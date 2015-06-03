@@ -1,0 +1,5 @@
+*.iso
+*.o
+*.pyc
+isodir
+sysroot
