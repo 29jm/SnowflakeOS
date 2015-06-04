@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MULTIBOOT_MAGIC 0x2BADB002
+
 typedef struct {
 
 } __attribute__ ((packed)) vbe_info_t;

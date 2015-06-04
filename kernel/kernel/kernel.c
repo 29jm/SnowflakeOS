@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,13 +11,15 @@
 void kernel_main(multiboot* boot, uintptr_t esp, uint32_t magic) {
 	terminal_init();
 
+	bool valid_magic = (magic == MULTIBOOT_MAGIC);
+
 	printf("################################################################################\n");
 	printf("######                                                                    ######\n");
 	printf("####                         Multiboot Header                               ####\n");
 	printf("###                                                                          ###\n");
 	printf("##                                                                            ##\n");
 	printf("#                                                                              #\n");
-	printf("\tMagic number: %s\n", magic == 0x1BADB002 ? "Valid" : "Invalid");
+	printf("\tMagic number: %x (%s)\n", magic, valid_magic ? "Valid" : "Invalid");
 	printf("\tCommand line: %s\n", boot->cmdline);
 }
 
