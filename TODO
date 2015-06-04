@@ -1,0 +1,6 @@
+TODO:
+- implement %X format in printf
+- move printf implementation to vsprintf
+
+DONE:
+- implement <ctype.h>

@@ -60,6 +60,12 @@ int printf(const char* restrict format, ...)
 			const char* s = itoa(i, conversion_buf, 10);
 			print(s, strlen(s));
 		}
+		else if (*format == 'x') {
+			format++;
+			int i = va_arg(parameters, int);
+			const char* s = itoa(i, conversion_buf, 16);
+			print(s, strlen(s));
+		}
 		else {
 			goto incomprehensible_conversion;
 		}

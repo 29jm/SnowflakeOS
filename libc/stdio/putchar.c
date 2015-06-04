@@ -1,12 +1,12 @@
 #include <stdio.h>
 
-#if defined(__is_redstaros_kernel)
+#ifdef _KERNEL_
 #include <kernel/tty.h>
 #endif
 
 int putchar(int ic)
 {
-#if defined(_KERNEL_)
+#ifdef _KERNEL_
 	char c = (char) ic;
 	terminal_write(&c, sizeof(c));
 #else

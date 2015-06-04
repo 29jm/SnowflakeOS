@@ -13,7 +13,7 @@ INCLUDEDIR?=$(PREFIX)/include
 LIBDIR?=$(EXEC_PREFIX)/lib
 
 CFLAGS:=$(CFLAGS) -Wall -Wextra
-CPPFLAGS:=$(CPPFLAGS) -D__is_myos_libc -Iinclude
+CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_LIBC_ -Iinclude
 LIBK_CFLAGS:=$(CFLAGS) -ffreestanding -fbuiltin
 LIBK_CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_
 
@@ -38,6 +38,20 @@ string/memcpy.o \
 string/memmove.o \
 string/memset.o \
 string/strlen.o \
+ctype/isalnum.o \
+ctype/isalpha.o \
+ctype/isblank.o \
+ctype/iscntrl.o \
+ctype/isdigit.o \
+ctype/isgraph.o \
+ctype/islower.o \
+ctype/isprint.o \
+ctype/ispunct.o \
+ctype/isspace.o \
+ctype/isupper.o \
+ctype/isxdigit.o \
+ctype/tolower.o \
+ctype/toupper.o
 
 HOSTEDOBJS:=\
 $(ARCH_HOSTEDOBJS) \
