@@ -43,7 +43,6 @@ _start:
 	# Transfer control to the main kernel.
 	# Pass the multiboot header adress and magic number (already pushed)
 	# See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
-	pushl %esp
 	pushl %ebx
 
 	cli

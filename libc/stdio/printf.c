@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 static void print(const char* data, size_t data_length)
 {
@@ -63,8 +64,16 @@ int printf(const char* restrict format, ...)
 		else if (*format == 'x') {
 			format++;
 			int i = va_arg(parameters, int);
-			const char* s = itoa(i, conversion_buf, 16);
-			print(s, strlen(s));
+			itoa(i, conversion_buf, 16);
+			print(conversion_buf, strlen(conversion_buf));
+		}
+		else if (*format == 'X') {
+			format++;
+			int i = va_arg(parameters, int);
+			itoa(i, conversion_buf, 16);
+			for (size_t i = 0; i < strlen(conversion_buf); i++)
+				conversion_buf[i] = toupper(conversion_buf[i]);
+			print(conversion_buf, strlen(conversion_buf));
 		}
 		else {
 			goto incomprehensible_conversion;

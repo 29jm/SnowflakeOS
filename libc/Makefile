@@ -33,6 +33,7 @@ stdio/putchar.o \
 stdio/puts.o \
 stdlib/abort.o \
 stdlib/itoa.o \
+stdlib/atoi.o \
 string/memcmp.o \
 string/memcpy.o \
 string/memmove.o \
