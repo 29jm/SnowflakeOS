@@ -1,6 +1,3 @@
-HOST?=i386-elf
-HOSTARCH:=i386
-
 CFLAGS?=-O2 -g
 CPPFLAGS?=
 LDFLAGS?=
@@ -17,51 +14,13 @@ CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_LIBC_ -Iinclude
 LIBK_CFLAGS:=$(CFLAGS) -ffreestanding -fbuiltin
 LIBK_CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_
 
-ARCHDIR:=arch/$(HOSTARCH)
+OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
+OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
-include $(ARCHDIR)/make.config
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
-CFLAGS:=$(CFLAGS) $(ARCH_CFLAGS)
-CPFLAGS:=$(CPPFLAGS) $(ARCH_CPPFLAGS)
-LIBK_CFLAGS:=$(LIBK_CFLAGS) $(KERNEL_ARCH_CFLAGS)
-LIBK_CPFLAGS:=$(LIBK_CPPFLAGS) $(KERNEL_ARCH_CPPFLAGS)
-
-FREEOBJS:=\
-$(ARCH_FREEOBJS) \
-stdio/printf.o \
-stdio/putchar.o \
-stdio/puts.o \
-stdlib/abort.o \
-stdlib/itoa.o \
-stdlib/atoi.o \
-string/memcmp.o \
-string/memcpy.o \
-string/memmove.o \
-string/memset.o \
-string/strlen.o \
-ctype/isalnum.o \
-ctype/isalpha.o \
-ctype/isblank.o \
-ctype/iscntrl.o \
-ctype/isdigit.o \
-ctype/isgraph.o \
-ctype/islower.o \
-ctype/isprint.o \
-ctype/ispunct.o \
-ctype/isspace.o \
-ctype/isupper.o \
-ctype/isxdigit.o \
-ctype/tolower.o \
-ctype/toupper.o
-
-HOSTEDOBJS:=\
-$(ARCH_HOSTEDOBJS) \
-
-OBJS:=\
-$(FREEOBJS) \
-$(HOSTEDOBJS) \
-
-LIBK_OBJS:=$(FREEOBJS:.o=.libk.o)
+LIBK_OBJS:=$(OBJS:.o=.libk.o)
 
 BINARIES=libc.a libg.a libk.a
 

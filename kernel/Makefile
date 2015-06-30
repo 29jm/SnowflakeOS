@@ -1,9 +1,6 @@
-HOST=i386-elf
-HOSTARCH=i386
-
 CFLAGS?=-O2 -g
 CPPFLAGS?=
-LDFLAGS?=
+LDFLAGS?=-T linker.ld
 LIBS?=
 
 DESTDIR?=
@@ -17,42 +14,20 @@ CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_ -Iinclude
 LDFLAGS:=$(LDFLAGS)
 LIBS:=$(LIBS) -nostdlib -lk -lgcc
 
-ARCHDIR:=arch/$(HOSTARCH)
+OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*/*.c))
+OBJS+=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
+OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
-include $(ARCHDIR)/make.config
-
-CFLAGS:=$(CFLAGS) $(KERNEL_ARCH_CFLAGS)
-CPFLAGS:=$(CPPFLAGS) $(KERNEL_ARCH_CPPFLAGS)
-LDFLAGS:=$(LDFLAGS) $(KERNEL_ARCH_LDFLAGS)
-LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
-
-OBJS:=\
-$(KERNEL_ARCH_OBJS) \
-kernel/kernel.o \
-
-CRTI_OBJ:=$(ARCHDIR)/crti.o
-CRTBEGIN_OBJ:=$(shell $(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=crtbegin.o)
-CRTEND_OBJ:=$(shell $(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=crtend.o)
-CRTN_OBJ:=$(ARCHDIR)/crtn.o
-
-ALL_OUR_OBJS:=\
-$(CRTI_OBJ) \
-$(OBJS) \
-$(CRTN_OBJ) \
-
-OBJ_LINK_LIST:=\
-$(CRTI_OBJ) \
-$(CRTBEGIN_OBJ) \
-$(OBJS) \
-$(CRTEND_OBJ) \
-$(CRTN_OBJ) \
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*/*.S))
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
 all: RedStarOS.kernel
 
 .PHONY: all clean install install-headers install-kernel
 
-RedStarOS.kernel: $(OBJ_LINK_LIST) $(ARCHDIR)/linker.ld
-	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(OBJ_LINK_LIST) $(LDFLAGS) $(LIBS)
+RedStarOS.kernel: $(OBJS) linker.ld
+	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
 	$(CC) -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
@@ -61,7 +36,7 @@ RedStarOS.kernel: $(OBJ_LINK_LIST) $(ARCHDIR)/linker.ld
 	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:
-	rm -f RedStarOS.kernel $(OBJS) $(ALL_OUR_OBJS) *.o */*.o */*/*.o
+	rm -f RedStarOS.kernel $(OBJS) *.o */*.o */*/*.o
 
 install: install-headers install-kernel
 
