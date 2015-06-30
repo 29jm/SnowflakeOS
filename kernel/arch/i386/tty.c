@@ -4,10 +4,8 @@
 #include <string.h>
 
 #include <kernel/vga.h>
+#include <kernel/tty.h>
 
-#ifdef YCM
-#define size_t uint32_t
-#endif
 
 size_t terminal_row;
 size_t terminal_column;
@@ -26,7 +24,7 @@ void terminal_reset() {
 	}
 }
 
-void terminal_init() {
+void init_terminal() {
 	terminal_row = 0;
 	terminal_column = 0;
 	terminal_color = make_color(COLOR_LIGHT_GREY, COLOR_DARK_GREY);

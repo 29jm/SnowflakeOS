@@ -2,5 +2,5 @@
 #include <stdio.h>
 
 void isr_handler(registers_t* regs) {
-	printf("You have been visited by M. Interruptel\n");
+	printf("Interrupt number %d was triggered\n", regs->int_no);
 }

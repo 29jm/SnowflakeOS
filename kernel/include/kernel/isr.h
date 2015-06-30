@@ -1,3 +1,6 @@
+#ifndef ISR_H
+#define ISR_H
+
 #include <stdint.h>
 
 typedef struct {
@@ -6,3 +9,5 @@ typedef struct {
 	uint32_t int_no, err_code;
 	uint32_t eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
 } registers_t; 
+
+#endif
