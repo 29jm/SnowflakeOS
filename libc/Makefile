@@ -1,5 +1,5 @@
-HOST?=$(shell ../default-host.sh)
-HOSTARCH:=$(shell ../target-triplet-to-arch.sh $(HOST))
+HOST?=i386-elf
+HOSTARCH:=i386
 
 CFLAGS?=-O2 -g
 CPPFLAGS?=

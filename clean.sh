@@ -8,4 +8,4 @@ done
 
 rm -rfv sysroot
 rm -rfv isodir
-rm -rfv myos.iso
+rm -rfv RedStarOS.iso

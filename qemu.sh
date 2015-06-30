@@ -2,4 +2,4 @@
 set -e
 . ./iso.sh
 
-qemu-system-$(./target-triplet-to-arch.sh $HOST) -cdrom RedStarOS.iso -monitor stdio
+qemu-system-i386 -cdrom RedStarOS.iso -monitor stdio
