@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MULTIBOOT_MAGIC        0x2BADB002
+#define MULTIBOOT_MAGIC        0x1BADB002
 #define MULTIBOOT_EAX_MAGIC    0x2BADB002
 #define MULTIBOOT_FLAG_MEM     (1 << 0)
 #define MULTIBOOT_FLAG_DEVICE  (1 << 1)
@@ -18,10 +18,6 @@
 #define MULTIBOOT_FLAG_VBE     (1 << 10)
 
 typedef struct {
-
-} __attribute__ ((packed)) vbe_info_t;
-
-typedef struct {
 	uint8_t drive_number;
 	uint8_t part1;
 	uint8_t part2;
@@ -29,11 +25,51 @@ typedef struct {
 } __attribute__ ((packed)) boot_device_t;
 
 typedef struct {
+	uintptr_t mod_start;
+	uintptr_t mod_end;
+	uintptr_t string;
+	uint32_t reserved;
+} mod_t;
+
+typedef struct {
+	uint32_t size;
+	uint64_t base_addr;
+	uint64_t length;
+	uint32_t type;
+} __attribute__ ((packed)) mmap_t;
+
+// Taken from ToaruOS
+typedef struct {
+	uint16_t attributes;
+	uint8_t  winA, winB;
+	uint16_t granularity;
+	uint16_t winsize;
+	uint16_t segmentA, segmentB;
+	uint32_t realFctPtr;
+	uint16_t pitch;
+
+	uint16_t Xres, Yres;
+	uint8_t  Wchar, Ychar, planes, bpp, banks;
+	uint8_t  memory_model, bank_size, image_pages;
+	uint8_t  reserved0;
+
+	uint8_t  red_mask, red_position;
+	uint8_t  green_mask, green_position;
+	uint8_t  blue_mask, blue_position;
+	uint8_t  rsv_mask, rsv_position;
+	uint8_t  directcolor_attributes;
+
+	uint32_t physbase;
+	uint32_t reserved1;
+	uint16_t reserved2;
+} __attribute__ ((packed)) vbe_info_t;
+
+typedef struct {
 	uintptr_t		flags;
 	uintptr_t		mem_lower;
 	uintptr_t		mem_upper;
-	boot_device_t*	boot_device;
-	char*			cmdline;
+	uintptr_t		boot_device;
+	uintptr_t		cmdline;
 	uintptr_t		mods_count;
 	uintptr_t		mods_addr;
 	uintptr_t		num;
@@ -53,6 +89,8 @@ typedef struct {
 	uintptr_t		vbe_interface_seg;
 	uintptr_t		vbe_interface_off;
 	uintptr_t		vbe_interface_len;
-} __attribute__ ((packed)) multiboot;
+} multiboot;
+
+void dump_multiboot_infos(multiboot* boot);
 
 #endif
