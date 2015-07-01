@@ -32,26 +32,28 @@ void init_irq() {
 }
 
 void irq_handler(registers_t* regs) {
-	CLI();
-
-	// Don't annoy the PIC with software interrupts
-	if (regs->int_no >= IRQ0 && regs->int_no <= IRQ15) {
-		// Received from slave
-		if (regs->int_no > IRQ7) {
-			outportb(PIC2_CMD, PIC_EOI);
-		}
-
-		// Not a bug: EOIs must be sent to both master and slave if the
-		// interrupt was on a slave line
-		outportb(PIC1_CMD, PIC_EOI);
-	}
+	irq_send_eoi(regs->int_no);
 
 	if (irq_handlers[regs->int_no]) {
 		handler_t handler = irq_handlers[regs->int_no];
 		handler(regs);
 	}
+	else {
+		printf("Unhandled IRQ%d\n", regs->int_no);
+	}
 
+	// IRQs had been disabled before this function was called
 	STI();
+}
+
+void irq_send_eoi(uint8_t irq) {
+	// Send EOI to PIC2 if necessary
+	if (irq > IRQ7) {
+		outportb(PIC2_CMD, PIC_EOI);
+	}
+
+	// Send to PIC1
+	outportb(PIC1_CMD, PIC_EOI);
 }
 
 void irq_register_handler(uint8_t irq, handler_t handler) {

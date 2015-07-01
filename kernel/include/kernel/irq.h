@@ -10,6 +10,7 @@ typedef void (*handler_t)(registers_t*);
 
 void init_irq();
 void irq_handler(registers_t* regs);
+void irq_send_eoi(uint8_t irq);
 void irq_register_handler(uint8_t irq, handler_t handler);
 void irq_remap();
 uint16_t irq_getmask(uint16_t pic);
