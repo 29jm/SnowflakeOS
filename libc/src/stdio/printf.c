@@ -75,6 +75,13 @@ int printf(const char* restrict format, ...)
 				conversion_buf[i] = toupper(conversion_buf[i]);
 			print(conversion_buf, strlen(conversion_buf));
 		}
+		else if (*format == 'b') {
+			// non standard
+			format++;
+			int i = va_arg(parameters, int);
+			itoa(i, conversion_buf, 2);
+			print(conversion_buf, strlen(conversion_buf));
+		}
 		else {
 			goto incomprehensible_conversion;
 		}
