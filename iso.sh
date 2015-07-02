@@ -6,11 +6,11 @@ mkdir -p isodir
 mkdir -p isodir/boot
 mkdir -p isodir/boot/grub
 
-cp sysroot/boot/RedStarOS.kernel isodir/boot/RedStarOS.kernel
+cp sysroot/boot/SnowflakeOS.kernel isodir/boot/SnowflakeOS.kernel
 cat > isodir/boot/grub/grub.cfg << EOF
-menuentry "RedStarOS" {
-	multiboot /boot/RedStarOS.kernel
+menuentry "SnowflakeOS" {
+	multiboot /boot/SnowflakeOS.kernel
 }
 EOF
 
-grub-mkrescue -o RedStarOS.iso isodir
+grub-mkrescue -o SnowflakeOS.iso isodir

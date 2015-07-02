@@ -8,4 +8,4 @@ done
 
 rm -rfv sysroot
 rm -rfv isodir
-rm -rfv RedStarOS.iso
+rm -rfv SnowflakeOS.iso

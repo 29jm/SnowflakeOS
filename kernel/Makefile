@@ -22,11 +22,11 @@ OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
-all: RedStarOS.kernel
+all: SnowflakeOS.kernel
 
 .PHONY: all clean install install-headers install-kernel
 
-RedStarOS.kernel: $(OBJS) linker.ld
+SnowflakeOS.kernel: $(OBJS) linker.ld
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
@@ -36,7 +36,7 @@ RedStarOS.kernel: $(OBJS) linker.ld
 	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:
-	rm -f RedStarOS.kernel $(OBJS) *.o */*.o */*/*.o
+	rm -f SnowflakeOS.kernel $(OBJS) *.o */*.o */*/*.o
 
 install: install-headers install-kernel
 
@@ -44,6 +44,6 @@ install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -RTv include $(DESTDIR)$(INCLUDEDIR)
 
-install-kernel: RedStarOS.kernel
+install-kernel: SnowflakeOS.kernel
 	mkdir -p $(DESTDIR)$(BOOTDIR)
-	cp RedStarOS.kernel $(DESTDIR)$(BOOTDIR)
+	cp SnowflakeOS.kernel $(DESTDIR)$(BOOTDIR)
