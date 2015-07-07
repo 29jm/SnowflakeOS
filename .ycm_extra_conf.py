@@ -35,17 +35,15 @@ import ycm_core
 # compilation database set (by default, one is not set).
 # CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
 flags = [
-'-Wall',
-'-Wextra',
-'-Werror',
-'--sysroot=/home/johan/Documents/Projects/RedStarOS/sysroot',
-'-std=c11',
-'-isytem',
-'/usr/include',
+'-std=gnu11',
+'-O2',
+'-g',
 '-ffreestanding',
 '-fbuiltin',
-'-D',
-'YCM'
+'-Wall',
+'-Wextra',
+'-isystem', 'kernel/include',
+'-isystem', 'libc/include'
 ]
 
 
