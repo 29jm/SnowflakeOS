@@ -9,6 +9,7 @@ __attribute__((__noreturn__))
 void abort();
 
 char* itoa(int value, char* str, int base);
+int atoi(const char* s);
 
 #ifdef __cplusplus
 }
