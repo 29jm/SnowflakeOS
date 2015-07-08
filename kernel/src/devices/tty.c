@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include <kernel/tty.h>
@@ -74,6 +75,15 @@ void term_change_bg_color(vga_color bg) {
 	term_set_bg_color(bg);
 }
 
+void term_set_blink(int blink) {
+	if (blink) {
+		term_color |= 0x8000;
+	}
+	else {
+		term_color &= ~(1 << 0x8000);
+	}
+}
+
 void term_putchar_at(char c, uint32_t x, uint32_t y) {
 	if (y >= VGA_HEIGHT || x >= VGA_WIDTH) {
 		return;
@@ -117,8 +127,9 @@ void term_putchar(char c) {
 		term_scrolldown();
 	}
 
-	if (!isprint(c))
+	if (term_interpret_ansi(c) || !isprint(c)) {
 		return;
+	}
 
 	term_putchar_at(c, term_column++, term_row);
 }
@@ -131,4 +142,147 @@ void term_write(const char* data, uint32_t size) {
 
 void term_write_string(const char* data) {
 	term_write(data, strlen(data));
+}
+
+// Returns != 0 if in an ANSI sequence
+// ANSI escape sequence: \x1B[param;param2...end_char
+int term_interpret_ansi(char c) {
+	typedef enum {
+		normal, bracket, params
+	} state_t;
+
+	static state_t state = normal;     // State tracker
+	static char buf[32] = "";          // Stores the string for 1 param
+	static uint32_t args[32] = { 0 };  // Stores the parsed params
+	static uint32_t current_arg = 0;   // Number of params
+	static uint32_t current_index = 0; // Number of chars in current param
+	static uint32_t saved_row = 0;
+	static uint32_t saved_col = 0;
+
+	if (state == normal) {
+		if (c == 0x1B) { // Escape character
+			state = bracket;
+		}
+		else {
+			return 0;
+		}
+	}
+	else if (state == bracket) {
+		if (c == '[') {
+			state = params;
+		}
+		else {
+			state = normal;
+			return 0;
+		}
+	}
+	else if (state == params) {
+		if (c == ';') {
+			buf[current_index] = '\0';
+			args[current_arg++] = atoi(buf);
+			current_index = 0;
+		}
+		else if (isdigit(c)) {
+			if (current_index >= 32) {
+				current_arg = 0;
+				current_index = 0;
+				state = normal;
+			}
+			else {
+				buf[current_index++] = c;
+			}
+		}
+		else if (isalpha(c)) {
+			buf[current_index] = '\0';
+			args[current_arg++] = atoi(buf);
+
+			switch (c) {
+				case 's': // Save cursor position
+					saved_row = term_row;
+					saved_col = term_column;
+					state = normal;
+					break;
+				case 'u': // Restore cursor position
+					term_row = saved_row;
+					term_column = saved_col;
+					state = normal;
+					break;
+				case 'K': // Erase until the end of line
+					for (uint32_t x = term_column; x < VGA_WIDTH; x++) {
+						ENTRY(x, term_row) = term_make_entry(' ', term_color);
+					}
+					state = normal;
+					break;
+				case 'H': // Set cursor position
+				case 'f':
+					term_row = args[0];
+					term_column = args[1];
+					break;
+				case 'A': // Cursor up
+					term_row -= args[0]; break;
+				case 'B': // Cursor down
+					term_row += args[0]; break;
+				case 'C': // Cursor right
+					term_column += args[0]; break;
+				case 'D': // Cursor left
+					term_column -= args[0]; break;
+				case 'J': // 2J: clear screen & reset cursor
+					if (args[0] == 2) {
+						init_term();
+					}
+					break;
+			}
+
+			if (c ==  'm') { // Set graphics mode
+				for (uint32_t i = 0; i < current_arg; i++) {
+					switch (args[i]) {
+						case 0:
+							term_set_blink(0); break;
+						case 1: break;
+						case 4: break;
+						case 5:
+							term_set_blink(1); break;
+						case 30:
+							term_set_fg_color(COLOR_BLACK); break;
+						case 31:
+							term_set_fg_color(COLOR_RED); break;
+						case 32:
+							term_set_fg_color(COLOR_GREEN); break;
+						case 33: // Yellow
+							term_set_fg_color(COLOR_BROWN); break;
+						case 34:
+							term_set_fg_color(COLOR_BLUE); break;
+						case 35:
+							term_set_fg_color(COLOR_MAGENTA); break;
+						case 36:
+							term_set_fg_color(COLOR_CYAN); break;
+						case 37:
+							term_set_fg_color(COLOR_WHITE); break;
+						case 40:
+							term_set_bg_color(COLOR_BLACK); break;
+						case 41:
+							term_set_bg_color(COLOR_RED); break;
+						case 42:
+							term_set_bg_color(COLOR_GREEN); break;
+						case 43: // Yellow
+							term_set_bg_color(COLOR_BROWN); break;
+						case 44:
+							term_set_bg_color(COLOR_BLUE); break;
+						case 45:
+							term_set_bg_color(COLOR_MAGENTA); break;
+						case 46:
+							term_set_bg_color(COLOR_CYAN); break;
+						case 47: // White
+							term_set_bg_color(COLOR_LIGHT_GREY); break;
+					}
+				}
+			}
+
+			current_arg = 0;
+			current_index = 0;
+			state = normal;
+		}
+	}
+
+	return 1;
 }

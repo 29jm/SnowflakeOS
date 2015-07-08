@@ -16,7 +16,7 @@ typedef enum {
 	COLOR_RED,
 	COLOR_MAGENTA,
 	COLOR_BROWN,
-	COLOR_LIGHT_GREY,
+	COLOR_LIGHT_GREY, // Max background color
 	COLOR_DARK_GREY,
 	COLOR_LIGHT_BLUE,
 	COLOR_LIGHT_GREEN,
@@ -31,9 +31,11 @@ void init_term();
 void term_putchar_at(char c, size_t x, size_t y);
 void term_setcolor(vga_color fg, vga_color bg);
 void term_change_bg_color(vga_color bg);
+void term_set_blink(int blink);
 void term_scrolldown();
 void term_putchar(char c);
 void term_write(const char* data, size_t size);
 void term_writestring(const char* data);
+int term_interpret_ansi(char c);
 
 #endif
