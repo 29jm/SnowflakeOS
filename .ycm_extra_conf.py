@@ -38,6 +38,7 @@ flags = [
 '-std=gnu11',
 '-O2',
 '-g',
+'-m32',
 '-ffreestanding',
 '-fbuiltin',
 '-Wall',
