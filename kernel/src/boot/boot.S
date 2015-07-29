@@ -1,9 +1,12 @@
-.set MAGIC,				0x1BADB002
-.set FLAGS_PAGE_ALIGN,	1 << 0
-.set FLAGS_MEMORY,		1 << 1
-.set FLAGS_GRAPHICS,	1 << 2
-.set FLAGS,				FLAGS_PAGE_ALIGN | FLAGS_MEMORY /*| FLAGS_GRAPHICS*/
-.set CHECKSUM,			-(MAGIC + FLAGS)
+.set MAGIC,            0x1BADB002
+.set FLAGS_PAGE_ALIGN, 1 << 0
+.set FLAGS_MEMORY,     1 << 1
+.set FLAGS_GRAPHICS,   1 << 2
+.set FLAGS,            FLAGS_PAGE_ALIGN | FLAGS_MEMORY /*| FLAGS_GRAPHICS*/
+.set CHECKSUM,         -(MAGIC + FLAGS)
+
+.set KERNEL_VIRTUAL_BASE, 0xC0000000
+.set KERNEL_PAGE_NUMBER,  (KERNEL_VIRTUAL_BASE >> 22)
 
 # Declare a header as in the Multiboot Standard.
 .section .multiboot
@@ -27,17 +30,45 @@ stack_bottom:
 	.skip 16384 # 16 KiB
 stack_top:
 
+.section .data
+.align 0x1000
+boot_page_directory:
+	.long 0x00000083
+	.fill (KERNEL_PAGE_NUMBER - 1), 4, 0
+	.long 0x00000083
+	.long 0x00400083
+	.fill (1024 - KERNEL_PAGE_NUMBER - 2), 4, 0
+
 # The kernel entry point.
 .section .text
 .global _start
 .type _start, @function
 _start:
+	mov $(boot_page_directory - KERNEL_VIRTUAL_BASE), %ecx
+	mov %ecx, %cr3
+
+	mov %cr4, %ecx
+	or $0x00000010, %ecx
+	mov %ecx, %cr4
+
+	mov %cr0, %ecx
+	or $0x80000000, %ecx
+	mov %ecx, %cr0
+
+	lea _start_higher_half, %ecx
+	jmp *%ecx
+
+_start_higher_half:
+	# movl $0, boot_page_directory
+	# invlpg 0
+
 	movl $stack_top, %esp
 
 	# Transfer control to the main kernel.
 	# Pass the multiboot header adress and magic number (already pushed)
 	# See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
 	pushl %eax
+	add $0xC0000000, %ebx
 	pushl %ebx
 
 	cli # disable until we setup handlers
@@ -49,5 +80,3 @@ _start:
 .hang:
 	hlt
 	jmp .hang
-
-.size _start, . - _start

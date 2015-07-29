@@ -6,12 +6,10 @@
 
 #include <stdio.h>
 
-static handler_t irq_handlers[256];
+handler_t irq_handlers[256];
 
 void init_irq() {
 	irq_remap();
-
-	memset(irq_handlers, 0, 256*sizeof(handler_t));
 
 	idt_set_entry(32, (uint32_t) irq0, 0x08, 0x8E);
 	idt_set_entry(33, (uint32_t) irq1, 0x08, 0x8E);

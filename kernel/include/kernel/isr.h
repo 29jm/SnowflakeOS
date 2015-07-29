@@ -10,4 +10,8 @@ typedef struct {
 	uint32_t eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
 } registers_t; 
 
+typedef void (*handler_t)(registers_t*);
+
+void isr_register_handler(uint32_t num, handler_t handler);
+
 #endif

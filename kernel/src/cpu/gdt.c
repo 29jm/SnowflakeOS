@@ -1,11 +1,13 @@
-#include <stdint.h>
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
+#include <kernel/paging.h>
 
-gdt_entry_t gdt_entries[5];
-gdt_entry_ptr_t gdt_ptr;
-idt_entry_t idt_entries[256];
-idt_entry_ptr_t idt_entry_ptr;
+#include <stdint.h>
+
+static gdt_entry_t gdt_entries[5];
+static gdt_entry_ptr_t gdt_ptr;
+static idt_entry_t idt_entries[256];
+static idt_entry_ptr_t idt_entry_ptr;
 
 void init_gdt() {
 	gdt_ptr.limit = (sizeof(gdt_entry_t)*5) - 1;
