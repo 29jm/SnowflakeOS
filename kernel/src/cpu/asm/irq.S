@@ -33,10 +33,13 @@ IRQ 15, 47
 irq_common_handler:
 	pusha
 
-	mov %ds, %ax
-	push %eax
+	push %ds
+	push %es
+	push %fs
+	push %gs
 
 	mov $0x10, %ax
+
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -46,13 +49,11 @@ irq_common_handler:
 	call irq_handler
 	add $4, %esp
 
-	pop %ebx
-	mov %bx, %ds
-	mov %bx, %es
-	mov %bx, %fs
-	mov %bx, %gs
+	pop %gs
+	pop %fs
+	pop %es
+	pop %ds
 
 	popa
 	add $8, %esp
-	sti
 	iret

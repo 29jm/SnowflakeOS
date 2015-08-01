@@ -57,8 +57,10 @@ ISR_NOERR 31
 isr_common_handler:
 	pusha
 
-	mov %ds, %ax
-	push %eax
+	push %ds
+	push %es
+	push %fs
+	push %gs
 
 	mov $0x10, %ax
 	mov %ax, %ds
@@ -70,11 +72,10 @@ isr_common_handler:
 	call isr_handler
 	add $4, %esp
 
-	pop %eax
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
+	pop %ds
+	pop %es
+	pop %fs
+	pop %gs
 
 	popa
 	add $8, %esp

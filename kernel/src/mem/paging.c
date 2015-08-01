@@ -32,7 +32,7 @@ void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
 		abort();
 	}
  
-    *page = phys | PAGE_PRESENT | (flags & 0xFFF);
+	*page = phys | PAGE_PRESENT | (flags & 0xFFF);
 	paging_invalidate_page(virt);
 }
 
@@ -90,7 +90,7 @@ void paging_invalidate_cache() {
 }
 
 void paging_invalidate_page(uintptr_t virt) {
-    asm volatile ("invlpg (%0)" :: "b"(virt) : "memory");
+	asm volatile ("invlpg (%0)" :: "b"(virt) : "memory");
 }
 
 void paging_fault_handler(registers_t* regs) {

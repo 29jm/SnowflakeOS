@@ -5,6 +5,3 @@ log: bochs.log
 megs: 128
 display_library: sdl
 magic_break: enabled=1
-info: action=report
-error: action=report
-panic: action=ask

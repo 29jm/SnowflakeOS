@@ -1,6 +1,4 @@
 #include <kernel/isr.h>
-#include <kernel/irq.h> // handler_t
-#include <kernel/tty.h>
 #include <stdio.h>
 #include <stdlib.h>
 

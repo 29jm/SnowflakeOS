@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -9,10 +8,10 @@
 
 #define ENTRY(x, y) term_buffer[(y)*VGA_WIDTH+(x)]
 
-uint32_t term_row;
-uint32_t term_column;
-uint8_t term_color;
-uint16_t* term_buffer;
+static uint32_t term_row;
+static uint32_t term_column;
+static uint8_t term_color;
+static uint16_t* term_buffer;
 
 // Helper functions
 static uint8_t term_make_color(vga_color fg, vga_color bg) {
@@ -77,10 +76,10 @@ void term_change_bg_color(vga_color bg) {
 
 void term_set_blink(int blink) {
 	if (blink) {
-		term_color |= 0x8000;
+		term_color |= (1 << 7);
 	}
 	else {
-		term_color &= ~(1 << 0x8000);
+		term_color &= ~(1 << 7);
 	}
 }
 
@@ -233,7 +232,7 @@ int term_interpret_ansi(char c) {
 					break;
 			}
 
-			if (c ==  'm') { // Set graphics mode
+			if (c == 'm') { // Set graphics mode
 				for (uint32_t i = 0; i < current_arg; i++) {
 					switch (args[i]) {
 						case 0:
