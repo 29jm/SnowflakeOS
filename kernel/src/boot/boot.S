@@ -31,20 +31,20 @@ stack_bottom:
 stack_top:
 
 .section .data
+.global kernel_directory
 .align 0x1000
-boot_page_directory:
+kernel_directory:
 	.long 0x00000083
 	.fill (KERNEL_PAGE_NUMBER - 1), 4, 0
 	.long 0x00000083
-	.long 0x00400083
-	.fill (1024 - KERNEL_PAGE_NUMBER - 2), 4, 0
+	.fill (1024 - KERNEL_PAGE_NUMBER - 1), 4, 0
 
 # The kernel entry point.
 .section .text
 .global _start
 .type _start, @function
 _start:
-	mov $(boot_page_directory - KERNEL_VIRTUAL_BASE), %ecx
+	mov $(kernel_directory - KERNEL_VIRTUAL_BASE), %ecx
 	mov %ecx, %cr3
 
 	mov %cr4, %ecx

@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-handler_t irq_handlers[256];
+static handler_t irq_handlers[256];
 
 void init_irq() {
 	irq_remap();

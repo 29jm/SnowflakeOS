@@ -46,12 +46,15 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 		mmap_t* mmap = (mmap_t*) PHYS_TO_VIRT(boot->mmap_addr);
 
 		while ((uintptr_t) mmap < (PHYS_TO_VIRT(boot->mmap_addr)+boot->mmap_length)) {
+			if (!mmap->length) {
+				continue;
+			}
+
 			if (mmap->type == 1) {
 				pmm_init_region((uintptr_t) mmap->addr, mmap->length);
 				available += mmap->length;
 			}
 			else {
-				pmm_deinit_region((uintptr_t) mmap->addr, mmap->length);
 				unavailable += mmap->length;
 			}
 
@@ -70,10 +73,7 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 	// Protect low memory, our glorious kernel and the PMM itself
 	pmm_deinit_region((uintptr_t) 0, (uint32_t) &KERNEL_END_PHYS + pmm_get_map_size());
 
-	/* init_paging(); */
-	printf("Attempting to page fault..\n");
-	int* crash = (int*) 0xCAFEBABE;
-	printf("crash: %d\n", *crash);
+	init_paging();
 
 	uint32_t time = 0;
 	while (1) {

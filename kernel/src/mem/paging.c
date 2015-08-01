@@ -7,113 +7,98 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define PAGE_DIRECTORY_INDEX(x) (((x) >> 22) & 0x3FF)
-#define PAGE_TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
+#define DIRECTORY_INDEX(x) ((x) >> 22)
+#define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
 
-static page_directory_t* current_page_directory;
-static page_directory_t* kernel_directory;
-static page_directory_t page_directory_pool[1024];
+static directory_entry_t* current_page_directory;
+extern directory_entry_t kernel_directory[1024];
 
-page_t* get_page(page_directory_t* dir, uintptr_t virt, bool create) {
-	uint32_t dir_index = PAGE_DIRECTORY_INDEX(virt);
-	uint32_t table_index = PAGE_TABLE_INDEX(virt);
-	directory_entry_t* dir_entry = &dir->entries[dir_index];
+void init_paging() {
+	isr_register_handler(14, &paging_fault_handler);
 
-	if (!dir_entry->present && create) {
-		dir_entry->frame = (uint32_t) pmm_alloc_page();
-		dir_entry->present = 1;
-		dir_entry->rw = 1;
+	// Setup the recursive page directory entry
+	// TODO: do that in boot.S
+	uintptr_t dir_phys = VIRT_TO_PHYS((uintptr_t) &kernel_directory);
+	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
+	paging_invalidate_page(0xFFC00000);
+}
 
-		memset((void*) dir_entry->frame, 0, sizeof(page_table_t));
-	} 
+// TODO: refuse 4 MiB pages
+void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
+	page_t* page = paging_get_page(virt, true);
 
-	if (dir_entry->present) {
-		page_table_t* table = (page_table_t*) dir_entry->frame;
-		page_t* page = &table->entries[table_index];
-
-		return page;
+	if (*page & PAGE_PRESENT) {
+		printf("[VMM] Tried to map an already mapped virtual address!\n");
+		abort();
 	}
-
-	return 0;
+ 
+    *page = phys | PAGE_PRESENT | (flags & 0xFFF);
+	paging_invalidate_page(virt);
 }
 
-page_t* configure_page(page_t* page, bool kernel, bool rw) {
-	// These are single bits, can't assign directly
-	page->user = kernel ? 0 : 1;
-	page->rw = rw ? 1 : 0;
-
-	return page;
-}
-
-page_t* map_page(page_directory_t* dir, uintptr_t phys, uintptr_t virt) {
-	if (phys % 0x1000 || virt % 0x1000) {
-		printf("Tried to map unaligned addresses!");
+page_t* paging_get_page(uintptr_t virt, bool create) {
+	if (virt % 0x1000) {
+		printf("[VMM] Tried to access a page at an unaligned address!\n");
 		abort();
 	}
 
-	page_t* page = get_page(dir, virt, true);
-	page->frame = phys;
+	uint32_t dir_index = DIRECTORY_INDEX(virt);
+	uint32_t table_index = TABLE_INDEX(virt);
 
-	return page;
-}
+	directory_entry_t* dir = (directory_entry_t*) 0xFFFFF000;
+	page_t* table = ((uint32_t*) 0xFFC00000) + (0x400 * dir_index);
 
-void free_page(page_t* page) {
-	if (page->frame) {
-		pmm_free_page(page->frame);
+	if (!(dir[dir_index] & PAGE_PRESENT && create)) {
+		page_t* new_table = (page_t*) pmm_alloc_page();
+		dir[dir_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW;
+		memset((void*) table, 0, 0x1000);
+	}
+	else {
+		return 0;
 	}
 
-	// For safety
-	page->present = 0;
+	return &table[table_index];
 }
 
-void map_memory(page_directory_t* dir, uintptr_t phys, uintptr_t virt, uint32_t size) {
+void paging_unmap_page(uintptr_t virt) {
+	page_t* page = paging_get_page(virt, false);
+
+	if (page) {
+		*page &= ~(PAGE_PRESENT);
+		paging_invalidate_page(virt);
+	}
+}
+
+void paging_map_memory(uintptr_t phys, uintptr_t virt, uint32_t size) {
 	// size / 0x1000 = number of pages to map
 	for (uint32_t i = 0; i < size / 0x1000; i++) {
-		configure_page(map_page(dir, phys, virt), true, true);
+		paging_map_page(phys, virt, PAGE_RW);
 		phys += 0x1000;
 		virt += 0x1000;
 	}
 }
 
-void enable_paging() {
+void paging_switch_directory(uintptr_t dir_phys) {
+	asm volatile("mov %0, %%cr3\n" :: "r"(dir_phys));
+	current_page_directory = (directory_entry_t*) PHYS_TO_VIRT(dir_phys);
+}
+
+void paging_invalidate_cache() {
 	asm volatile(
-		"mov %cr0, %eax\n"
-		"or $0x80000000, %eax\n"
-		"mov %eax, %cr0\n");
+		"mov %cr3, %eax\n"
+		"mov %eax, %cr3\n");
 }
 
-void switch_directory(page_directory_t* dir) {
-	asm volatile("mov %0, %%cr3\n" :: "r"(dir));
-	current_page_directory = dir;
+void paging_invalidate_page(uintptr_t virt) {
+    asm volatile ("invlpg (%0)" :: "b"(virt) : "memory");
 }
 
-void invalidate_page(uintptr_t virt) {
-	asm volatile(
-		"mov %0, %%eax\n"
-		"invlpg (%%eax)\n"
-		:: "r"(virt) : "%eax");
-}
-
-void fault_handler(registers_t* regs) {
+void paging_fault_handler(registers_t* regs) {
 	uint32_t err = regs->err_code;
-
-	// abort(); // TODO: remove
 
 	printf("The page requested %s present ", err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 	printf("The reserved bits %s overwritten.\n", err & 0x08 ? "were" : "weren't");
 	printf("The fault %s during an instruction fetch.\n", err & 0x10 ? "occured" : "didn't occur");
-}
-
-void init_paging() {
-	asm volatile("xchgw %bx, %bx");
-	kernel_directory = &page_directory_pool[0];
-	memset(kernel_directory, 0, sizeof(page_directory_t));
-
-	map_memory(kernel_directory, 0x00000000, 0xC0000000, 0x800000);
-
-	isr_register_handler(14, fault_handler);
-
-	switch_directory(kernel_directory);
 }

@@ -15,6 +15,8 @@ extern uint32_t KERNEL_END;
 
 // mem is in KiB
 void init_pmm(uint32_t mem) {
+	printf("[PMM] Initialization\n");
+
 	mem_size = mem;
 	mem_map = &KERNEL_END;
 	max_blocks = (mem*1024) / PMM_BLOCK_SIZE;
@@ -55,7 +57,7 @@ void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 
 void* pmm_alloc_page() {
 	if (max_blocks - used_blocks <= 0) {
-		printf("[PMM] Kernel is out of memory!");
+		printf("[PMM] Kernel is out of physical memory!");
 		abort();
 	}
 
@@ -89,12 +91,11 @@ void* pmm_alloc_pages(uint32_t num) {
 }
 
 void pmm_free_page(uintptr_t addr) {
-	uint32_t block = ((uintptr_t) addr)/PMM_BLOCK_SIZE;
+	uint32_t block = addr/PMM_BLOCK_SIZE;
 	mmap_unset(block);
 }
 
 void pmm_free_pages(uintptr_t addr, uint32_t num) {
-	addr += 0xC0000000;
 	uint32_t first_block = addr/PMM_BLOCK_SIZE;
 
 	for (uint32_t i = 0; i < num; i++) {
