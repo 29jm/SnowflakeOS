@@ -96,9 +96,12 @@ void paging_invalidate_page(uintptr_t virt) {
 void paging_fault_handler(registers_t* regs) {
 	uint32_t err = regs->err_code;
 
+	printf("\x1B[37;44m");
 	printf("The page requested %s present ", err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 	printf("The reserved bits %s overwritten.\n", err & 0x08 ? "were" : "weren't");
 	printf("The fault %s during an instruction fetch.\n", err & 0x10 ? "occured" : "didn't occur");
+
+	abort();
 }

@@ -25,6 +25,7 @@ void init_idt() {
 	idt_set_entry(11, (uint32_t) isr11, 0x08, 0x8E);
 	idt_set_entry(12, (uint32_t) isr12, 0x08, 0x8E);
 	idt_set_entry(13, (uint32_t) isr13, 0x08, 0x8E);
+	idt_set_entry(14, (uint32_t) isr14, 0x08, 0x8E);
 	idt_set_entry(15, (uint32_t) isr15, 0x08, 0x8E);
 	idt_set_entry(16, (uint32_t) isr16, 0x08, 0x8E);
 	idt_set_entry(17, (uint32_t) isr17, 0x08, 0x8E);
@@ -43,7 +44,7 @@ void init_idt() {
 	idt_set_entry(30, (uint32_t) isr30, 0x08, 0x8E);
 	idt_set_entry(31, (uint32_t) isr31, 0x08, 0x8E);
 
-	idt_load((uint32_t) &idt_entry_ptr);
+	idt_load((uintptr_t) &idt_entry_ptr);
 }
 
 void idt_set_entry(uint8_t num, uint32_t base, uint16_t selector, uint8_t flags) {

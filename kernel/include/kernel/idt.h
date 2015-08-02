@@ -18,7 +18,8 @@ typedef struct {
 
 void init_idt();
 void idt_set_entry(uint8_t num, uint32_t base, uint16_t selector, uint8_t flags);
-void idt_load(uint32_t idt_ptr);
+
+extern void idt_load(uintptr_t idt_ptr);
 
 void isr0();
 void isr1();

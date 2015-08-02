@@ -1,6 +1,7 @@
 #include <kernel/isr.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 static char* exception_msgs[] = {
 	"Division By Zero",
@@ -52,6 +53,8 @@ void isr_handler(registers_t* regs) {
 }
 
 void isr_register_handler(uint32_t num, handler_t handler) {
+	assert(num < 32);
+
 	if (isr_handlers[num]) {
 		printf("Exception handler %d (%s) already registered\n", num,
 			exception_msgs[num]);
