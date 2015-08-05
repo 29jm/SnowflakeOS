@@ -13,6 +13,8 @@
 static directory_entry_t* current_page_directory;
 extern directory_entry_t kernel_directory[1024];
 
+static void* heap_pointer = (void*) KERNEL_HEAP_VIRT;
+
 void init_paging() {
 	isr_register_handler(14, &paging_fault_handler);
 
@@ -21,19 +23,12 @@ void init_paging() {
 	uintptr_t dir_phys = VIRT_TO_PHYS((uintptr_t) &kernel_directory);
 	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
 	paging_invalidate_page(0xFFC00000);
-}
 
-// TODO: refuse 4 MiB pages
-void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
-	page_t* page = paging_get_page(virt, true);
-
-	if (*page & PAGE_PRESENT) {
-		printf("[VMM] Tried to map an already mapped virtual address!\n");
-		abort();
-	}
- 
-	*page = phys | PAGE_PRESENT | (flags & 0xFFF);
-	paging_invalidate_page(virt);
+	// Identity map only the 1st MiB
+	// TODO: do that in boot.S
+	kernel_directory[0] = 0;
+	paging_invalidate_page(0x00000000);
+	paging_map_pages(0x00000000, 0x00000000, 256);
 }
 
 page_t* paging_get_page(uintptr_t virt, bool create) {
@@ -48,16 +43,31 @@ page_t* paging_get_page(uintptr_t virt, bool create) {
 	directory_entry_t* dir = (directory_entry_t*) 0xFFFFF000;
 	page_t* table = ((uint32_t*) 0xFFC00000) + (0x400 * dir_index);
 
-	if (!(dir[dir_index] & PAGE_PRESENT && create)) {
+	if (!(dir[dir_index] & PAGE_PRESENT) && create) {
 		page_t* new_table = (page_t*) pmm_alloc_page();
 		dir[dir_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW;
 		memset((void*) table, 0, 0x1000);
 	}
-	else {
-		return 0;
+
+	if (dir[dir_index] & PAGE_PRESENT) {
+		return &table[table_index];
 	}
 
-	return &table[table_index];
+	return 0;
+}
+
+// TODO: refuse 4 MiB pages
+void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
+	page_t* page = paging_get_page(virt, true);
+
+	if (*page & PAGE_PRESENT) {
+		printf("[VMM] Tried to map an already mapped virtual address 0x%X to 0x%X\n",
+			virt, phys);
+		abort();
+	}
+
+	*page = phys | PAGE_PRESENT | (flags & PAGE_FLAGS);
+	paging_invalidate_page(virt);
 }
 
 void paging_unmap_page(uintptr_t virt) {
@@ -69,11 +79,17 @@ void paging_unmap_page(uintptr_t virt) {
 	}
 }
 
-void paging_map_memory(uintptr_t phys, uintptr_t virt, uint32_t size) {
-	// size / 0x1000 = number of pages to map
-	for (uint32_t i = 0; i < size / 0x1000; i++) {
-		paging_map_page(phys, virt, PAGE_RW);
+void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num) {
+	for (uint32_t i = 0; i < num; i++) {
+		paging_map_page(virt, phys, PAGE_RW);
 		phys += 0x1000;
+		virt += 0x1000;
+	}
+}
+
+void paging_unmap_pages(uintptr_t virt, uint32_t num) {
+	for (uint32_t i = 0; i < num; i++) {
+		paging_unmap_page(virt);
 		virt += 0x1000;
 	}
 }
@@ -95,13 +111,40 @@ void paging_invalidate_page(uintptr_t virt) {
 
 void paging_fault_handler(registers_t* regs) {
 	uint32_t err = regs->err_code;
+	uintptr_t cr2 = 0;
+	asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
 	printf("\x1B[37;44m");
-	printf("The page requested %s present ", err & 0x01 ? "was" : "wasn't");
+	printf("The page at 0x%X %s present ", cr2, err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 	printf("The reserved bits %s overwritten.\n", err & 0x08 ? "were" : "weren't");
 	printf("The fault %s during an instruction fetch.\n", err & 0x10 ? "occured" : "didn't occur");
 
 	abort();
+}
+
+void* paging_alloc_pages(uint32_t num) {
+	if ((uintptr_t) heap_pointer + num * 0x1000 >= 0xE0000000) {
+		return 0;
+	}
+
+	uintptr_t phys = (uintptr_t) pmm_alloc_pages(num);
+	paging_map_pages((uintptr_t) heap_pointer, phys, num);
+	void* old_pointer = heap_pointer;
+	heap_pointer += num * 0x1000;
+
+	return old_pointer;
+}
+
+int paging_free_pages(uintptr_t virt, uint32_t num) {
+	page_t* page = paging_get_page(virt, false);
+
+	if (page) {
+		pmm_free_pages(*page & PAGE_FRAME, num);
+		return 0;
+	}
+	else {
+		return 1;
+	}
 }

@@ -2,5 +2,7 @@
 *.o
 *.pyc
 *.log
+*.ini
+Session.vim
 isodir
 sysroot

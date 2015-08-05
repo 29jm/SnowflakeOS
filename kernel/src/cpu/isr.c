@@ -38,9 +38,11 @@ static char* exception_msgs[] = {
 	"Reserved",
 };
 
-static handler_t isr_handlers[32];
+static handler_t isr_handlers[256];
 
 void isr_handler(registers_t* regs) {
+	assert(regs->int_no < 256);
+
 	if (isr_handlers[regs->int_no]) {
 		handler_t handler = isr_handlers[regs->int_no];
 		handler(regs);
@@ -53,7 +55,7 @@ void isr_handler(registers_t* regs) {
 }
 
 void isr_register_handler(uint32_t num, handler_t handler) {
-	assert(num < 32);
+	assert(num < 256);
 
 	if (isr_handlers[num]) {
 		printf("Exception handler %d (%s) already registered\n", num,

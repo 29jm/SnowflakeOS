@@ -28,9 +28,6 @@ void init_pmm(multiboot* boot) {
 
 	memset(bitmap, 0xFF, max_blocks/8);
 
-	// Protect low memory, our glorious kernel and the PMM itself
-	pmm_deinit_region((uintptr_t) 0, (uint32_t) &KERNEL_END_PHYS + max_blocks/8);
-
 	uint64_t available = 0;
 	uint64_t unavailable = 0;
 
@@ -52,6 +49,9 @@ void init_pmm(multiboot* boot) {
 		// Casts needed to get around pointer increment magic
 		mmap = (mmap_t*) ((uintptr_t) mmap + mmap->size + sizeof(uintptr_t));
 	}
+
+	// Protect low memory, our glorious kernel and the PMM itself
+	pmm_deinit_region((uintptr_t) 0, (uint32_t) &KERNEL_END_PHYS + max_blocks/8);
 
 	printf("[PMM] Memory stats: available: \x1B[32m%dMiB", available >> 20);
 	printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
