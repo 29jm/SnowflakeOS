@@ -13,6 +13,7 @@ void irq_handler(registers_t* regs);
 void irq_send_eoi(uint8_t irq);
 void irq_register_handler(uint8_t irq, handler_t handler);
 void irq_remap();
+uint16_t irq_get_isr();
 uint16_t irq_getmask(uint16_t pic);
 void irq_setmask(uint16_t pic, uint16_t mask);
 void irq_mask(uint8_t irq);
@@ -36,16 +37,17 @@ void irq13();
 void irq14();
 void irq15();
 
-#define PIC1_CMD 0x20
-#define PIC1_DATA 0x21
-#define PIC1 PIC1_CMD
+#define PIC1_CMD    0x20
+#define PIC1_DATA   0x21
+#define PIC1        PIC1_CMD
 
-#define PIC2_CMD 0xA0
-#define PIC2_DATA 0xA1
-#define PIC2 PIC2_CMD
+#define PIC2_CMD    0xA0
+#define PIC2_DATA   0xA1
+#define PIC2        PIC2_CMD
 
-#define PIC_EOI 0x20
+#define PIC_EOI     0x20
 #define PIC_RESTART 0x11
+#define PIC_ISR     0x0B
 
 #define IRQ0  32
 #define IRQ1  33

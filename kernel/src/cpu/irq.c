@@ -1,12 +1,13 @@
 #include <kernel/irq.h>
 #include <kernel/idt.h>
 #include <kernel/com.h>
+
 #include <stdint.h>
 #include <string.h>
-
+#include <assert.h>
 #include <stdio.h>
 
-static handler_t irq_handlers[256];
+static handler_t irq_handlers[16];
 
 void init_irq() {
 	irq_remap();
@@ -30,14 +31,35 @@ void init_irq() {
 }
 
 void irq_handler(registers_t* regs) {
-	irq_send_eoi(regs->int_no);
+	uint32_t irq = regs->int_no;
 
-	if (irq_handlers[regs->int_no]) {
-		handler_t handler = irq_handlers[regs->int_no];
+	assert(irq <= IRQ15);
+
+	// Handle spurious interrupts
+	if (irq == IRQ7 || irq == IRQ15) {
+		uint16_t isr = irq_get_isr();
+
+		// If it's a real interrupt, the corresponding bit will be set in the ISR
+		// Else, it was probably caused by a solar flare, so do not send EOI
+		// If faulty IRQ was sent from the slave PIC, still send EOI to the master
+		if (!(isr & (1 << (irq - IRQ0)))) {
+			if (irq == IRQ15) {
+				irq_send_eoi(IRQ0); // Sort of hackish
+			}
+
+			return;
+		}
+	}
+
+	irq_send_eoi(irq);
+
+	handler_t handler = irq_handlers[irq - IRQ0];
+
+	if (handler) {
 		handler(regs);
 	}
 	else {
-		printf("Unhandled IRQ%d\n", regs->int_no);
+		printf("Unhandled IRQ%d\n", irq - IRQ0);
 	}
 
 	// IRQs had been disabled before this function was called
@@ -55,16 +77,14 @@ void irq_send_eoi(uint8_t irq) {
 }
 
 void irq_register_handler(uint8_t irq, handler_t handler) {
-	CLI();
+	assert(irq >= IRQ0 && irq <= IRQ15);
 
-	if (!irq_handlers[irq]) {
-		irq_handlers[irq] = handler;
+	if (!irq_handlers[irq - IRQ0]) {
+		irq_handlers[irq - IRQ0] = handler;
 	}
 	else {
 		printf("IRQ %d already registered\n", irq);
 	}
-
-	STI();
 }
 
 void irq_remap() {
@@ -73,8 +93,8 @@ void irq_remap() {
 
 	// Remap the vector offset to 32, so that IRQs are called with
 	// numbers within 32-47.
-	outportb(PIC1_DATA, 32);
-	outportb(PIC2_DATA, 40);
+	outportb(PIC1_DATA, IRQ0);
+	outportb(PIC2_DATA, IRQ8);
 
 	// Setup cascading
 	outportb(PIC1_DATA, 4);
@@ -83,6 +103,13 @@ void irq_remap() {
 	// Finish the setup?
 	outportb(PIC1_DATA, 1);
 	outportb(PIC2_DATA, 1);
+}
+
+uint16_t irq_get_isr() {
+	outportb(PIC1, PIC_ISR);
+	outportb(PIC2, PIC_ISR);
+
+	return (inportb(PIC2) << 8) | inportb(PIC1);
 }
 
 uint16_t irq_getmask(uint16_t pic) {
