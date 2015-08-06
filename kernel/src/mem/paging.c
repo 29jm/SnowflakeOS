@@ -28,7 +28,7 @@ void init_paging() {
 	// TODO: do that in boot.S
 	kernel_directory[0] = 0;
 	paging_invalidate_page(0x00000000);
-	paging_map_pages(0x00000000, 0x00000000, 256);
+	paging_map_pages(0x00000000, 0x00000000, 256, PAGE_RW);
 }
 
 page_t* paging_get_page(uintptr_t virt, bool create) {
@@ -63,6 +63,7 @@ void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
 	if (*page & PAGE_PRESENT) {
 		printf("[VMM] Tried to map an already mapped virtual address 0x%X to 0x%X\n",
 			virt, phys);
+		printf("[VMM] Previous mapping: 0x%X to 0x%X\n", virt, *page & PAGE_FRAME);
 		abort();
 	}
 
@@ -79,7 +80,7 @@ void paging_unmap_page(uintptr_t virt) {
 	}
 }
 
-void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num) {
+void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num, uint32_t flags) {
 	for (uint32_t i = 0; i < num; i++) {
 		paging_map_page(virt, phys, PAGE_RW);
 		phys += 0x1000;
@@ -124,13 +125,13 @@ void paging_fault_handler(registers_t* regs) {
 	abort();
 }
 
-void* paging_alloc_pages(uint32_t num) {
+void* paging_alloc_pages(uint32_t num, uint32_t flags) {
 	if ((uintptr_t) heap_pointer + num * 0x1000 >= 0xE0000000) {
 		return 0;
 	}
 
 	uintptr_t phys = (uintptr_t) pmm_alloc_pages(num);
-	paging_map_pages((uintptr_t) heap_pointer, phys, num);
+	paging_map_pages((uintptr_t) heap_pointer, phys, num, flags);
 	void* old_pointer = heap_pointer;
 	heap_pointer += num * 0x1000;
 
@@ -144,7 +145,6 @@ int paging_free_pages(uintptr_t virt, uint32_t num) {
 		pmm_free_pages(*page & PAGE_FRAME, num);
 		return 0;
 	}
-	else {
-		return 1;
-	}
+
+	return 1;
 }

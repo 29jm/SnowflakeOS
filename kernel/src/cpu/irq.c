@@ -28,6 +28,8 @@ void init_irq() {
 	idt_set_entry(45, (uint32_t) irq13, 0x08, 0x8E);
 	idt_set_entry(46, (uint32_t) irq14, 0x08, 0x8E);
 	idt_set_entry(47, (uint32_t) irq15, 0x08, 0x8E);
+
+	STI();
 }
 
 void irq_handler(registers_t* regs) {
@@ -79,12 +81,16 @@ void irq_send_eoi(uint8_t irq) {
 void irq_register_handler(uint8_t irq, handler_t handler) {
 	assert(irq >= IRQ0 && irq <= IRQ15);
 
+	CLI();
+
 	if (!irq_handlers[irq - IRQ0]) {
 		irq_handlers[irq - IRQ0] = handler;
 	}
 	else {
 		printf("IRQ %d already registered\n", irq);
 	}
+
+	STI();
 }
 
 void irq_remap() {

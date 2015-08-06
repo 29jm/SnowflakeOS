@@ -832,7 +832,7 @@ int liballoc_unlock() {
 }
 
 void* liballoc_alloc(uint32_t num) {
-	return paging_alloc_pages(num);
+	return paging_alloc_pages(num, PAGE_RW);
 }
 
 int liballoc_free(void* virt, uint32_t num) {

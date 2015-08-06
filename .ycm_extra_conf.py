@@ -44,7 +44,8 @@ flags = [
 '-Wall',
 '-Wextra',
 '-isystem', 'kernel/include',
-'-isystem', 'libc/include'
+'-isystem', 'libc/include',
+'-include', 'stddef.h'
 ]
 
 

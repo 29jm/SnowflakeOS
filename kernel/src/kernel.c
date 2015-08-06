@@ -14,9 +14,7 @@
 #include <kernel/paging.h>
 #include <kernel/keyboard.h>
 
-extern uint32_t KERNEL_BEGIN;
 extern uint32_t KERNEL_BEGIN_PHYS;
-extern uint32_t KERNEL_END;
 extern uint32_t KERNEL_END_PHYS;
 extern uint32_t KERNEL_SIZE;
 
@@ -43,7 +41,7 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 		uint32_t ntime = (uint32_t) timer_get_time();
 		if (ntime > time) {
 			time = ntime;
-			printf("\x1B[s\x1B[24;76H"); // save & move cursor
+			printf("\x1B[s\x1B[24;75H"); // save & move cursor
 			printf("\x1B[K");            // Clear line
 			printf("%ds", time);
 			printf("\x1B[u");            // Restore cursor
