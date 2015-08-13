@@ -43,6 +43,7 @@ void init_idt() {
 	idt_set_entry(29, (uint32_t) isr29, 0x08, 0x8E);
 	idt_set_entry(30, (uint32_t) isr30, 0x08, 0x8E);
 	idt_set_entry(31, (uint32_t) isr31, 0x08, 0x8E);
+	idt_set_entry(48, (uint32_t) isr48, 0x08, 0x8E);
 
 	idt_load((uintptr_t) &idt_entry_ptr);
 }

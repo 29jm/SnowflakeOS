@@ -13,6 +13,7 @@
 #include <kernel/pmm.h>
 #include <kernel/paging.h>
 #include <kernel/keyboard.h>
+#include <kernel/syscall.h>
 
 extern uint32_t KERNEL_BEGIN_PHYS;
 extern uint32_t KERNEL_END_PHYS;
@@ -35,6 +36,7 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 	init_keyboard();
 	init_pmm(boot);
 	init_paging();
+	init_syscall();
 
 	uint32_t time = 0;
 	while (1) {

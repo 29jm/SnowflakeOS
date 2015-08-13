@@ -49,7 +49,7 @@ void isr_handler(registers_t* regs) {
 	}
 	else {
 		printf("Unhandled hardware exception %d: %s\n", regs->int_no,
-			exception_msgs[regs->int_no]);
+			regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
 		abort();
 	}
 }
