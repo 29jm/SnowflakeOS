@@ -1,11 +1,11 @@
-#include <kernel/irq.h>
-#include <kernel/idt.h>
-#include <kernel/com.h>
-
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+
+#include <kernel/irq.h>
+#include <kernel/idt.h>
+#include <kernel/com.h>
 
 static handler_t irq_handlers[16];
 

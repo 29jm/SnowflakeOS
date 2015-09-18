@@ -1,11 +1,11 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <string.h>
 #include <kernel/isr.h>
-
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
@@ -82,7 +82,7 @@ void paging_unmap_page(uintptr_t virt) {
 
 void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num, uint32_t flags) {
 	for (uint32_t i = 0; i < num; i++) {
-		paging_map_page(virt, phys, PAGE_RW);
+		paging_map_page(virt, phys, flags);
 		phys += 0x1000;
 		virt += 0x1000;
 	}

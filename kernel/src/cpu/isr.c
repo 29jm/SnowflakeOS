@@ -1,7 +1,8 @@
-#include <kernel/isr.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+
+#include <kernel/isr.h>
 
 static char* exception_msgs[] = {
 	"Division By Zero",

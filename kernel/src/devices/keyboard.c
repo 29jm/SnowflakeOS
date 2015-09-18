@@ -1,7 +1,9 @@
+#include <stdio.h>
+
 #include <kernel/keyboard.h>
 #include <kernel/irq.h>
 #include <kernel/com.h>
-#include <stdio.h>
+#include <kernel/sys.h>
 
 uint8_t keyboard_buffer[512];
 uint32_t buf_length;
@@ -25,6 +27,8 @@ void init_keyboard() {
 }
 
 void keyboard_handler(registers_t* regs) {
+	UNUSED(regs);
+
 	key_event_t key_event;
 	uint8_t scancode = inportb(KBD_DATA);
 	uint8_t sc = scancode & 0x7F;

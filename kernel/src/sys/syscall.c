@@ -1,6 +1,7 @@
+#include <stdio.h>
+
 #include <kernel/syscall.h>
 #include <kernel/isr.h>
-#include <stdio.h>
 
 static void syscall_handler(registers_t* regs);
 

@@ -1,7 +1,9 @@
+#include <stdio.h>
+
 #include <kernel/timer.h>
 #include <kernel/irq.h>
 #include <kernel/com.h>
-#include <stdio.h>
+#include <kernel/sys.h>
 
 // Globals are always initialized to 0
 static uint32_t current_tick;
@@ -17,6 +19,8 @@ void init_timer() {
 }
 
 void timer_callback(registers_t* regs) {
+	UNUSED(regs);
+
 	current_tick++;
 }
 
