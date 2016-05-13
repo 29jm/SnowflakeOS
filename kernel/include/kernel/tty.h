@@ -38,4 +38,19 @@ void term_write(const char* data, size_t size);
 void term_writestring(const char* data);
 int term_interpret_ansi(char c);
 
+// Getters and setters, used by the ANSI escape sequences interpreter
+uint32_t term_get_row();
+uint32_t term_get_column();
+uint8_t term_get_color();
+uint8_t term_get_fg_color();
+uint8_t term_get_bg_color();
+uint16_t* term_get_buffer();
+
+void term_set_row(uint32_t row);
+void term_set_column(uint32_t column);
+void term_set_color(uint8_t color);
+void term_set_fg_color(vga_color color);
+void term_set_bg_color(vga_color color);
+void term_set_buffer(uint16_t* buffer);
+
 #endif

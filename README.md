@@ -10,5 +10,7 @@ Where /dev/sdX is the device file representing an USB key. You can then boot fro
 
 # Requirements
 * An i686 cross-compiler in your path (see osdev.org's article)
+* Xorriso, found in the package `libisoburn` on Archlinux
+* The `mtools` optional dependency for grub
 * QEMU, unless you run it on real hardware
 * 2MiB of RAM (huh)
