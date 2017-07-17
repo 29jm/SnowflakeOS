@@ -5,7 +5,7 @@
 
 static void syscall_handler(registers_t* regs);
 
-sys_handler_t syscall_handlers[256];
+sys_handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
 void init_syscall() {
 	isr_register_handler(48, &syscall_handler);

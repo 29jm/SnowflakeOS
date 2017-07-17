@@ -58,6 +58,3 @@ void keyboard_handler(registers_t* regs) {
 	}
 }
 
-void keyboard_wait() {
-	while (inportb(KBD_STATUS) & (1 << 1));
-}

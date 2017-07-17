@@ -4,6 +4,8 @@
 #include <kernel/isr.h>
 #include <stdint.h>
 
+#define SYSCALL_NUM 256
+
 typedef int(*sys_handler_t)(registers_t*);
 
 void init_syscall();

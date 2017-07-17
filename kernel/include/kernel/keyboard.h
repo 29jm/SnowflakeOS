@@ -36,7 +36,6 @@ typedef struct {
 
 void init_keyboard();
 void keyboard_handler(registers_t* regs);
-void keyboard_wait();
 
 #define KEY_RELEASED (1 << 7)
 
