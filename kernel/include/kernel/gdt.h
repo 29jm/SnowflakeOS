@@ -50,7 +50,7 @@ typedef struct {
 void init_gdt();
 void gdt_set_entry(uint32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);
 void gdt_write_tss(uint32_t num, uint32_t ss0, uint32_t esp0);
-void gdt_set_kernel_stack(uint32_t stack);
+void gdt_set_kernel_stack(uintptr_t stack);
 
 extern void gdt_load(uintptr_t gdt_ptr);
 

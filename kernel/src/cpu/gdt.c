@@ -7,15 +7,7 @@
 static gdt_entry_t gdt_entries[6];
 static gdt_entry_ptr_t gdt_ptr;
 
-static tss_entry_t tss = {
-	.ss0 = 0x10, /* Kernel Data Segment */
-	.esp0 = 0,
-	.es = 0x10,  /* Kernel Data Segment */
-	.cs = 0x08,  /* Kernel Code Segment */
-	.ds = 0x13,  /* Kernel Data Segment */
-	.fs = 0x13,  /* Kernel Data Segment */
-	.gs = 0x13   /* Kernel Data Segment */
-};
+static tss_entry_t tss;
 
 void init_gdt() {
 	gdt_ptr.limit = (sizeof(gdt_entry_t)*6) - 1;
@@ -31,7 +23,8 @@ void init_gdt() {
 
 	gdt_load((uintptr_t) &gdt_ptr);
 
-	asm("mov $0x2B, %ax\n"
+	// 0x2B = 0+5*8bytes | 3 (bottom 2 bits control ring number)
+	asm("mov $0x2B, %ax\n" // Flush the TSS
 	    "ltr %ax\n");
 }
 

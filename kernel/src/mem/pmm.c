@@ -87,7 +87,7 @@ void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 	}
 }
 
-void* pmm_alloc_page() {
+uintptr_t pmm_alloc_page() {
 	if (max_blocks - used_blocks <= 0) {
 		printf("[PMM] Kernel is out of physical memory!");
 		abort();
@@ -101,10 +101,34 @@ void* pmm_alloc_page() {
 
 	mmap_set(block);
 
-	return (void*) (block*PMM_BLOCK_SIZE);
+	return (uintptr_t) (block*PMM_BLOCK_SIZE);
 }
 
-void* pmm_alloc_pages(uint32_t num) {
+/* Strategy:
+ * Find an 8 MiB section of memory. In there, we are guaranteed to find an
+ * address that is 4 MiB-aligned. Return that, mark 4 MiB as taken.
+ */
+uintptr_t pmm_alloc_aligned_large_page() { // TODO: generalize
+	if (max_blocks - used_blocks < 2*1024) { // 4MiB
+		return 0;
+	}
+
+	uint32_t free_block = mmap_find_free_frame(2*1024);
+
+	if (!free_block) {
+		return 0;
+	}
+
+	uint32_t aligned_block = ((free_block / 1024) + 1) * 1024;
+
+	for (int i = 0; i < 1024; i++) {
+		mmap_set(aligned_block + i);
+	}
+
+	return (uintptr_t)(aligned_block*PMM_BLOCK_SIZE);
+}
+
+uintptr_t pmm_alloc_pages(uint32_t num) {
 	if (max_blocks-used_blocks < num) {
 		return 0;
 	}
@@ -119,7 +143,7 @@ void* pmm_alloc_pages(uint32_t num) {
 		mmap_set(first_block+i);
 	}
 
-	return (void*) (first_block*PMM_BLOCK_SIZE);
+	return (uintptr_t) (first_block*PMM_BLOCK_SIZE);
 }
 
 void pmm_free_page(uintptr_t addr) {
@@ -170,7 +194,7 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 	uint32_t count = 0;
 
 	for (uint32_t i = 0; i < max_blocks/32; i++) {
-		if (bitmap[i]  != 0xFFFFFFFF) {
+		if (bitmap[i] != 0xFFFFFFFF) {
 			for (uint32_t j = 0; j < 32; j++) {
 				if (!(bitmap[i] & (1 << j))) {
 					if (!first) {
@@ -178,8 +202,7 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 					}
 
 					count++;
-				}
-				else {
+				} else {
 					first = 0;
 					count = 0;
 				}
@@ -188,6 +211,9 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 					return first;
 				}
 			}
+		} else {
+			first = 0;
+			count = 0;
 		}
 	}
 

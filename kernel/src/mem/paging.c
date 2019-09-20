@@ -4,8 +4,10 @@
 
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
-#include <string.h>
 #include <kernel/isr.h>
+#include <kernel/mem.h>
+
+#include <string.h>
 
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
@@ -19,18 +21,25 @@ void init_paging() {
 	isr_register_handler(14, &paging_fault_handler);
 
 	// Setup the recursive page directory entry
-	// TODO: do that in boot.S
 	uintptr_t dir_phys = VIRT_TO_PHYS((uintptr_t) &kernel_directory);
 	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
 	paging_invalidate_page(0xFFC00000);
 
-	// Identity map only the 1st MiB
+	// Identity map only the 1st MiB: in boot.S, we identity mapped the first 4 MiB
 	// TODO: do that in boot.S
 	kernel_directory[0] = 0;
 	paging_invalidate_page(0x00000000);
 	paging_map_pages(0x00000000, 0x00000000, 256, PAGE_RW);
+	current_page_directory = kernel_directory;
 }
 
+/* Given a page-aligned virtual address, returns a pointer to the corresponding
+ * page table entry. Usually, this entry is then filled with appropriate page
+ * information such as the physical address it points to, whether it is writable
+ * etc...
+ * If the `create` flag is passed, the corresponding page is created if needed
+ * and this function should never return NULL.
+ */
 page_t* paging_get_page(uintptr_t virt, bool create) {
 	if (virt % 0x1000) {
 		printf("[VMM] Tried to access a page at an unaligned address!\n");
@@ -41,19 +50,19 @@ page_t* paging_get_page(uintptr_t virt, bool create) {
 	uint32_t table_index = TABLE_INDEX(virt);
 
 	directory_entry_t* dir = (directory_entry_t*) 0xFFFFF000;
-	page_t* table = ((uint32_t*) 0xFFC00000) + (0x400 * dir_index);
+	page_t* table = (page_t*) (0xFFC00000 + (dir_index << 12));
 
 	if (!(dir[dir_index] & PAGE_PRESENT) && create) {
 		page_t* new_table = (page_t*) pmm_alloc_page();
 		dir[dir_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW;
-		memset((void*) table, 0, 0x1000);
+		memset((void*) table, 0, 4096);
 	}
 
 	if (dir[dir_index] & PAGE_PRESENT) {
 		return &table[table_index];
 	}
 
-	return 0;
+	return NULL;
 }
 
 // TODO: refuse 4 MiB pages
@@ -126,7 +135,7 @@ void paging_fault_handler(registers_t* regs) {
 }
 
 void* paging_alloc_pages(uint32_t num, uint32_t flags) {
-	if ((uintptr_t) heap_pointer + num * 0x1000 >= 0xE0000000) {
+	if ((uintptr_t) heap_pointer + num * 0x1000 >= KERNEL_HEAP_VIRT_MAX) {
 		return 0;
 	}
 
@@ -147,4 +156,13 @@ int paging_free_pages(uintptr_t virt, uint32_t num) {
 	}
 
 	return 1;
+}
+
+uintptr_t paging_virt_to_phys(uintptr_t virt) {
+	page_t* p = paging_get_page(virt & PAGE_FRAME, false);
+
+	if (!p)
+		return 0;
+
+	return (((uintptr_t)*p) & PAGE_FRAME) + (virt & 0xFFF);
 }

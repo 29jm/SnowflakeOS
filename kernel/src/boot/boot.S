@@ -34,7 +34,7 @@ stack_top:
 .global kernel_directory
 .align 0x1000
 kernel_directory:
-	.long 0x00000083
+	.long 0x00000083 # 4 MiB pages
 	.fill (KERNEL_PAGE_NUMBER - 1), 4, 0
 	.long 0x00000083
 	.fill (1024 - KERNEL_PAGE_NUMBER - 1), 4, 0
@@ -47,6 +47,7 @@ _start:
 	mov $(kernel_directory - KERNEL_VIRTUAL_BASE), %ecx
 	mov %ecx, %cr3
 
+	# Enable PSE for 4 MiB pages
 	mov %cr4, %ecx
 	or $0x00000010, %ecx
 	mov %ecx, %cr4
