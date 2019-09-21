@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "paging.h": "c",
+        "proc.h": "c",
+        "stdint.h": "c"
+    }
+}

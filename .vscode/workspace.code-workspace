@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "/home/johan/Documents/Projects/SnowflakeOS"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"paging.h": "c",
+			"proc.h": "c",
+			"stdint.h": "c",
+			"stdbool.h": "c",
+			"cstdint": "c",
+			"idt.h": "c",
+			"gdt.h": "c",
+			"isr.h": "c",
+			"irq.h": "c",
+			"com.h": "c",
+			"sys.h": "c",
+			"timer.h": "c",
+			"pmm.h": "c",
+			"multiboot.h": "c"
+		},
+		"files.exclude": {
+			"**/*.o": true
+		}
+	}
+}

@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "gdb",
+            "target": "localhost:1234",
+            "executable": "${workspaceFolder}/kernel/SnowflakeOS.kernel",
+            "request": "attach",
+            "remote": true,
+            "cwd": "${workspaceFolder}",
+            "gdbpath": "i686-elf-gdb"
+            // "args": [],
+            // "stopAtEntry": false,
+            // "environment": [],
+            // "externalConsole": false,
+        }
+    ]
+}
