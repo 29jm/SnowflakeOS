@@ -146,13 +146,25 @@ void proc_switch_process(registers_t* regs) {
 	paging_switch_directory(current_process->directory);
 
 	// Setup the stack as if we were coming from usermode because of an interrupt,
-	// then interrupt-return to usermode.
+	// then interrupt-return to usermode. We make sure to push the correct value
+	// value for %eip
 	asm volatile (
 		"push $0x23\n" // data segment selector
 		"push $0xBFFFFFFB\n" // %esp
 		"push $512\n" // %eflags: the 9th bit is supposed to allow cli/sti
 		"push $0x1B\n" // code segment selector
-		"push $0x00000000\n" // %eip
+	);
+
+	uint32_t eip_val = current_process->registers.eip;
+
+	asm volatile (
+		"mov %0, %%eax\n"
+		"push %%eax\n"
+		:                 // ouput registers
+		: "r" (eip_val)   // input registers
+		: "%eax");        // now invalid registers
+
+	asm volatile (
 		"iret\n"
 	);
 }
