@@ -44,11 +44,15 @@ void init_idt() {
 	idt_set_entry(29, (uint32_t) isr29, 0x08, 0x8E);
 	idt_set_entry(30, (uint32_t) isr30, 0x08, 0x8E);
 	idt_set_entry(31, (uint32_t) isr31, 0x08, 0x8E);
-	idt_set_entry(48, (uint32_t) isr48, 0x08, 0x8E);
+
+	// We need to set the DPL bits to 3 here, `int 48` is for syscalls
+	idt_set_entry(48, (uint32_t) isr48, 0x08, 0x8E | 0x60);
 
 	idt_load((uintptr_t) &idt_entry_ptr);
 }
 
+/* TODO: revamp that, it's unusable
+ */
 void idt_set_entry(uint8_t num, uint32_t base, uint16_t selector, uint8_t flags) {
 	idt_entries[num].base_low = base & 0xFFFF;
 	idt_entries[num].base_high = (base >> 16) & 0xFFFF;

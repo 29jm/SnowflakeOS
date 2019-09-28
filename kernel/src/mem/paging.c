@@ -33,6 +33,10 @@ void init_paging() {
 	current_page_directory = kernel_directory;
 }
 
+uintptr_t paging_get_kernel_directory() {
+	return VIRT_TO_PHYS((uintptr_t) &kernel_directory);
+}
+
 /* Given a page-aligned virtual address, returns a pointer to the corresponding
  * page table entry. Usually, this entry is then filled with appropriate page
  * information such as the physical address it points to, whether it is writable
@@ -128,6 +132,13 @@ void paging_fault_handler(registers_t* regs) {
 	printf("The page at 0x%X %s present ", cr2, err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
+
+	page_t* page = paging_get_page(cr2, false);
+
+	if (page) {
+		printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
+	}
+
 	printf("The reserved bits %s overwritten.\n", err & 0x08 ? "were" : "weren't");
 	printf("The fault %s during an instruction fetch.\n", err & 0x10 ? "occured" : "didn't occur");
 

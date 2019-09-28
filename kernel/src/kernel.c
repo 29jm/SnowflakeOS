@@ -38,14 +38,28 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 	init_pmm(boot);
 	init_paging();
 	init_syscall();
-	init_proc();
 
-	uint8_t code[] = {                // code:
-		0xb8, 0x2a, 0x00, 0x00, 0x00, //   mov $42, %eax
-		0xeb, 0xf9                    //   jmp code
+	uint8_t p1[] = {
+		0xb9, 0x2A, 0x00, 0x00, 0x00, // Sets %ecx to 42
+		0xb8, 0x00, 0x00, 0x00, 0x00,
+		// 0x66, 0x87, 0xDB, // xchgw %bx, %bx
+		0xCD, 0x30,
+		0xEB, 0xF2
 	};
 
-	proc_run_code(code, 7*sizeof(uint8_t));
+	uint8_t p2[] = {
+		0xb9, 0x45, 0x00, 0x00, 0x00, // Sets it to 69
+		0xb8, 0x00, 0x00, 0x00, 0x00,
+		0xCD, 0x30,
+		0xEB, 0xF2
+	};
+
+	proc_run_code(p1, sizeof(p1));
+	proc_run_code(p2, sizeof(p2));
+
+	proc_print_processes();
+
+	init_proc();
 
 	uint32_t time = 0;
 	while (1) {

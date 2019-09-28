@@ -1,6 +1,9 @@
 .section .text
 .align 4
 
+# Only interrupts 8, 10, 11, 12, 13, 14 and 17 push an error code, so we
+# compensate by pushing 0 for other interrupts.
+# This allows reusing the same structure for all interrupts in kernel code.
 .macro ISR_NOERR num
 	.global isr\num
 	isr\num:

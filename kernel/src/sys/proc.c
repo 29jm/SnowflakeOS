@@ -5,22 +5,14 @@
 #include <kernel/pmm.h>
 #include <kernel/gdt.h>
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 process_t* current_process;
 
 void init_proc() {
-	process_t* kernel_proc = kmalloc(sizeof(process_t));
-
-	*kernel_proc = (process_t) {
-		.next = kernel_proc,
-		.pid = 0,
-		// .directory = paging_get_kernel_directory()
-	};
-
-	current_process = NULL;
-
-	timer_register_callback(proc_timer_tic_handler);
+	proc_switch_process(NULL);
 }
 
 void proc_run_code(uint8_t* code, int len) {
@@ -47,45 +39,111 @@ void proc_run_code(uint8_t* code, int len) {
 
 	*process = (process_t) {
 		.pid = 42, // TODO: dynamic PID attribution
+		.code_len = 1024,
+		.stack_len = 1024,
 		.directory = pd_phys,
+		.registers = (registers_t) {
+			.eip = 0x00000000,
+			.esp = 0xBFFFFFFB,
+			.cs = 0x1B,
+			.ds = 0x23,
+		}
 	};
 
-	// Insert the process in the ring
+	// Insert the process in the ring, create it if empty
 	if (current_process && current_process->next) {
-		process_t* current_last = current_process->next;
-
-		while (current_last->next != current_process) {
-			current_last = current_last->next;
-		}
-
-		current_last->next = process;
-		process->next = current_process;
+		process_t* p = current_process->next;
+		current_process->next = process;
+		process->next = p;
+	} else if (!current_process) {
+		current_process = process;
+		current_process->next = current_process;
 	}
-
-	// Switch to it
-	proc_switch_process(process);
 }
 
+void proc_print_processes() {
+	process_t* p = current_process->next;
+
+	printf("Process chain: 0x%X -> ", current_process);
+
+	while (p != current_process) {
+		printf("0x%X -> ", p);
+		p = p->next;
+	}
+
+	printf("\n");
+}
+
+void proc_exit_current_process() {
+	directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
+
+	uintptr_t code_page = pd[0] & PAGE_FRAME;
+	uintptr_t stack_page = pd[767] & PAGE_FRAME;
+	uintptr_t pd_page = pd[1023] & PAGE_FRAME;
+
+	pmm_free_pages(code_page, current_process->code_len); // Large pages
+	pmm_free_pages(stack_page, current_process->stack_len);
+	pmm_free_page(pd_page);
+
+	// Remove the process from our circular list
+	process_t* next_current = current_process->next;
+
+	if (next_current == current_process) {
+		printf("[PROC] Killed last process alive\n");
+		abort();
+	}
+
+	process_t* p = next_current;
+
+	while (p->next != current_process)
+		p = p->next;
+
+	p->next = next_current;
+
+	kfree(current_process);
+	
+	// We set the current process to the one right before the one we want
+	// because `proc_switch_process` will grab current_process->next
+	current_process = p;
+
+	proc_switch_process(NULL);
+}
+
+/* Will be used to implement parallel-looking execution
+ */
 void proc_timer_tic_handler(registers_t* regs) {
 	if (!current_process || current_process->next == current_process) {
 		return;
 	}
 
-	current_process->registers = *regs;
-
 	if (current_process->next) {
-		proc_switch_process(current_process->next);
+		proc_switch_process(regs);
 	}
 }
 
-void proc_switch_process(process_t* process) {
+/* Saves the execution context of the current process, then switches execution
+ * to the next process in the list.
+ * Passing `regs = NULL` can be useful when the old process is of no interest.
+ */
+void proc_switch_process(registers_t* regs) {
+	if (regs) {
+		current_process->registers = *regs;
+	}
+
+	current_process = current_process->next;
+
+	if (!current_process) {
+		printf("[PROC] No next process in queue\n");
+		abort();
+	}
+
 	// Remember the correct kernel stack
 	uintptr_t esp0 = 0;
 	asm volatile("mov %%esp, %0\n" : "=r"(esp0));
 	gdt_set_kernel_stack(esp0);
 
 	// Switch back to the process' page directoy
-	paging_switch_directory(process->directory);
+	paging_switch_directory(current_process->directory);
 
 	// Setup the stack as if we were coming from usermode because of an interrupt,
 	// then interrupt-return to usermode.
