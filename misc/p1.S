@@ -1,3 +1,4 @@
+# Yields continuously
 loop:
 	mov $42, %ecx
 	push %ecx

@@ -13,6 +13,7 @@ static void syscall_handler(registers_t* regs);
 static void syscall_yield(registers_t* regs);
 static void syscall_exit(registers_t* regs);
 static void syscall_wait(registers_t* regs);
+static void syscall_putchar(registers_t* regs);
 
 sys_handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -22,6 +23,7 @@ void init_syscall() {
 	syscall_handlers[0] = syscall_yield;
 	syscall_handlers[1] = syscall_exit;
 	syscall_handlers[2] = syscall_wait;
+	syscall_handlers[3] = syscall_putchar;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -54,10 +56,15 @@ static void syscall_exit(registers_t* regs) {
 }
 
 static void syscall_wait(registers_t* regs) {
-	double wait_time = (double)regs->ebx;
-	double t_0 = timer_get_time();
+	// TODO
+	/* This must be implemented by the scheduler, not here:
+	 * - IRQs don't fire while in a syscall, so we can't rely on the timer
+	 *   increasing
+	 * - We can't both task switch and come back to this handler to check
+	 *   the time
+	 */
+}
 
-	while (wait_time - (timer_get_time() - t_0) > 0) {
-		// nop. We could yield, but how long would that take?
-	}
+static void syscall_putchar(registers_t* regs) {
+	putchar((char)regs->ebx);
 }

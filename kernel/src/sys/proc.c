@@ -9,7 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-process_t* current_process;
+static process_t* current_process;
+static uint32_t next_pid = 0;
 
 void init_proc() {
 	proc_switch_process(NULL);
@@ -40,11 +41,11 @@ void proc_run_code(uint8_t* code, int len) {
 	paging_unmap_page(KERNEL_HEAP_VIRT_MAX); // todo: zero stack page?
 
 	*process = (process_t) {
-		.pid = 42, // TODO: dynamic PID attribution
+		.pid = next_pid++,
 		.code_len = 1024,
 		.stack_len = 1024,
 		.directory = pd_phys,
-		.kernel_stack = kernel_stack,
+		.kernel_stack = kernel_stack, // TODO: check if regs->esp could be used
 		.registers = (registers_t) {
 			.eip = 0x00000000,
 			.useresp = 0xBFFFFFFB,
@@ -67,14 +68,14 @@ void proc_run_code(uint8_t* code, int len) {
 void proc_print_processes() {
 	process_t* p = current_process->next;
 
-	printf("Process chain: 0x%X -> ", current_process);
+	printf("Process chain: %d -> ", current_process->pid);
 
 	while (p != current_process) {
-		printf("0x%X -> ", p);
+		printf("%d -> ", p->pid);
 		p = p->next;
 	}
 
-	printf("\n");
+	printf("(loop)\n");
 }
 
 void proc_exit_current_process() {
