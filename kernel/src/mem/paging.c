@@ -6,6 +6,7 @@
 #include <kernel/pmm.h>
 #include <kernel/isr.h>
 #include <kernel/mem.h>
+#include <kernel/tty.h>
 
 #include <string.h>
 
@@ -36,6 +37,15 @@ void init_paging() {
 	uint32_t heap_pages = (KERNEL_HEAP_VIRT_MAX-KERNEL_HEAP_VIRT)/4096;
 	uintptr_t heap_phys = pmm_alloc_pages(heap_pages);
 	paging_map_pages(0xD0000000, heap_phys, heap_pages, PAGE_RW);
+
+	// Keep the TTY alive
+	uint32_t size = sizeof(uint16_t)*VGA_WIDTH*VGA_HEIGHT;
+	uint16_t* tty_buff = (uint16_t*)kamalloc(size, 0x1000);
+	// Worth a `paging_remap_page` func?
+	page_t* p = paging_get_page((uintptr_t)tty_buff, false);
+	*p = 0xB8000 | PAGE_PRESENT | PAGE_RW;
+	memcpy((void*)tty_buff, (void*)term_get_buffer(), size);
+	term_set_buffer(tty_buff);
 }
 
 uintptr_t paging_get_kernel_directory() {
@@ -174,4 +184,19 @@ void* kmalloc(uint32_t size) {
 	heap_pointer += size;
 
 	return previous_heap;
+}
+
+/* Aligned memory allocator.
+ * Returns `size` bytes of memory at an address multiple of `align`.
+ */
+void* kamalloc(uint32_t size, uint32_t align) {
+	uintptr_t next = (((uintptr_t)heap_pointer / align) + 1) * align;
+
+	if (next + size >= KERNEL_HEAP_VIRT_MAX) {
+		return NULL;
+	}
+
+	heap_pointer = (uint8_t*)(next + size);
+
+	return (uint8_t*)next;
 }

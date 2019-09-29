@@ -7,7 +7,7 @@
 int putchar(int ic)
 {
 #ifdef _KERNEL_
-	char c = (char) ic;
+	uint8_t c = (uint8_t) ic;
 	term_write(&c, sizeof(c));
 #else
 	// TODO: You need to implement a write system call.

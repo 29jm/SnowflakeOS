@@ -46,10 +46,6 @@ void init_term() {
 	ansi_init_context(&ctx);
 }
 
-void term_setcolor(vga_color fg, vga_color bg) {
-	term_color = term_make_color(fg, bg);
-}
-
 void term_change_bg_color(vga_color bg) {
 	for (uint32_t x = 0; x < VGA_WIDTH; x++) {
 		for (uint32_t y = 0; y < VGA_HEIGHT; y++) {
@@ -122,14 +118,14 @@ void term_putchar(char c) {
 	term_putchar_at(c, term_column++, term_row);
 }
 
-void term_write(const char* data, uint32_t size) {
+void term_write(const uint8_t* data, uint32_t size) {
 	for (uint32_t i = 0; i < size; i++) {
 		term_putchar(data[i]);
 	}
 }
 
-void term_write_string(const char* data) {
-	term_write(data, strlen(data));
+void term_write_string(const uint8_t* data) {
+	term_write(data, strlen((char*)data));
 }
 
 // Getters
@@ -181,4 +177,3 @@ void term_set_fg_color(vga_color color) {
 void term_set_buffer(uint16_t* buffer) {
 	term_buffer = buffer;
 }
-

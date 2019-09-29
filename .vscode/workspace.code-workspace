@@ -19,7 +19,8 @@
 			"sys.h": "c",
 			"timer.h": "c",
 			"pmm.h": "c",
-			"multiboot.h": "c"
+			"multiboot.h": "c",
+			"ansi_interpreter.h": "c"
 		},
 		"files.exclude": {
 			"**/*.o": true

@@ -27,6 +27,7 @@ void paging_free_pages(uintptr_t virt, uint32_t num);
 uintptr_t paging_virt_to_phys(uintptr_t virt);
 
 void* kmalloc(uint32_t size);
+void* kamalloc(uint32_t size, uint32_t align);
 
 /* We assume here that the kernel code data and stack as setup by our linker
  * script ends before addresses 0xD0000000, which is a fair guess, as long as

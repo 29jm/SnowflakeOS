@@ -28,14 +28,13 @@ typedef enum {
 } vga_color;
 
 void init_term();
-void term_putchar_at(char c, size_t x, size_t y);
-void term_setcolor(vga_color fg, vga_color bg);
+void term_putchar_at(char c, uint32_t x, uint32_t y);
 void term_change_bg_color(vga_color bg);
 void term_set_blink(int blink);
 void term_scrolldown();
 void term_putchar(char c);
-void term_write(const char* data, size_t size);
-void term_writestring(const char* data);
+void term_write(const uint8_t* data, uint32_t size);
+void term_write_string(const uint8_t* data);
 int term_interpret_ansi(char c);
 
 // Getters and setters, used by the ANSI escape sequences interpreter
