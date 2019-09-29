@@ -19,29 +19,32 @@ void proc_run_code(uint8_t* code, int len) {
 	// TODO: implement and use a kmalloc that returns the physical address.
 	// That way hand-mapping them wouldn't be necessary.
 	process_t* process = kmalloc(sizeof(process_t));
-	uintptr_t pd_phys = (uintptr_t)pmm_alloc_page();
+	uintptr_t pd_phys = pmm_alloc_page();
 	uintptr_t code_phys = pmm_alloc_aligned_large_page();
 	uintptr_t stack_phys = pmm_alloc_aligned_large_page();
+	// Don't forget that the stack grows backwards, hence the `+ ...`
+	uintptr_t kernel_stack = (uintptr_t)kmalloc(1024*4) + 1024*4; // This ought to be enough for any process...
 
 	// Copy the kernel page directory
-	paging_map_page(0xB0000000, pd_phys, PAGE_RW); // Temporary mapping
-	memcpy((void*)0xB0000000, (void*)0xFFFFF000, 4096);
+	paging_map_page(KERNEL_HEAP_VIRT_MAX, pd_phys, PAGE_RW); // Temporary mapping after the kernel heap
+	memcpy((void*)KERNEL_HEAP_VIRT_MAX, (void*)0xFFFFF000, 4096);
 	// Map our code and stack pages (they are 4 MiB pages)
-	directory_entry_t* pd = (directory_entry_t*)0xB0000000;
+	directory_entry_t* pd = (directory_entry_t*)KERNEL_HEAP_VIRT_MAX;
 	pd[0] = code_phys | PAGE_PRESENT | PAGE_USER | PAGE_RW | PAGE_LARGE;
 	pd[767] = stack_phys | PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_LARGE;
-	paging_unmap_page(0xB0000000); // Remove the temporary mapping
+	paging_unmap_page(KERNEL_HEAP_VIRT_MAX); // Remove the temporary mapping
 
 	// Write the given code to memory. TODO: compute number of pages to allocate
-	paging_map_page(0xB0000000, code_phys, PAGE_RW);
-	memcpy((void*)0xB0000000, code, len);
-	paging_unmap_page(0xB0000000); // todo: zero stack page?
+	paging_map_page(KERNEL_HEAP_VIRT_MAX, code_phys, PAGE_RW);
+	memcpy((void*)KERNEL_HEAP_VIRT_MAX, code, len);
+	paging_unmap_page(KERNEL_HEAP_VIRT_MAX); // todo: zero stack page?
 
 	*process = (process_t) {
 		.pid = 42, // TODO: dynamic PID attribution
 		.code_len = 1024,
 		.stack_len = 1024,
 		.directory = pd_phys,
+		.kernel_stack = kernel_stack,
 		.registers = (registers_t) {
 			.eip = 0x00000000,
 			.esp = 0xBFFFFFFB,
@@ -107,7 +110,7 @@ void proc_exit_current_process() {
 	proc_switch_process(NULL);
 }
 
-/* Will be used to implement parallel-looking execution
+/* Will be used to implement preemptive multitasking
  */
 void proc_timer_tic_handler(registers_t* regs) {
 	if (!current_process || current_process->next == current_process) {
@@ -135,10 +138,9 @@ void proc_switch_process(registers_t* regs) {
 		abort();
 	}
 
-	// Remember the correct kernel stack
-	uintptr_t esp0 = 0;
-	asm volatile("mov %%esp, %0\n" : "=r"(esp0));
-	gdt_set_kernel_stack(esp0);
+	// This sets the stack pointer that will be used when an inter-privilege
+	// interrupt happens
+	gdt_set_kernel_stack(current_process->kernel_stack);
 
 	// Switch back to the process' page directoy
 	paging_switch_directory(current_process->directory);
@@ -161,6 +163,7 @@ void proc_switch_process(registers_t* regs) {
 		:                 // ouput registers
 		: "r" (eip_val)   // input registers
 		: "%eax");        // now invalid registers
+
 
 	asm volatile (
 		"iret\n"

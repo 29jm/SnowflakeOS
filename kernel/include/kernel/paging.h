@@ -28,11 +28,18 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 
 void* kmalloc(uint32_t size);
 
+/* We assume here that the kernel code data and stack as setup by our linker
+ * script ends before addresses 0xD0000000, which is a fair guess, as long as
+ * our kernel occupies less than 255 MiB of memory.
+ * We could also use the `KERNEl_END_PHYS` linker symbol to avoid making these
+ * assumptions, and probably to gain address space, but having clear separations
+ * has advantages in debugging.
+ */
 #define KERNEL_BASE_VIRT 0xC0000000
 
-// Get ourselves ~764 Mio of heap space
+// Get ourselves ~4 MiB of heap space
 #define KERNEL_HEAP_VIRT 0xD0000000
-#define KERNEL_HEAP_VIRT_MAX 0xFFC00000 // We stop right at the recursive directory
+#define KERNEL_HEAP_VIRT_MAX 0xD0400000
 
 #define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
 #define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)

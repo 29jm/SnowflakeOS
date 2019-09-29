@@ -12,6 +12,7 @@ typedef struct _proc_t {
     uint32_t stack_len;
     uint32_t code_len;
     uintptr_t directory;
+    uintptr_t kernel_stack;
     registers_t registers;
 } process_t;
 
