@@ -47,7 +47,7 @@ void proc_run_code(uint8_t* code, int len) {
 		.kernel_stack = kernel_stack,
 		.registers = (registers_t) {
 			.eip = 0x00000000,
-			.esp = 0xBFFFFFFB,
+			.useresp = 0xBFFFFFFB,
 			.cs = 0x1B,
 			.ds = 0x23,
 		}
@@ -147,25 +147,21 @@ void proc_switch_process(registers_t* regs) {
 
 	// Setup the stack as if we were coming from usermode because of an interrupt,
 	// then interrupt-return to usermode. We make sure to push the correct value
-	// value for %eip
-	asm volatile (
-		"push $0x23\n" // data segment selector
-		"push $0xBFFFFFFB\n" // %esp
-		"push $512\n" // %eflags: the 9th bit is supposed to allow cli/sti
-		"push $0x1B\n" // code segment selector
-	);
-
+	// value for %esp and %eip
+	uint32_t esp_val = current_process->registers.useresp;
 	uint32_t eip_val = current_process->registers.eip;
 
 	asm volatile (
+		"push $0x23\n"    // user ds selector
 		"mov %0, %%eax\n"
-		"push %%eax\n"
-		:                 // ouput registers
-		: "r" (eip_val)   // input registers
-		: "%eax");        // now invalid registers
-
-
-	asm volatile (
+		"push %%eax\n"    // %esp
+		"push $512\n"     // %eflags with 9th bit set to allow calling interrupts
+		"push $0x1B\n"    // user cs selector
+		"mov %1, %%eax\n"
+		"push %%eax\n"    // %eip
 		"iret\n"
+		:                 /* read registers: none */
+		: "r" (esp_val), "r" (eip_val) /* inputs %0 and %1 stored anywhere */
+		: "%eax"          /* registers clobbered by hand in there */
 	);
 }
