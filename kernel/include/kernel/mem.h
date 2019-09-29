@@ -1,6 +1,6 @@
 #pragma once
 
-/* Just a better header name than liballoc.h to access kmalloc/kfree
+/* Just a better header name than paging.h to access kmalloc
  */
 
-#include <kernel/liballoc.h>
+#include <kernel/paging.h>

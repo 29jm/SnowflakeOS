@@ -15,7 +15,7 @@
 static directory_entry_t* current_page_directory;
 extern directory_entry_t kernel_directory[1024];
 
-static void* heap_pointer = (void*) KERNEL_HEAP_VIRT;
+static uint8_t* heap_pointer = (uint8_t*) KERNEL_HEAP_VIRT;
 
 void init_paging() {
 	isr_register_handler(14, &paging_fault_handler);
@@ -31,6 +31,11 @@ void init_paging() {
 	paging_invalidate_page(0x00000000);
 	paging_map_pages(0x00000000, 0x00000000, 256, PAGE_RW);
 	current_page_directory = kernel_directory;
+
+	// Map the kernel heap
+	uint32_t heap_pages = (KERNEL_HEAP_VIRT_MAX-KERNEL_HEAP_VIRT)/4096;
+	uintptr_t heap_phys = pmm_alloc_pages(heap_pages);
+	paging_map_pages(0xD0000000, heap_phys, heap_pages, PAGE_RW);
 }
 
 uintptr_t paging_get_kernel_directory() {
@@ -145,30 +150,6 @@ void paging_fault_handler(registers_t* regs) {
 	abort();
 }
 
-void* paging_alloc_pages(uint32_t num, uint32_t flags) {
-	if ((uintptr_t) heap_pointer + num * 0x1000 >= KERNEL_HEAP_VIRT_MAX) {
-		return 0;
-	}
-
-	uintptr_t phys = (uintptr_t) pmm_alloc_pages(num);
-	paging_map_pages((uintptr_t) heap_pointer, phys, num, flags);
-	void* old_pointer = heap_pointer;
-	heap_pointer += num * 0x1000;
-
-	return old_pointer;
-}
-
-int paging_free_pages(uintptr_t virt, uint32_t num) {
-	page_t* page = paging_get_page(virt, false);
-
-	if (page) {
-		pmm_free_pages(*page & PAGE_FRAME, num);
-		return 0;
-	}
-
-	return 1;
-}
-
 uintptr_t paging_virt_to_phys(uintptr_t virt) {
 	page_t* p = paging_get_page(virt & PAGE_FRAME, false);
 
@@ -176,4 +157,21 @@ uintptr_t paging_virt_to_phys(uintptr_t virt) {
 		return 0;
 
 	return (((uintptr_t)*p) & PAGE_FRAME) + (virt & 0xFFF);
+}
+
+/* Used to allocate memory for use by the kernel.
+ * The memory is pre-mapped, which means clones of the kernel page directory
+ * (i.e processes) share their kernel memory in kernel mode, for instance
+ * during syscalls.
+ * There's no corresponding kfree. What the kernel takes, the kernel keeps.
+ */
+void* kmalloc(uint32_t size) {
+	if ((uintptr_t)heap_pointer + size >= KERNEL_HEAP_VIRT_MAX) {
+		return NULL;
+	}
+
+	uint8_t* previous_heap = heap_pointer;
+	heap_pointer += size;
+
+	return previous_heap;
 }

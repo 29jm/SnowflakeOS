@@ -100,8 +100,6 @@ void proc_exit_current_process() {
 
 	p->next = next_current;
 
-	kfree(current_process);
-	
 	// We set the current process to the one right before the one we want
 	// because `proc_switch_process` will grab current_process->next
 	current_process = p;
