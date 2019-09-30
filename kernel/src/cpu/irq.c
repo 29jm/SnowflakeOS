@@ -61,7 +61,7 @@ void irq_handler(registers_t* regs) {
 		handler(regs);
 	}
 	else {
-		printf("Unhandled IRQ%d\n", irq - IRQ0);
+		printf("[IRQ] Unhandled IRQ%d\n", irq - IRQ0);
 	}
 
 	// IRQs had been disabled before this function was called

@@ -19,7 +19,7 @@ typedef struct _proc_t {
 void init_proc();
 void proc_run_code(uint8_t* code, int len);
 void proc_print_processes();
-void proc_timer_tic_handler(registers_t* regs);
+void proc_timer_callback(registers_t* regs);
 void proc_switch_process(registers_t* regs);
 void proc_exit_current_process();
 

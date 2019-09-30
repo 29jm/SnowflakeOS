@@ -43,7 +43,7 @@ void init_paging() {
 	uint16_t* tty_buff = (uint16_t*)kamalloc(size, 0x1000);
 	// Worth a `paging_remap_page` func?
 	page_t* p = paging_get_page((uintptr_t)tty_buff, false);
-	*p = 0xB8000 | PAGE_PRESENT | PAGE_RW;
+	*p = VGA_MEMORY | PAGE_PRESENT | PAGE_RW;
 	memcpy((void*)tty_buff, (void*)term_get_buffer(), size);
 	term_set_buffer(tty_buff);
 }

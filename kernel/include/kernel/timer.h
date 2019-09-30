@@ -9,8 +9,7 @@ uint32_t timer_get_tick();
 double timer_get_time();
 void timer_register_callback(handler_t handler);
 
-#define TIMER_IRQ IRQ0
-#define TIMER_FREQ 1000 // in Hz
+#define TIMER_FREQ 10 // in Hz
 #define TIMER_QUOTIENT 1193180
 
 #define PIT_0 0x40

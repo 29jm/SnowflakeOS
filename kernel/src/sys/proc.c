@@ -10,9 +10,11 @@
 #include <string.h>
 
 static process_t* current_process;
-static uint32_t next_pid = 0;
+static uint32_t next_pid = 1;
 
 void init_proc() {
+	timer_register_callback(&proc_timer_callback);
+
 	proc_switch_process(NULL);
 }
 
@@ -68,7 +70,7 @@ void proc_run_code(uint8_t* code, int len) {
 void proc_print_processes() {
 	process_t* p = current_process->next;
 
-	printf("Process chain: %d -> ", current_process->pid);
+	printf("[PROC] Process chain: %d -> ", current_process->pid);
 
 	while (p != current_process) {
 		printf("%d -> ", p->pid);
@@ -79,6 +81,8 @@ void proc_print_processes() {
 }
 
 void proc_exit_current_process() {
+	printf("[PROC] Terminating process %d\n", current_process->pid);
+
 	directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
 
 	uintptr_t code_page = pd[0] & PAGE_FRAME;
@@ -111,9 +115,9 @@ void proc_exit_current_process() {
 	proc_switch_process(NULL);
 }
 
-/* Will be used to implement preemptive multitasking
+/* Switches process on clock tick.
  */
-void proc_timer_tic_handler(registers_t* regs) {
+void proc_timer_callback(registers_t* regs) {
 	if (!current_process || current_process->next == current_process) {
 		return;
 	}
@@ -123,8 +127,8 @@ void proc_timer_tic_handler(registers_t* regs) {
 	}
 }
 
-/* Saves the execution context of the current process, then switches execution
- * to the next process in the list.
+/* Saves the execution context `regs` of the current process, then switches
+ * execution to the next process in the list.
  * Passing `regs = NULL` can be useful when the old process is of no interest.
  */
 void proc_switch_process(registers_t* regs) {
@@ -138,6 +142,12 @@ void proc_switch_process(registers_t* regs) {
 		printf("[PROC] No next process in queue\n");
 		abort();
 	}
+
+	// Print the current PID in the bottom right of the screen
+	printf("\x1B[s\x1B[24;78H");
+	printf("\x1B[K");
+	printf("%d", current_process->pid);
+	printf("\x1B[u");
 
 	// This sets the stack pointer that will be used when an inter-privilege
 	// interrupt happens
@@ -156,7 +166,7 @@ void proc_switch_process(registers_t* regs) {
 		"push $0x23\n"    // user ds selector
 		"mov %0, %%eax\n"
 		"push %%eax\n"    // %esp
-		"push $512\n"     // %eflags with 9th bit set to allow calling interrupts
+		"push $512\n"     // %eflags with `IF` bit set, equivalent to calling `sti`
 		"push $0x1B\n"    // user cs selector
 		"mov %1, %%eax\n"
 		"push %%eax\n"    // %eip

@@ -1,4 +1,4 @@
 set -e
 . ./iso.sh
 
-bochs -q
+bochs -q -rc .bochsrc_cmds

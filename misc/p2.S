@@ -1,11 +1,8 @@
-# Yields a few times then exits
-	xchgw %bx, %bx
-	mov $69, %ecx
+# Loops
 loop:
-	mov $0, %eax
-	int $0x30
-	dec %ecx
-	test %ecx,%ecx
-	jnz loop
+	mov $69, %ecx
+	# mov $0, %eax
+	# int $0x30
+	jmp loop
 	mov $1, %eax
 	int $48 # exit

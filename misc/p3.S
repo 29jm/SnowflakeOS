@@ -30,6 +30,7 @@ main:
 	mov $10, %ebx # \n
 	int $0x30
 
+	# wait for 10 secs
 	mov $2, %eax
 	mov $10, %ebx
 	int $0x30
