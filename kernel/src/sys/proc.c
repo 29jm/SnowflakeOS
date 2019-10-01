@@ -18,34 +18,57 @@ void init_proc() {
 	proc_switch_process(NULL);
 }
 
-void proc_run_code(uint8_t* code, int len) {
-	// TODO: implement and use a kmalloc that returns the physical address.
-	// That way hand-mapping them wouldn't be necessary.
+/* Creates a process running the code specified at `code` in raw instructions
+ * and add it to the process queue, after the currently executing process.
+ */
+void proc_run_code(uint8_t* code, uint32_t len) {
+	uint32_t num_code_pages = len / 4096 + 1;
+	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
+
 	process_t* process = kmalloc(sizeof(process_t));
+	uintptr_t kernel_stack = (uintptr_t) kmalloc(4096) + 4096 - 1;
 	uintptr_t pd_phys = pmm_alloc_page();
-	uintptr_t code_phys = pmm_alloc_aligned_large_page();
-	uintptr_t stack_phys = pmm_alloc_aligned_large_page();
-	// Don't forget that the stack grows backwards, hence the `+ ...`
-	uintptr_t kernel_stack = (uintptr_t)kmalloc(1024*4) + 1024*4; // This ought to be enough for any process...
 
-	// Copy the kernel page directory
-	paging_map_page(KERNEL_HEAP_VIRT_MAX, pd_phys, PAGE_RW); // Temporary mapping after the kernel heap
-	memcpy((void*)KERNEL_HEAP_VIRT_MAX, (void*)0xFFFFF000, 4096);
-	// Map our code and stack pages (they are 4 MiB pages)
-	directory_entry_t* pd = (directory_entry_t*)KERNEL_HEAP_VIRT_MAX;
-	pd[0] = code_phys | PAGE_PRESENT | PAGE_USER | PAGE_RW | PAGE_LARGE;
-	pd[767] = stack_phys | PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_LARGE;
-	paging_unmap_page(KERNEL_HEAP_VIRT_MAX); // Remove the temporary mapping
+	// Copy the kernel page directory with a temporary mapping after the heap
+	paging_map_page(KERNEL_HEAP_VIRT_MAX, pd_phys, PAGE_RW);
+	memcpy((void*) KERNEL_HEAP_VIRT_MAX, (void*) 0xFFFFF000, 4096);
+	directory_entry_t* pd = (directory_entry_t*) KERNEL_HEAP_VIRT_MAX;
+	pd[1023] = pd_phys | PAGE_PRESENT | PAGE_RW;
 
-	// Write the given code to memory. TODO: compute number of pages to allocate
-	paging_map_page(KERNEL_HEAP_VIRT_MAX, code_phys, PAGE_RW);
-	memcpy((void*)KERNEL_HEAP_VIRT_MAX, code, len);
-	paging_unmap_page(KERNEL_HEAP_VIRT_MAX); // todo: zero stack page?
+	for (uint32_t i = 0; i < (KERNEL_BASE_VIRT >> 22); i++) {
+		pd[i] = 0; // Unmap everything below the kernel
+	}
+
+	paging_unmap_page(KERNEL_HEAP_VIRT_MAX);
+
+	// We can now switch to that directory to modify it easily
+	uintptr_t previous_pd = *paging_get_page(0xFFFFF000, false, 0) & PAGE_FRAME;
+	paging_switch_directory(pd_phys);
+
+	// Map the code and copy it to physical pages
+	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
+	paging_map_pages(0x00000000, code_phys, num_code_pages,
+	    PAGE_USER | PAGE_RW);
+	memcpy((void*) 0x00000000, (void*) code, len);
+
+	// Remove RW flag on code pages
+	for (uint32_t i = 0; i < num_code_pages; i++) {
+		page_t* p = paging_get_page(0x00000000 + i*4096, false, 0);
+		*p &= ~PAGE_RW;
+	}
+
+	// Map the stack
+	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
+	paging_map_pages(0xC0000000 - 4096*num_stack_pages, stack_phys,
+	    num_stack_pages, PAGE_USER | PAGE_RW);
+
+	// Switch to the original page directory
+	paging_switch_directory(previous_pd);
 
 	*process = (process_t) {
 		.pid = next_pid++,
-		.code_len = 1024,
-		.stack_len = 1024,
+		.code_len = num_code_pages,
+		.stack_len = num_stack_pages,
 		.directory = pd_phys,
 		.kernel_stack = kernel_stack, // TODO: check if regs->esp could be used
 		.registers = (registers_t) {
@@ -67,6 +90,9 @@ void proc_run_code(uint8_t* code, int len) {
 	}
 }
 
+/* Prints the processes currently in the queue in execution order.
+ * The second-printed process is the one currently executing.
+ */
 void proc_print_processes() {
 	process_t* p = current_process->next;
 
@@ -80,6 +106,9 @@ void proc_print_processes() {
 	printf("(loop)\n");
 }
 
+/* Terminates the currently executing process.
+ * Implements the `exit` system call.
+ */
 void proc_exit_current_process() {
 	printf("[PROC] Terminating process %d\n", current_process->pid);
 

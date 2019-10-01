@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#define PROC_KERNEL_STACK_PAGES 10 // In pages
+
 typedef struct _proc_t {
     struct _proc_t* next;
     uint32_t pid;
@@ -17,7 +19,7 @@ typedef struct _proc_t {
 } process_t;
 
 void init_proc();
-void proc_run_code(uint8_t* code, int len);
+void proc_run_code(uint8_t* code, uint32_t len);
 void proc_print_processes();
 void proc_timer_callback(registers_t* regs);
 void proc_switch_process(registers_t* regs);
