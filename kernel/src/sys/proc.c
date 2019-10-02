@@ -35,6 +35,7 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	directory_entry_t* pd = (directory_entry_t*) KERNEL_HEAP_VIRT_MAX;
 	pd[1023] = pd_phys | PAGE_PRESENT | PAGE_RW;
 
+	// ">> 22" grabs the address's index in the page directory, see `paging.c`
 	for (uint32_t i = 0; i < (KERNEL_BASE_VIRT >> 22); i++) {
 		pd[i] = 0; // Unmap everything below the kernel
 	}
@@ -51,7 +52,7 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	    PAGE_USER | PAGE_RW);
 	memcpy((void*) 0x00000000, (void*) code, len);
 
-	// Remove RW flag on code pages
+	// Remove write flag on code pages
 	for (uint32_t i = 0; i < num_code_pages; i++) {
 		page_t* p = paging_get_page(0x00000000 + i*4096, false, 0);
 		*p &= ~PAGE_RW;
@@ -73,7 +74,7 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		.kernel_stack = kernel_stack, // TODO: check if regs->esp could be used
 		.registers = (registers_t) {
 			.eip = 0x00000000,
-			.useresp = 0xBFFFFFFB,
+			.esp = 0xBFFFFFFB,
 			.cs = 0x1B,
 			.ds = 0x23,
 		}
@@ -188,20 +189,24 @@ void proc_switch_process(registers_t* regs) {
 	// Setup the stack as if we were coming from usermode because of an interrupt,
 	// then interrupt-return to usermode. We make sure to push the correct value
 	// value for %esp and %eip
-	uint32_t esp_val = current_process->registers.useresp;
-	uint32_t eip_val = current_process->registers.eip;
+	uint32_t esp = current_process->registers.esp;
+	uint32_t eip = current_process->registers.eip;
+	uint32_t eflags = current_process->registers.eflags;
 
 	asm volatile (
 		"push $0x23\n"    // user ds selector
-		"mov %0, %%eax\n"
+		"mov %[esp], %%eax\n"
 		"push %%eax\n"    // %esp
-		"push $512\n"     // %eflags with `IF` bit set, equivalent to calling `sti`
+		"mov %[eflags], %%eax\n"
+		"or $512, %%eax\n"
+		"push %%eax\n"    // %eflags with `IF` bit set, equivalent to calling `sti`
 		"push $0x1B\n"    // user cs selector
-		"mov %1, %%eax\n"
+		"mov %[eip], %%eax\n"
 		"push %%eax\n"    // %eip
+
 		"iret\n"
-		:                 /* read registers: none */
-		: "r" (esp_val), "r" (eip_val) /* inputs %0 and %1 stored anywhere */
-		: "%eax"          /* registers clobbered by hand in there */
+		: // [name] "mode" (var), where "r" is in register, "m" from memory
+		: [esp] "r" (esp), [eflags] "r" (eflags), [eip] "r" (eip)
+		: "%eax"
 	);
 }

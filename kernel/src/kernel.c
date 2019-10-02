@@ -32,6 +32,7 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 
 	init_gdt();
 	init_idt();
+	init_isr();
 	init_irq();
 	init_timer();
 	init_keyboard();

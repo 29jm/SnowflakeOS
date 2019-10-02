@@ -3,6 +3,8 @@
 *.pyc
 *.log
 *.ini
+*.bin
+*.out
 Session.vim
 isodir
 sysroot

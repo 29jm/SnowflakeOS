@@ -4,7 +4,6 @@
 .macro IRQ num remap
 	.global irq\num
 	irq\num:
-		cli
 		push $0
 		push $\remap
 		jmp irq_common_handler
@@ -32,7 +31,6 @@ IRQ 15, 47
 
 irq_common_handler:
 	pusha
-
 	push %ds
 	push %es
 	push %fs
@@ -53,7 +51,8 @@ irq_common_handler:
 	pop %fs
 	pop %es
 	pop %ds
-
 	popa
+
 	add $8, %esp
+
 	iret

@@ -9,33 +9,41 @@
 
 static handler_t irq_handlers[16];
 
+/* This file is responsible for handling hardware interrupts, IRQs.
+ */
+
+/* Points IDT entries 32 to 47 to our IRQ handlers.
+ * Those are defined in `irq.S`, and are responsible for calling `irq_handler`
+ * below.
+ */
 void init_irq() {
 	irq_remap();
 
-	idt_set_entry(32, (uint32_t) irq0, 0x08, 0x8E);
-	idt_set_entry(33, (uint32_t) irq1, 0x08, 0x8E);
-	idt_set_entry(34, (uint32_t) irq2, 0x08, 0x8E);
-	idt_set_entry(35, (uint32_t) irq3, 0x08, 0x8E);
-	idt_set_entry(36, (uint32_t) irq4, 0x08, 0x8E);
-	idt_set_entry(37, (uint32_t) irq5, 0x08, 0x8E);
-	idt_set_entry(38, (uint32_t) irq6, 0x08, 0x8E);
-	idt_set_entry(39, (uint32_t) irq7, 0x08, 0x8E);
-	idt_set_entry(40, (uint32_t) irq8, 0x08, 0x8E);
-	idt_set_entry(41, (uint32_t) irq9, 0x08, 0x8E);
-	idt_set_entry(42, (uint32_t) irq10, 0x08, 0x8E);
-	idt_set_entry(43, (uint32_t) irq11, 0x08, 0x8E);
-	idt_set_entry(44, (uint32_t) irq12, 0x08, 0x8E);
-	idt_set_entry(45, (uint32_t) irq13, 0x08, 0x8E);
-	idt_set_entry(46, (uint32_t) irq14, 0x08, 0x8E);
-	idt_set_entry(47, (uint32_t) irq15, 0x08, 0x8E);
+	// 0x08 is the GDT selector for the kernel code segment
+	idt_set_entry(32, (uint32_t) irq0, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(33, (uint32_t) irq1, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(34, (uint32_t) irq2, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(35, (uint32_t) irq3, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(36, (uint32_t) irq4, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(37, (uint32_t) irq5, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(38, (uint32_t) irq6, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(39, (uint32_t) irq7, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(40, (uint32_t) irq8, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(41, (uint32_t) irq9, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(42, (uint32_t) irq10, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(43, (uint32_t) irq11, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(44, (uint32_t) irq12, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(45, (uint32_t) irq13, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(46, (uint32_t) irq14, 0x08, IDT_INT_KERNEL);
+	idt_set_entry(47, (uint32_t) irq15, 0x08, IDT_INT_KERNEL);
 
 	STI();
 }
 
+/* Calls the handler associated with calling IRQ, if any.
+ */
 void irq_handler(registers_t* regs) {
 	uint32_t irq = regs->int_no;
-
-	assert(irq <= IRQ15);
 
 	// Handle spurious interrupts
 	if (irq == IRQ7 || irq == IRQ15) {
