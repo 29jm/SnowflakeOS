@@ -2,8 +2,11 @@
 #define ASSERT_H
 
 #ifdef NDEBUG
+
 #define assert(expr)
+
 #else
+
 #include <stdio.h>
 #include <stdlib.h>
 #define STR(x) #x
@@ -14,6 +17,7 @@
 			abort(); \
 		} \
 	} while (0)
+
 #endif
 
 #endif

@@ -8,7 +8,7 @@
 static void print(const char* data, size_t data_length)
 {
 	for (size_t i = 0; i < data_length; i++)
-		putchar((int) ((const unsigned char*) data)[i]);
+		putchar((int) data[i]);
 }
 
 int printf(const char* restrict format, ...)

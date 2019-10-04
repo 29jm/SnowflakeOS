@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include <kernel/tty.h>
+#include <kernel/term.h>
 #include <kernel/multiboot.h>
 #include <kernel/gdt.h>
 #include <kernel/idt.h>

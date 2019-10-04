@@ -2,8 +2,7 @@
 .align 4
 
 .global proc_switch_process
-proc_switch_process: # void proc_switch_process(void);
-    # xchgw %bx, %bx
+proc_switch_process: # void proc_switch_process();
     # Save register state
     push %ebx
     push %esi
@@ -18,9 +17,9 @@ proc_switch_process: # void proc_switch_process(void);
     mov (%eax), %eax
     mov %eax, current_process
 
-    # Set esp0 to the next process's kstack in the TSS
+    # Set esp0 to the next process's kernel stack in the TSS
     push %eax
-    push 20(%eax) # kstack
+    push 20(%eax) # kernel_stack
     call gdt_set_kernel_stack
     add $4, %esp
     pop %eax

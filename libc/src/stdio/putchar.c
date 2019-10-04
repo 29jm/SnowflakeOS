@@ -1,16 +1,20 @@
 #include <stdio.h>
 
 #ifdef _KERNEL_
-#include <kernel/tty.h>
+#include <kernel/term.h>
 #endif
 
-int putchar(int ic)
-{
+int putchar(int c) {
 #ifdef _KERNEL_
-	uint8_t c = (uint8_t) ic;
-	term_write(&c, sizeof(c));
+	term_putchar(c);
 #else
-	// TODO: You need to implement a write system call.
+	asm (
+		"mov %[c], %%eax\n"
+		"int $0x30\n"
+		:
+		: [c] "r" (c)
+		: "%eax"
+	);
 #endif
-	return ic;
+	return c;
 }

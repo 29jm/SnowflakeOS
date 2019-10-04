@@ -1,4 +1,5 @@
 #include <kernel/proc.h>
+#include <kernel/sys.h>
 #include <kernel/mem.h>
 #include <kernel/timer.h>
 #include <kernel/paging.h>
@@ -87,6 +88,7 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		current_process->next = current_process;
 	}
 
+	// We use this label as the return address from `proc_switch_process`
 	uint32_t* jmp = &irq_handler_end;
 
 	// Setup the process's kernel stack as if it had already been interrupted
@@ -187,6 +189,8 @@ void proc_exit_current_process() {
 /* Switches process on clock tick.
  */
 void proc_timer_callback(registers_t* regs) {
+	UNUSED(regs);
+
 	if (current_process->next == current_process) {
 		return;
 	}

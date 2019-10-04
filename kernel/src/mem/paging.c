@@ -7,7 +7,7 @@
 #include <kernel/pmm.h>
 #include <kernel/isr.h>
 #include <kernel/mem.h>
-#include <kernel/tty.h>
+#include <kernel/term.h>
 #include <kernel/proc.h>
 
 #define DIRECTORY_INDEX(x) ((x) >> 22)
@@ -39,11 +39,11 @@ void init_paging() {
 	paging_map_pages(0xD0000000, heap_phys, heap_pages, PAGE_RW);
 
 	// Keep the TTY alive
-	uint32_t size = sizeof(uint16_t)*VGA_WIDTH*VGA_HEIGHT;
+	uint32_t size = sizeof(uint16_t)*TERM_WIDTH*TERM_HEIGHT;
 	uint16_t* tty_buff = (uint16_t*)kamalloc(size, 0x1000);
 	// Worth a `paging_remap_page` func?
 	page_t* p = paging_get_page((uintptr_t)tty_buff, false, 0);
-	*p = VGA_MEMORY | PAGE_PRESENT | PAGE_RW;
+	*p = TERM_MEMORY | PAGE_PRESENT | PAGE_RW;
 	term_set_buffer(tty_buff);
 }
 
@@ -129,9 +129,10 @@ void paging_switch_directory(uintptr_t dir_phys) {
 }
 
 void paging_invalidate_cache() {
-	asm volatile(
+	asm (
 		"mov %cr3, %eax\n"
-		"mov %eax, %cr3\n");
+		"mov %eax, %cr3\n"
+	);
 }
 
 void paging_invalidate_page(uintptr_t virt) {
@@ -171,6 +172,9 @@ void paging_fault_handler(registers_t* regs) {
 	}
 }
 
+/* Rerturns the current physical mapping of `virt` if it exists, zero
+ * otherwise.
+ */
 uintptr_t paging_virt_to_phys(uintptr_t virt) {
 	page_t* p = paging_get_page(virt & PAGE_FRAME, false, 0);
 
@@ -187,14 +191,9 @@ uintptr_t paging_virt_to_phys(uintptr_t virt) {
  * There's no corresponding kfree. What the kernel takes, the kernel keeps.
  */
 void* kmalloc(uint32_t size) {
-	if ((uintptr_t)heap_pointer + size >= KERNEL_HEAP_VIRT_MAX) {
-		return NULL;
-	}
-
-	uint8_t* previous_heap = heap_pointer;
-	heap_pointer += size;
-
-	return previous_heap;
+	// Accessing basic datatypes at unaligned addresses is apparently undefined
+	// behavior. Four-bytes alignement should be enough for most things.
+	return kamalloc(size, 4);
 }
 
 /* Aligned memory allocator.

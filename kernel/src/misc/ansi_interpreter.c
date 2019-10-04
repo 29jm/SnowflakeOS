@@ -2,7 +2,7 @@
 #include <ctype.h>
 
 #include <kernel/ansi_interpreter.h>
-#include <kernel/tty.h>
+#include <kernel/term.h>
 
 void ansi_init_context(ansi_interpreter_context* ctx) {
 	ctx->state = NORMAL;
@@ -12,8 +12,10 @@ void ansi_init_context(ansi_interpreter_context* ctx) {
 	ctx->saved_col = 0;
 }
 
-// Returns != 0 if in an ANSI sequence
-// ANSI escape sequence: \x1B[param;param2...end_char
+/* Returns a non-zero value if the given `ctx` is still in an ANSI sequence
+ * after printing `c`.
+ * ANSI escape sequence: \x1B[param;param2...end_char
+ */
 int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
 	if (ctx->state == NORMAL) {
 		if (c == 0x1B) { // Escape character
@@ -64,7 +66,7 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
 					ctx->state = NORMAL;
 					break;
 				case 'K': // Erase until the end of line
-					for (uint32_t x = term_get_column(); x < VGA_WIDTH; x++) {
+					for (uint32_t x = term_get_column(); x < TERM_WIDTH; x++) {
 						term_putchar_at(' ', x, term_get_row());
 					}
 					ctx->state = NORMAL;
@@ -103,37 +105,37 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
 						case 5:
 							term_set_blink(1); break;
 						case 30:
-							term_set_fg_color(COLOR_BLACK); break;
+							term_set_fg_color(TERM_COLOR_BLACK); break;
 						case 31:
-							term_set_fg_color(COLOR_RED); break;
+							term_set_fg_color(TERM_COLOR_RED); break;
 						case 32:
-							term_set_fg_color(COLOR_GREEN); break;
+							term_set_fg_color(TERM_COLOR_GREEN); break;
 						case 33: // Yellow
-							term_set_fg_color(COLOR_BROWN); break;
+							term_set_fg_color(TERM_COLOR_BROWN); break;
 						case 34:
-							term_set_fg_color(COLOR_BLUE); break;
+							term_set_fg_color(TERM_COLOR_BLUE); break;
 						case 35:
-							term_set_fg_color(COLOR_MAGENTA); break;
+							term_set_fg_color(TERM_COLOR_MAGENTA); break;
 						case 36:
-							term_set_fg_color(COLOR_CYAN); break;
+							term_set_fg_color(TERM_COLOR_CYAN); break;
 						case 37:
-							term_set_fg_color(COLOR_WHITE); break;
+							term_set_fg_color(TERM_COLOR_WHITE); break;
 						case 40:
-							term_set_bg_color(COLOR_BLACK); break;
+							term_set_bg_color(TERM_COLOR_BLACK); break;
 						case 41:
-							term_set_bg_color(COLOR_RED); break;
+							term_set_bg_color(TERM_COLOR_RED); break;
 						case 42:
-							term_set_bg_color(COLOR_GREEN); break;
+							term_set_bg_color(TERM_COLOR_GREEN); break;
 						case 43: // Yellow
-							term_set_bg_color(COLOR_BROWN); break;
+							term_set_bg_color(TERM_COLOR_BROWN); break;
 						case 44:
-							term_set_bg_color(COLOR_BLUE); break;
+							term_set_bg_color(TERM_COLOR_BLUE); break;
 						case 45:
-							term_set_bg_color(COLOR_MAGENTA); break;
+							term_set_bg_color(TERM_COLOR_MAGENTA); break;
 						case 46:
-							term_set_bg_color(COLOR_CYAN); break;
+							term_set_bg_color(TERM_COLOR_CYAN); break;
 						case 47: // White
-							term_set_bg_color(COLOR_LIGHT_GREY); break;
+							term_set_bg_color(TERM_COLOR_LIGHT_GREY); break;
 					}
 				}
 			}

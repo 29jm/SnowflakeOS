@@ -44,16 +44,21 @@ static void syscall_handler(registers_t* regs) {
  */
 
 static void syscall_yield(registers_t* regs) {
+	UNUSED(regs);
+
 	proc_switch_process();
 }
 
 static void syscall_exit(registers_t* regs) {
 	UNUSED(regs);
 
+	// TODO: exit status?
 	proc_exit_current_process();
 }
 
 static void syscall_wait(registers_t* regs) {
+	UNUSED(regs);
+
 	// TODO
 	/* This must be implemented by the scheduler, not here:
 	 * - IRQs don't fire while in a syscall, so we can't rely on the timer

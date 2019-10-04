@@ -12,7 +12,7 @@ int atoi(const char* s) {
 	switch (*s) {
 		case '-':
 			neg = 1;
-			/* Fallthrough is intentional here */
+			// fall through
 		case '+':
 			s++;
 	}
