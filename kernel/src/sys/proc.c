@@ -9,13 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-static process_t* current_process;
+extern uint32_t irq_handler_end;
+
+process_t* current_process;
 static uint32_t next_pid = 1;
 
 void init_proc() {
 	timer_register_callback(&proc_timer_callback);
 
-	proc_switch_process(NULL);
+	proc_enter_usermode();
 }
 
 /* Creates a process running the code specified at `code` in raw instructions
@@ -71,13 +73,8 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		.code_len = num_code_pages,
 		.stack_len = num_stack_pages,
 		.directory = pd_phys,
-		.kernel_stack = kernel_stack, // TODO: check if regs->esp could be used
-		.registers = (registers_t) {
-			.eip = 0x00000000,
-			.esp = 0xBFFFFFFB,
-			.cs = 0x1B,
-			.ds = 0x23,
-		}
+		.kernel_stack = kernel_stack,
+		.esp = kernel_stack
 	};
 
 	// Insert the process in the ring, create it if empty
@@ -89,6 +86,52 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		current_process = process;
 		current_process->next = current_process;
 	}
+
+	uint32_t* jmp = &irq_handler_end;
+
+	// Setup the process's kernel stack as if it had already been interrupted
+	asm volatile (
+		// Save our stack in %ebx
+		"mov %%esp, %%ebx\n"
+
+		// Temporarily use the new process's kernel stack
+		"mov %[kstack], %%eax\n"
+		"mov %%eax, %%esp\n"
+
+		// Stuff popped by `iret`
+		"push $0x23\n"         // user ds selector
+		"push $0xBFFFFFFB\n"   // %esp
+		"push $512\n"          // %eflags with `IF` bit set, equivalent to calling `sti`
+		"push $0x1B\n"         // user cs selector
+		"push $0x00000000\n"   // %eip
+		// Push error code, interrupt number
+		"sub $8, %%esp\n"
+		// `pusha` equivalent
+		"sub $32, %%esp\n"
+		// push data segment registers
+		"mov $0x20, %%eax\n"
+		"push %%eax\n"
+		"push %%eax\n"
+		"push %%eax\n"
+		"push %%eax\n"
+
+		// Push proc_switch_process's `ret` %eip
+		"mov %[jmp], %%eax\n"
+		"push %%eax\n"
+		// Push garbage %ebx, %esi, %edi, %ebp
+		"sub $16, %%esp\n"
+
+		// Save the new process's %esp in %eax
+		"mov %%esp, %%eax\n"
+		// Restore our stack
+		"mov %%ebx, %%esp\n"
+		// Update the new process's %esp
+		"mov %%eax, %[esp]\n"
+		: [esp] "=r" (process->esp)
+		: [kstack] "r" (kernel_stack),
+		  [jmp] "r" (jmp)
+		: "%eax", "%ebx"
+	);
 }
 
 /* Prints the processes currently in the queue in execution order.
@@ -119,7 +162,7 @@ void proc_exit_current_process() {
 	uintptr_t stack_page = pd[767] & PAGE_FRAME;
 	uintptr_t pd_page = pd[1023] & PAGE_FRAME;
 
-	pmm_free_pages(code_page, current_process->code_len); // Large pages
+	pmm_free_pages(code_page, current_process->code_len);
 	pmm_free_pages(stack_page, current_process->stack_len);
 	pmm_free_page(pd_page);
 
@@ -131,82 +174,49 @@ void proc_exit_current_process() {
 		abort();
 	}
 
-	process_t* p = next_current;
+	process_t* p = current_process;
 
 	while (p->next != current_process)
 		p = p->next;
 
 	p->next = next_current;
 
-	// We set the current process to the one right before the one we want
-	// because `proc_switch_process` will grab current_process->next
-	current_process = p;
-
-	proc_switch_process(NULL);
+	proc_switch_process();
 }
 
 /* Switches process on clock tick.
  */
 void proc_timer_callback(registers_t* regs) {
-	if (!current_process || current_process->next == current_process) {
+	if (current_process->next == current_process) {
 		return;
 	}
 
-	if (current_process->next) {
-		proc_switch_process(regs);
-	}
-}
-
-/* Saves the execution context `regs` of the current process, then switches
- * execution to the next process in the list.
- * Passing `regs = NULL` can be useful when the old process is of no interest.
- */
-void proc_switch_process(registers_t* regs) {
-	if (regs) {
-		current_process->registers = *regs;
-	}
-
-	current_process = current_process->next;
-
-	if (!current_process) {
-		printf("[PROC] No next process in queue\n");
-		abort();
-	}
-
-	// Print the current PID in the bottom right of the screen
+	// Update the PID text on the bottom right of the terminal
 	printf("\x1B[s\x1B[24;78H");
 	printf("\x1B[K");
 	printf("%d", current_process->pid);
 	printf("\x1B[u");
 
-	// This sets the stack pointer that will be used when an inter-privilege
-	// interrupt happens
-	gdt_set_kernel_stack(current_process->kernel_stack);
+	proc_switch_process();
+}
 
-	// Switch back to the process' page directoy
+/* Make the first jump to usermode.
+ * A special function is needed as our first kernel stack isn't setup to return
+ * to any interrupt handler; we have to `iret` ourselves.
+ */
+void proc_enter_usermode() {
+	gdt_set_kernel_stack(current_process->kernel_stack);
 	paging_switch_directory(current_process->directory);
 
-	// Setup the stack as if we were coming from usermode because of an interrupt,
-	// then interrupt-return to usermode. We make sure to push the correct value
-	// value for %esp and %eip
-	uint32_t esp = current_process->registers.esp;
-	uint32_t eip = current_process->registers.eip;
-	uint32_t eflags = current_process->registers.eflags;
-
-	asm volatile (
-		"push $0x23\n"    // user ds selector
-		"mov %[esp], %%eax\n"
-		"push %%eax\n"    // %esp
-		"mov %[eflags], %%eax\n"
-		"or $512, %%eax\n"
-		"push %%eax\n"    // %eflags with `IF` bit set, equivalent to calling `sti`
-		"push $0x1B\n"    // user cs selector
-		"mov %[eip], %%eax\n"
-		"push %%eax\n"    // %eip
-
-		"iret\n"
-		: // [name] "mode" (var), where "r" is in register, "m" from memory
-		: [esp] "r" (esp), [eflags] "r" (eflags), [eip] "r" (eip)
-		: "%eax"
+	asm (
+		"push $0x23\n"
+		"push $0xBFFFFFFB\n"
+		"push $512\n"
+		"push $0x1B\n"
+		"push $0x00000000\n"
 	);
+}
+
+uint32_t proc_get_current_pid() {
+	return current_process->pid;
 }

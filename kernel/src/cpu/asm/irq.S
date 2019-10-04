@@ -47,6 +47,10 @@ irq_common_handler:
 	call irq_handler
 	add $4, %esp
 
+# jumped to on first context switch
+.global irq_handler_end
+irq_handler_end:
+
 	pop %gs
 	pop %fs
 	pop %es

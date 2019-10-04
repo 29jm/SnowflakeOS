@@ -1,14 +1,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <kernel/isr.h>
 #include <kernel/mem.h>
 #include <kernel/tty.h>
-
-#include <string.h>
+#include <kernel/proc.h>
 
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
@@ -144,20 +144,31 @@ void paging_fault_handler(registers_t* regs) {
 	asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
 	printf("\x1B[37;44m");
+	printf("[VMM] Page Fault caused by instruction at 0x%X from process %d:\n",
+	    regs->eip, proc_get_current_pid());
 	printf("The page at 0x%X %s present ", cr2, err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 
-	page_t* page = paging_get_page(cr2, false, 0);
+	page_t* page = paging_get_page(cr2 & PAGE_FRAME, false, 0);
 
 	if (page) {
 		printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
 	}
 
-	printf("The reserved bits %s overwritten.\n", err & 0x08 ? "were" : "weren't");
-	printf("The fault %s during an instruction fetch.\n", err & 0x10 ? "occured" : "didn't occur");
+	if (err & 0x08) {
+		printf("The reserved bits were overwritten.\n");
+	}
 
-	abort();
+	if (err & 0x10) {
+		printf("The fault occured during an instruction fetch.\n");
+
+	}
+	printf("\x1B[37;40m");
+
+	if (err & 0x04) { // user process
+		proc_exit_current_process();
+	}
 }
 
 uintptr_t paging_virt_to_phys(uintptr_t virt) {
