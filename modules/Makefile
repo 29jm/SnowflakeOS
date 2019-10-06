@@ -14,4 +14,4 @@ clean:
 	rm -fv */*.o */*.mod
 
 %.mod: %.c mod.ld src/start.S
-	$(CC) $< src/start.S -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)
+	$(CC) src/start.S $< -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)

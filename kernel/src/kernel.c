@@ -63,6 +63,16 @@ void kernel_main(multiboot* boot, uint32_t magic) {
 		0x00, 0x00, 0x00, 0xcd, 0x30, 0xb8, 0x01, 0x00, 0x00, 0x00, 0xcd, 0x30
 	};
 
+	mod_t* modules = (mod_t*) boot->mods_addr;
+
+	for (uint32_t i = 0; i < boot->mods_count; i++) {
+		mod_t mod = modules[i];
+		uint32_t len = mod.mod_end - mod.mod_start;
+		uint8_t* code = (uint8_t*) kmalloc(len);
+		memcpy((void*) code, (void*) mod.mod_start, len);
+		proc_run_code(code, len);
+	}
+
 	proc_run_code(p1, sizeof(p1));
 	proc_run_code(p2, sizeof(p2));
 	proc_run_code(p3, sizeof(p3));

@@ -9,7 +9,8 @@ int putchar(int c) {
 	term_putchar(c);
 #else
 	asm (
-		"mov %[c], %%eax\n"
+		"mov $3, %%eax\n"
+		"mov %[c], %%ebx\n"
 		"int $0x30\n"
 		:
 		: [c] "r" (c)

@@ -213,11 +213,16 @@ void proc_enter_usermode() {
 	paging_switch_directory(current_process->directory);
 
 	asm (
-		"push $0x23\n"
-		"push $0xBFFFFFFB\n"
-		"push $512\n"
-		"push $0x1B\n"
-		"push $0x00000000\n"
+		"mov $0x23, %eax\n"
+		"mov %eax, %ds\n"
+		"mov %eax, %es\n"
+		"mov %eax, %fs\n"
+		"mov %eax, %gs\n"
+		"push %eax\n"        // %ss
+		"push $0xBFFFFFFB\n" // %esp
+		"push $512\n"        // %eflags
+		"push $0x1B\n"       // %cs
+		"push $0x00000000\n" // %eip
 		"iret\n"
 	);
 }

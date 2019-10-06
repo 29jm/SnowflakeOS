@@ -26,11 +26,11 @@ void init_paging() {
 	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
 	paging_invalidate_page(0xFFC00000);
 
-	// Identity map only the 1st MiB: in boot.S, we identity mapped the first 4 MiB
-	// TODO: do that in boot.S
+	// Identity map only the first 2 MiB: in boot.S, we identity mapped the first 4 MiB
+	// We take 2 MiB to give room to GRUB modules.
 	kernel_directory[0] = 0;
 	paging_invalidate_page(0x00000000);
-	paging_map_pages(0x00000000, 0x00000000, 256, PAGE_RW);
+	paging_map_pages(0x00000000, 0x00000000, 512, PAGE_RW);
 	current_page_directory = kernel_directory;
 
 	// Map the kernel heap

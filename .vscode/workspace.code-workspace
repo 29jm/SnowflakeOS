@@ -22,7 +22,7 @@
 			"multiboot.h": "c",
 			"ansi_interpreter.h": "c",
 			"random": "c",
-			"stdlib.h": "c"
+			"stdlib.h": "c",
 		},
 		"files.exclude": {
 			"**/*.o": true

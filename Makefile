@@ -1,4 +1,4 @@
-export
+export # Makes variables from this file available in sub-makefiles
 
 HOST=i686-elf
 PREFIX=usr
@@ -17,10 +17,11 @@ CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
 CFLAGS=-g -std=gnu11 -ffreestanding -fbuiltin -Wall -Wextra
 LDFLAGS=-nostdlib
 
+# Make will be called on these folders
 PROJECTS=libc kernel modules
 
 # Generate sub-targets
-PROJECT_HEADERS=$(PROJECTS:=.headers) #adds .headers to every project name
+PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
 PROJECT_INSTALL=$(PROJECTS:=.install)
 PROJECT_CLEAN=$(PROJECTS:=.clean)
 
@@ -30,13 +31,13 @@ all: install-headers install SnowflakeOS.iso
 
 install-headers: $(PROJECT_HEADERS)
 
-install: $(PROJECT_INSTALL)
+install: install-headers $(PROJECT_INSTALL)
 
-SnowflakeOS.iso: all
+SnowflakeOS.iso: install
 	mkdir -p $(ISODIR)/modules
 	mkdir -p $(ISODIR)/boot/grub
-	cp sysroot/boot/SnowflakeOS.kernel $(ISODIR)/boot
-	cp sysroot/modules/* $(ISODIR)/modules
+	cp $(SYSROOT)/boot/SnowflakeOS.kernel $(ISODIR)/boot
+	cp $(SYSROOT)/modules/* $(ISODIR)/modules
 	cp grub.cfg $(ISODIR)/boot/grub
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
 
