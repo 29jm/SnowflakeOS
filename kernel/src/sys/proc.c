@@ -218,6 +218,7 @@ void proc_enter_usermode() {
 		"push $512\n"
 		"push $0x1B\n"
 		"push $0x00000000\n"
+		"iret\n"
 	);
 }
 
