@@ -1,21 +1,8 @@
-CFLAGS?=-O2 -g
-CPPFLAGS?=
-LDFLAGS?=
-LIBS?=
-
-DESTDIR?=
-PREFIX?=/usr/local
-EXEC_PREFIX?=$(PREFIX)
-INCLUDEDIR?=$(PREFIX)/include
-LIBDIR?=$(EXEC_PREFIX)/lib
-
-CFLAGS:=$(CFLAGS) -Wall -Wextra
-CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_LIBC_ -Iinclude
-LIBK_CFLAGS:=$(CFLAGS) -ffreestanding -fbuiltin
-LIBK_CPPFLAGS:=$(CPPFLAGS) -D_KERNEL_
+LIBK_CFLAGS:=$(CFLAGS) -D_KERNEL_
 
 OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
 OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
+
 
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
@@ -38,26 +25,26 @@ libk.a: $(LIBK_OBJS)
 	$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -include stddef.h -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
 
 %.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 %.libk.o: %.c
-	$(CC) -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	$(CC) -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS)
 
 %.libk.o: %.S
-	$(CC) -c $< -o $@ $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
+	$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 clean:
-	rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
+	rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) $(MODS) *.o */*.o */*/*.o
 
-install: install-headers install-libs
+install: install-libs
 
 install-headers:
-	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	cp -RTv include $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
+	cp -RTv include $(SYSROOT)/$(INCLUDEDIR)
 
 install-libs: $(BINARIES)
-	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp $(BINARIES) $(DESTDIR)$(LIBDIR)
+	mkdir -p $(SYSROOT)/$(LIBDIR)
+	cp $(BINARIES) $(SYSROOT)/$(LIBDIR)

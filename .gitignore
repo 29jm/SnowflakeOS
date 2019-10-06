@@ -5,6 +5,7 @@
 *.ini
 *.bin
 *.out
+*.mod
 Session.vim
 isodir
 sysroot

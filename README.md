@@ -1,11 +1,11 @@
 # SnowflakeOS
-A hobby OS to help me learn about kernel stuff, to eventually get into linux kernel developpement. Currently it can: boot in higher half, setup paging, handle hardware exceptions and IRQs, print things on the screen, get keyboard input (but it's useless right now), and count seconds with the PIC. I also aim to make the code readable and well-organized. 
+A hobby OS to help me learn about kernel stuff, to eventually get into linux kernel developpement. Currently it can: boot in higher half, setup paging, handle hardware exceptions and IRQs, print things on the screen, get keyboard input (but it's useless right now), count seconds with the PIC, start usermode processes and switch between them... I also aim to make the code readable and well-organized. 
 
 # Build & Run in a QEMU
-Run build.sh to get the binary, iso.sh to get the iso, and qemu.sh to run it in qemu.
+Run `make` to get the binary and disk image, and `make qemu/bochs` to run it.
 
 # Installation on real hardware
-`sudo dd if=SnowflakeOS.iso of=/dev/sdX # I'm not responsible if you break anything`
+`sudo dd if=SnowflakeOS.iso of=/dev/sdX # I'm not responsible if you break anything`  
 Where /dev/sdX is the device file representing an USB key. You can then boot from it.
 
 # Requirements
