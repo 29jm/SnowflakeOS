@@ -18,7 +18,7 @@ extern uint32_t KERNEL_END;
 extern uint32_t KERNEL_END_PHYS;
 
 // mem is in KiB
-void init_pmm(multiboot* boot) {
+void init_pmm(multiboot_t* boot) {
 	printf("[PMM] Initialization\n");
 
 	mem_size = boot->mem_lower + boot->mem_upper;

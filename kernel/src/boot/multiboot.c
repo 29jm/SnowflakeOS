@@ -2,7 +2,7 @@
 
 #include <kernel/multiboot.h>
 
-void dump_multiboot_infos(multiboot* boot) {
+void dump_multiboot_infos(multiboot_t* boot) {
 	printf("Flags:\n");
 	printf("\tFLAG_MEM: %s\n", (boot->flags & MULTIBOOT_FLAG_MEM ? "Set" : "Not set"));
 	printf("\tFLAG_DEVICE: %s\n", (boot->flags & MULTIBOOT_FLAG_DEVICE ? "Set" : "Not set"));

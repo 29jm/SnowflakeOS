@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-void init_pmm(multiboot* boot);
+void init_pmm(multiboot_t* boot);
 uint32_t pmm_get_map_size();
 void pmm_init_region(uintptr_t addr, uint32_t size);
 void pmm_deinit_region(uintptr_t addr, uint32_t size);

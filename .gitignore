@@ -6,6 +6,7 @@
 *.bin
 *.out
 *.mod
+misc/grub.cfg
 Session.vim
 isodir
 sysroot

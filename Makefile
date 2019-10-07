@@ -33,14 +33,6 @@ install-headers: $(PROJECT_HEADERS)
 
 install: install-headers $(PROJECT_INSTALL)
 
-SnowflakeOS.iso: install
-	mkdir -p $(ISODIR)/modules
-	mkdir -p $(ISODIR)/boot/grub
-	cp $(SYSROOT)/boot/SnowflakeOS.kernel $(ISODIR)/boot
-	cp $(SYSROOT)/modules/* $(ISODIR)/modules
-	cp grub.cfg $(ISODIR)/boot/grub
-	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
-
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown
 
@@ -51,8 +43,20 @@ clean: $(PROJECT_CLEAN)
 	rm -rfv $(SYSROOTDIR)
 	rm -rfv $(ISODIR)
 	rm -fv SnowflakeOS.iso
+	rm -fv misc/grub.cfg
 	rm -fv xbochs.log
 	rm -fv irq.log
+
+SnowflakeOS.iso: install misc/grub.cfg
+	mkdir -p $(ISODIR)/modules
+	mkdir -p $(ISODIR)/boot/grub
+	cp $(SYSROOT)/boot/SnowflakeOS.kernel $(ISODIR)/boot
+	cp $(SYSROOT)/modules/* $(ISODIR)/modules
+	cp misc/grub.cfg $(ISODIR)/boot/grub
+	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
+
+misc/grub.cfg:
+	./misc/gen-grub-config.sh
 
 %.headers: %
 	$(MAKE) -C $< install-headers

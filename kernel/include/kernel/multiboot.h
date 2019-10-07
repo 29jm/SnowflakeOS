@@ -90,8 +90,8 @@ typedef struct {
 	uintptr_t vbe_interface_seg;
 	uintptr_t vbe_interface_off;
 	uintptr_t vbe_interface_len;
-} multiboot;
+} multiboot_t;
 
-void dump_multiboot_infos(multiboot* boot);
+void dump_multiboot_infos(multiboot_t* boot);
 
 #endif
