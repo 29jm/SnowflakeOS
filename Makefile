@@ -6,6 +6,7 @@ BOOTDIR=boot
 LIBDIR=$(PREFIX)/lib
 INCLUDEDIR=$(PREFIX)/include
 ISODIR=isodir
+ISO=$(PWD)/$(ISODIR)
 SYSROOTDIR=sysroot
 SYSROOT=$(PWD)/$(SYSROOTDIR)
 
@@ -20,18 +21,23 @@ LDFLAGS=-nostdlib
 # Make will be called on these folders
 PROJECTS=libc kernel modules
 
-# Generate sub-targets
+# Generate project sub-targets
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
-PROJECT_INSTALL=$(PROJECTS:=.install)
 PROJECT_CLEAN=$(PROJECTS:=.clean)
 
-.PHONY: all install-headers install qemu bochs clean
+.PHONY: all build qemu bochs clean $(PROJECTS)
 
-all: install-headers install SnowflakeOS.iso
+all: build SnowflakeOS.iso
 
-install-headers: $(PROJECT_HEADERS)
+build: $(PROJECTS)
 
-install: install-headers $(PROJECT_INSTALL)
+# Copy headers before building anything
+$(PROJECTS): $(PROJECT_HEADERS)
+	$(MAKE) -C $@ build
+
+# Make sure `libc` gets built before `kernel` and `modules`
+kernel: libc
+modules: libc
 
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown
@@ -47,22 +53,17 @@ clean: $(PROJECT_CLEAN)
 	rm -fv xbochs.log
 	rm -fv irq.log
 
-SnowflakeOS.iso: install misc/grub.cfg
-	mkdir -p $(ISODIR)/modules
+SnowflakeOS.iso: build misc/grub.cfg
 	mkdir -p $(ISODIR)/boot/grub
-	cp $(SYSROOT)/boot/SnowflakeOS.kernel $(ISODIR)/boot
-	cp $(SYSROOT)/modules/* $(ISODIR)/modules
 	cp misc/grub.cfg $(ISODIR)/boot/grub
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
 
-misc/grub.cfg:
+misc/grub.cfg: build misc/gen-grub-config.sh
 	./misc/gen-grub-config.sh
 
-%.headers: %
+# Automatic rules for our generated sub-targets
+%.headers: %/
 	$(MAKE) -C $< install-headers
 
-%.install: %
-	$(MAKE) -C $< install
-
-%.clean: %
+%.clean: %/
 	$(MAKE) -C $< clean

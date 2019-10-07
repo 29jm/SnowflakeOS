@@ -4,9 +4,11 @@ LIBS=-lc -lgcc
 
 MODS=$(patsubst %.c,%.mod,$(wildcard src/*.c))
 
-install: $(MODS)
-	mkdir -p $(SYSROOT)/modules
-	cp $(MODS) $(SYSROOT)/modules
+.PHONY: build install-headers clean
+
+build: $(MODS)
+	mkdir -p $(ISO)/modules
+	cp $(MODS) $(ISO)/modules
 
 install-headers:
 

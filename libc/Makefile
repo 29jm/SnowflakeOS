@@ -13,7 +13,7 @@ BINARIES=libc.a libg.a libk.a
 
 all: $(BINARIES)
 
-.PHONY: all clean install install-headers install-libs
+.PHONY: all clean build install-headers install-libs
 
 libc.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
@@ -39,11 +39,11 @@ libk.a: $(LIBK_OBJS)
 clean:
 	rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) $(MODS) *.o */*.o */*/*.o
 
-install: install-libs
+build: install-libs
 
 install-headers:
 	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -RTv include $(SYSROOT)/$(INCLUDEDIR)
+	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 install-libs: $(BINARIES)
 	mkdir -p $(SYSROOT)/$(LIBDIR)

@@ -10,7 +10,7 @@ OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
-.PHONY: all clean install install-headers install-kernel
+.PHONY: all clean build install-headers install-kernel
 
 SnowflakeOS.kernel: $(OBJS) linker.ld
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
@@ -21,13 +21,13 @@ SnowflakeOS.kernel: $(OBJS) linker.ld
 %.o: %.S
 	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-install: SnowflakeOS.kernel
-	mkdir -p $(SYSROOT)/$(BOOTDIR)
-	cp SnowflakeOS.kernel $(SYSROOT)/$(BOOTDIR)
+build: SnowflakeOS.kernel
+	mkdir -p $(ISO)/$(BOOTDIR)
+	cp SnowflakeOS.kernel $(ISO)/$(BOOTDIR)
 
 install-headers:
 	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -RTv include $(SYSROOT)/$(INCLUDEDIR)
+	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 clean:
 	rm -f SnowflakeOS.kernel $(OBJS) *.o */*.o */*/*.o
