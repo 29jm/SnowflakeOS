@@ -10,13 +10,13 @@ static uint32_t current_tick;
 handler_t callback;
 
 void init_timer() {
+	irq_register_handler(IRQ0, &timer_callback);
+
 	uint32_t divisor = TIMER_QUOTIENT / TIMER_FREQ;
 
 	outportb(PIT_CMD, PIT_SET);
 	outportb(PIT_0, divisor & 0xFF);
 	outportb(PIT_0, (divisor >> 8) & 0xFF);
-
-	irq_register_handler(IRQ0, &timer_callback);
 }
 
 void timer_callback(registers_t* regs) {

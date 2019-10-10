@@ -12,7 +12,7 @@
 #include <kernel/timer.h>
 #include <kernel/pmm.h>
 #include <kernel/paging.h>
-#include <kernel/keyboard.h>
+#include <kernel/ps2.h>
 #include <kernel/syscall.h>
 #include <kernel/proc.h>
 
@@ -34,8 +34,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	init_idt();
 	init_isr();
 	init_irq();
+	init_ps2();
 	init_timer();
-	init_keyboard();
 	init_pmm(boot);
 	init_paging();
 	init_syscall();

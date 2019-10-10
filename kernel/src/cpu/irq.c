@@ -37,10 +37,20 @@ void init_irq() {
 	idt_set_entry(46, (uint32_t) irq14, 0x08, IDT_INT_KERNEL);
 	idt_set_entry(47, (uint32_t) irq15, 0x08, IDT_INT_KERNEL);
 
+	// We mask every interrupt, unmask them as needed
+	for (uint32_t irq = IRQ0; irq <= IRQ15; irq++) {
+		// Masking that IRQ prevents PIC2 from raising IRQs
+		if (irq == IRQ2) {
+			continue;
+		}
+
+		irq_mask(irq);
+	}
+
 	STI();
 }
 
-/* Calls the handler associated with calling IRQ, if any.
+/* Calls the handler associated with the calling IRQ, if any.
  */
 void irq_handler(registers_t* regs) {
 	uint32_t irq = regs->int_no;
@@ -50,7 +60,7 @@ void irq_handler(registers_t* regs) {
 		uint16_t isr = irq_get_isr();
 
 		// If it's a real interrupt, the corresponding bit will be set in the ISR
-		// Else, it was probably caused by a solar flare, so do not send EOI
+		// Otherwise, it was probably caused by a solar flare, so do not send EOI
 		// If faulty IRQ was sent from the slave PIC, still send EOI to the master
 		if (!(isr & (1 << (irq - IRQ0)))) {
 			if (irq == IRQ15) {
@@ -72,8 +82,6 @@ void irq_handler(registers_t* regs) {
 		printf("[IRQ] Unhandled IRQ%d\n", irq - IRQ0);
 	}
 
-	// IRQs had been disabled before this function was called
-	STI();
 }
 
 void irq_send_eoi(uint8_t irq) {
@@ -86,19 +94,19 @@ void irq_send_eoi(uint8_t irq) {
 	outportb(PIC1_CMD, PIC_EOI);
 }
 
+/* Registers a function that'll be called when `irq` is raised by a PIC.
+ * There can only be one per IRQ; subsequent calls will do nothing.
+ */
 void irq_register_handler(uint8_t irq, handler_t handler) {
 	assert(irq >= IRQ0 && irq <= IRQ15);
 
-	CLI();
-
 	if (!irq_handlers[irq - IRQ0]) {
 		irq_handlers[irq - IRQ0] = handler;
-	}
-	else {
+	} else {
 		printf("IRQ %d already registered\n", irq);
 	}
 
-	STI();
+	irq_unmask(irq);
 }
 
 void irq_remap() {
@@ -126,43 +134,46 @@ uint16_t irq_get_isr() {
 	return (inportb(PIC2) << 8) | inportb(PIC1);
 }
 
-uint16_t irq_getmask(uint16_t pic) {
-	return inports(pic);
+uint8_t irq_get_mask(uint16_t pic) {
+	return inportb(pic);
 }
 
-void irq_setmask(uint16_t pic, uint16_t mask) {
-	outports(pic, mask);
+void irq_set_mask(uint16_t pic, uint8_t mask) {
+	outportb(pic, mask);
 }
 
-// Sets an IRQ number to hide
-void irq_mask(uint8_t irq) {
+/* Masks `irq`, where `irq` is in the `IRQ0-IRQ15` range.
+ */
+void irq_mask(uint32_t irq) {
 	uint16_t pic = 0;
 
-	if (irq < 8) {
+	if (irq < IRQ8) {
 		pic = PIC1_DATA;
-	}
-	else {
+	} else {
 		pic = PIC2_DATA;
 		irq -= 8; // from range 8-15 to 0-7
 	}
 
-	uint16_t mask = irq_getmask(pic);
-	mask |= (1 << irq);
-	irq_setmask(pic, mask);
+	uint8_t mask = irq_get_mask(pic);
+	mask |= (1 << (irq - IRQ0));
+
+	irq_set_mask(pic, mask);
 }
 
-void irq_unmask(uint8_t irq) {
+/* Unmasks an interrupt; see `irq_mask`.
+ */
+void irq_unmask(uint32_t irq) {
 	uint16_t pic = 0;
 	
-	if (irq < 8) {
+	if (irq < IRQ8) {
 		pic = PIC1_DATA;
-	}
-	else {
+	} else {
 		pic = PIC2_DATA;
 		irq -= 8;
 	}
 
-	uint16_t mask = irq_getmask(pic);
-	mask &= ~(1 << mask);
-	irq_setmask(pic, mask);
+	uint16_t mask = irq_get_mask(pic);
+	mask &= ~(1 << (irq - IRQ0));
+
+	irq_set_mask(pic, mask);
 }
