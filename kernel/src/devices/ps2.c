@@ -1,7 +1,7 @@
 #include <kernel/ps2.h>
 #include <kernel/com.h>
 #include <kernel/mouse.h>
-#include <kernel/keyboard.h>
+#include <kernel/kbd.h>
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -143,7 +143,7 @@ void init_ps2() {
                 case PS2_KEYBOARD:
                 case PS2_KEYBOARD_TRANSLATED:
                     printf("[PS2] Keyboard\n");
-                    init_keyboard(i);
+                    init_kbd(i);
                     break;
                 case PS2_MOUSE:
                 case PS2_MOUSE_SCROLL_WHEEL:

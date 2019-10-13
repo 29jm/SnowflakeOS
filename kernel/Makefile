@@ -16,10 +16,10 @@ SnowflakeOS.kernel: $(OBJS) linker.ld
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS) $(CPPFLAGS)
+	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
 
 %.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 build: SnowflakeOS.kernel
 	mkdir -p $(ISO)/$(BOOTDIR)

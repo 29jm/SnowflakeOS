@@ -5,18 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Attach",
             "type": "gdb",
-            "target": "localhost:1234",
-            "executable": "${workspaceFolder}/kernel/SnowflakeOS.kernel",
             "request": "attach",
+            "target": "localhost:1234",
             "remote": true,
+            "executable": "${workspaceFolder}/kernel/SnowflakeOS.kernel",
             "cwd": "${workspaceFolder}",
-            "gdbpath": "i686-elf-gdb"
-            // "args": [],
-            // "stopAtEntry": false,
-            // "environment": [],
-            // "externalConsole": false,
+            "printCalls": true
         }
     ]
 }

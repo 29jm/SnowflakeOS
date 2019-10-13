@@ -6,3 +6,4 @@ megs: 128
 display_library: x, options="gui_debug"
 magic_break: enabled=1
 mouse: type=imps2, enabled=1
+keyboard: keymap=/usr/share/bochs/keymaps/x11-pc-fr.map

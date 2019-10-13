@@ -8,9 +8,10 @@
 .set KERNEL_VIRTUAL_BASE, 0xC0000000
 .set KERNEL_PAGE_NUMBER,  (KERNEL_VIRTUAL_BASE >> 22)
 
+.align 4
+
 # Declare a header as in the Multiboot Standard.
 .section .multiboot
-	.align 4
 	.long MAGIC
 	.long FLAGS
 	.long CHECKSUM

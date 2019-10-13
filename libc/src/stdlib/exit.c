@@ -1,13 +1,8 @@
 #include <stdlib.h>
 
-#ifdef _KERNEL_
-
-#include <kernel/sys.h>
-
-#endif
+#ifndef _KERNEL_
 
 void exit(int status) {
-#ifndef _KERNEL_
     asm (
         "mov $1, %%eax\n"
         "mov %[status], %%ebx\n"
@@ -18,7 +13,6 @@ void exit(int status) {
     );
 
     __builtin_unreachable();
-#else
-    UNUSED(status);
-#endif
 }
+
+#endif
