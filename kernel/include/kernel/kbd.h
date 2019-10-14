@@ -71,5 +71,6 @@ void kbd_handler(registers_t* regs);
 uint32_t kbd_process_byte(uint8_t sc, kbd_event_t* event);
 bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code);
 bool kbd_is_key_pressed(uint32_t key_code);
+char kbd_make_shift(char c);
 
 #endif

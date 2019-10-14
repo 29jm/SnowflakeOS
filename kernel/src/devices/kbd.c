@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+// Contains keycode mappings for one-byte scancodes
+// A zero means the index isn't a valid scancode
 uint32_t simple_sc_to_kc[] = {
 	0, KBD_F9, 0, KBD_F5,
 	KBD_F4, KBD_F1, KBD_F2, KBD_F12,
@@ -41,6 +43,7 @@ uint32_t simple_sc_to_kc[] = {
 	0, 0, 0, KBD_F7
 };
 
+// Maps relevant scancodes to their printable ASCII counterparts
 char kc_to_char[] = {
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
 	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -122,8 +125,8 @@ void kbd_handler(registers_t* regs) {
 	if (next_event.key_code <= KBD_KP_ENTER && next_event.pressed) {
 		char c = kc_to_char[next_event.key_code];
 
-		if (c <= 'z' && context.shift) { // TODO: handle shift properly
-			c = toupper(c);
+		if (context.shift) {
+			c = kbd_make_shift(c);
 		}
 
 		printf("%c", c);
@@ -163,6 +166,8 @@ uint32_t kbd_process_byte(uint8_t sc, kbd_event_t* event) {
 			event->key_code = simple_sc_to_kc[sc];
 			event->pressed = false;
 			return KBD_NORMAL;
+
+			break;
 		case KBD_CONTINUE:
 			if (sc == 0xF0 && sc_pos == 1) {
 				event->pressed = false;
@@ -260,4 +265,60 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 
 bool kbd_is_key_pressed(uint32_t key_code) {
 	return key_states[key_code];
+}
+
+/* Returns the shifted version of printable character `c` if applicable, and
+ * `c` otherwise.
+ */
+char kbd_make_shift(char c) {
+	if (c >= 'a' && c <= 'z') {
+		return toupper(c);
+	}
+
+	switch (c) {
+		case '`':
+			return '~'; break;
+		case '1':
+			return '!'; break;
+		case '2':
+			return '@'; break;
+		case '3':
+			return '#'; break;
+		case '4':
+			return '$'; break;
+		case '5':
+			return '%'; break;
+		case '6':
+			return '^'; break;
+		case '7':
+			return '&'; break;
+		case '8':
+			return '*'; break;
+		case '9':
+			return '('; break;
+		case '0':
+			return ')'; break;
+		case '-':
+			return '_'; break;
+		case '=':
+			return '+'; break;
+		case '[':
+			return '{'; break;
+		case ']':
+			return '}'; break;
+		case ';':
+			return ':'; break;
+		case '\'':
+			return '"'; break;
+		case ',':
+			return '<'; break;
+		case '.':
+			return '>'; break;
+		case '/':
+			return '?'; break;
+		case '\\':
+			return '|'; break;
+	}
+
+	return c;
 }

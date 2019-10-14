@@ -88,8 +88,7 @@ void mouse_handle_packet() {
         delta_x |= 0xFFFFFF00;
     }
 
-    // with the y-axis pointing downward
-    if (!(flags & MOUSE_Y_NEG)) {
+    if (flags & MOUSE_Y_NEG) {
         delta_y |= 0xFFFFFF00;
     }
 
@@ -98,7 +97,7 @@ void mouse_handle_packet() {
     middle_pressed = flags & MOUSE_MIDDLE;
 
     x += delta_x;
-    y += delta_y;
+    y -= delta_y; // Point the y-axis downward
 
 	printf("\x1B[s\x1B[23;65H");
 	printf("\x1B[K");

@@ -19,8 +19,6 @@ extern uint32_t KERNEL_END_PHYS;
 
 // mem is in KiB
 void init_pmm(multiboot_t* boot) {
-	printf("[PMM] Initialization\n");
-
 	mem_size = boot->mem_lower + boot->mem_upper;
 	bitmap = &KERNEL_END;
 	max_blocks = (mem_size*1024) / PMM_BLOCK_SIZE;
@@ -79,8 +77,6 @@ void pmm_init_region(uintptr_t addr, uint32_t size) {
 void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 	uint32_t base_block = addr/PMM_BLOCK_SIZE;
 	uint32_t num = size/PMM_BLOCK_SIZE;
-
-	printf("[PMM] Reserving blocs %d to %d\n", base_block, base_block+num);
 
 	while (num-- > 0) {
 		mmap_set(base_block++);
