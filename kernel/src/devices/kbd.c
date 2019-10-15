@@ -94,14 +94,11 @@ void kbd_handler(registers_t* regs) {
 
 	uint8_t sc = ps2_read(PS2_DATA);
 
-	context.state = kbd_process_byte(sc, &next_event);
-
-	// We're in the middle of a byte sequence
-	if (context.state != KBD_NORMAL) {
-		return;
+	if (!kbd_process_byte(&context, sc, &next_event)) {
+		return; // We're in the middle of a scancode
 	}
 
-	// A key event has happened
+	// We've received a full scancode
 	key_states[next_event.key_code] = next_event.pressed;
 
 	switch (next_event.key_code) {
@@ -135,57 +132,50 @@ void kbd_handler(registers_t* regs) {
 
 /* Interprets the received byte according to the current keyboard state and
  * previously received bytes.
- * Returns the new keyboard state. When `KBD_NORMAL` is returned, `event` is
- * filled with the key event that has just finished.
+ * Returns whether a full scancode was just received, in which case `event` is
+ * filled with the corresponding key event.
  * Note: expects `event` not to be modified between calls.
  */
-uint32_t kbd_process_byte(uint8_t sc, kbd_event_t* event) {
-	static uint8_t bytes[8] = { 0 };
-	static uint32_t current = 0;
+bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
+	ctx->scancode[ctx->current++] = sc;
+	uint32_t sc_pos = ctx->current - 1;
 
-	bytes[current++] = sc;
-	uint32_t sc_pos = current - 1;
-
-	switch (context.state) {
+	switch (ctx->state) {
 		case KBD_NORMAL:
 			event->pressed = true;
 
 			if (sc == 0xF0) {
-				return KBD_RELEASE_SHORT;
+				ctx->state = KBD_RELEASE_SHORT;
 			} else if (sc == 0xE0 || sc == 0xE1) {
-				return KBD_CONTINUE;
+				ctx->state = KBD_CONTINUE;
 			} else {
-				current = 0;
+				ctx->current = 0;
 				event->key_code = simple_sc_to_kc[sc];
-				return KBD_NORMAL;
 			}
 
 			break;
 		case KBD_RELEASE_SHORT:
-			current = 0;
+			ctx->state = KBD_NORMAL;
+			ctx->current = 0;
 			event->key_code = simple_sc_to_kc[sc];
 			event->pressed = false;
-			return KBD_NORMAL;
 
 			break;
 		case KBD_CONTINUE:
 			if (sc == 0xF0 && sc_pos == 1) {
 				event->pressed = false;
-				return KBD_CONTINUE;
+				break;
 			}
 
-			if (kbd_is_valid_scancode(&bytes[1], sc_pos, &event->key_code)) {
-				current = 0;
-				return KBD_NORMAL;
-			} else {
-				return KBD_CONTINUE;
+			if (kbd_is_valid_scancode(&ctx->scancode[1], sc_pos, &event->key_code)) {
+				ctx->state = KBD_NORMAL;
+				ctx->current = 0;
 			}
 
 			break;
 	}
 
-	// Unreachable
-	return KBD_CONTINUE;
+	return ctx->state == KBD_NORMAL;
 }
 
 /* Returns whether `bytes` is a valid, complete multibyte scancode.
@@ -205,35 +195,35 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 	if (len == 1) {
 		switch (bytes[0]) {
 			case 0x6B:
-				*key_code = KBD_LEFT; return true; break;
+				*key_code = KBD_LEFT; return true;
 			case 0x74:
-				*key_code = KBD_RIGHT; return true; break;
+				*key_code = KBD_RIGHT; return true;
 			case 0x75:
-				*key_code = KBD_UP; return true; break;
+				*key_code = KBD_UP; return true;
 			case 0x72:
-				*key_code = KBD_DOWN; return true; break;
+				*key_code = KBD_DOWN; return true;
 			case 0x4A:
-				*key_code = KBD_KP_SLASH; return true; break;
+				*key_code = KBD_KP_SLASH; return true;
 			case 0x5A:
-				*key_code = KBD_KP_ENTER; return true; break;
+				*key_code = KBD_KP_ENTER; return true;
 			case 0x69:
-				*key_code = KBD_END; return true; break;
+				*key_code = KBD_END; return true;
 			case 0x6C:
-				*key_code = KBD_HOME; return true; break;
+				*key_code = KBD_HOME; return true;
 			case 0x70:
-				*key_code = KBD_INSERT; return true; break;
+				*key_code = KBD_INSERT; return true;
 			case 0x71:
-				*key_code = KBD_DELETE; return true; break;
+				*key_code = KBD_DELETE; return true;
 			case 0x7A:
-				*key_code = KBD_PAGE_DOWN; return true; break;
+				*key_code = KBD_PAGE_DOWN; return true;
 			case 0x7D:
-				*key_code = KBD_PAGE_UP; return true; break;
+				*key_code = KBD_PAGE_UP; return true;
 			case 0x11:
-				*key_code = KBD_RIGHT_ALT; return true; break;
+				*key_code = KBD_RIGHT_ALT; return true;
 			case 0x1F:
-				*key_code = KBD_SUPER; return true; break;
+				*key_code = KBD_SUPER; return true;
 			case 0x2F:
-				*key_code = KBD_MENU; return true; break;
+				*key_code = KBD_MENU; return true;
 		}
 	}
 
@@ -276,48 +266,27 @@ char kbd_make_shift(char c) {
 	}
 
 	switch (c) {
-		case '`':
-			return '~'; break;
-		case '1':
-			return '!'; break;
-		case '2':
-			return '@'; break;
-		case '3':
-			return '#'; break;
-		case '4':
-			return '$'; break;
-		case '5':
-			return '%'; break;
-		case '6':
-			return '^'; break;
-		case '7':
-			return '&'; break;
-		case '8':
-			return '*'; break;
-		case '9':
-			return '('; break;
-		case '0':
-			return ')'; break;
-		case '-':
-			return '_'; break;
-		case '=':
-			return '+'; break;
-		case '[':
-			return '{'; break;
-		case ']':
-			return '}'; break;
-		case ';':
-			return ':'; break;
-		case '\'':
-			return '"'; break;
-		case ',':
-			return '<'; break;
-		case '.':
-			return '>'; break;
-		case '/':
-			return '?'; break;
-		case '\\':
-			return '|'; break;
+		case '`': return '~';
+		case '1': return '!';
+		case '2': return '@';
+		case '3': return '#';
+		case '4': return '$';
+		case '5': return '%';
+		case '6': return '^';
+		case '7': return '&';
+		case '8': return '*';
+		case '9': return '(';
+		case '0': return ')';
+		case '-': return '_';
+		case '=': return '+';
+		case '[': return '{';
+		case ']': return '}';
+		case ';': return ':';
+		case '\'': return '"';
+		case ',': return '<';
+		case '.': return '>';
+		case '/': return '?';
+		case '\\': return '|';
 	}
 
 	return c;

@@ -59,6 +59,8 @@ typedef struct {
 
 typedef struct {
 	uint32_t state;
+	uint8_t scancode[8];
+	uint32_t current;
 	bool alt;
 	bool alt_gr;
 	bool shift;
@@ -68,7 +70,7 @@ typedef struct {
 
 void init_kbd(uint32_t dev);
 void kbd_handler(registers_t* regs);
-uint32_t kbd_process_byte(uint8_t sc, kbd_event_t* event);
+bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event);
 bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code);
 bool kbd_is_key_pressed(uint32_t key_code);
 char kbd_make_shift(char c);
