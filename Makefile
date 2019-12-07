@@ -40,7 +40,7 @@ kernel: libc
 modules: libc
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown
+	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
 
 bochs: SnowflakeOS.iso
 	bochs -q -rc .bochsrc_cmds

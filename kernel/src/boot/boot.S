@@ -1,8 +1,12 @@
+# Relevant documentation:
+# https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+
 .set MAGIC,            0x1BADB002
 .set FLAGS_PAGE_ALIGN, 1 << 0
 .set FLAGS_MEMORY,     1 << 1
 .set FLAGS_GRAPHICS,   1 << 2
-.set FLAGS,            FLAGS_PAGE_ALIGN | FLAGS_MEMORY /*| FLAGS_GRAPHICS*/
+
+.set FLAGS,            FLAGS_PAGE_ALIGN | FLAGS_MEMORY | FLAGS_GRAPHICS
 .set CHECKSUM,         -(MAGIC + FLAGS)
 
 .set KERNEL_VIRTUAL_BASE, 0xC0000000
@@ -20,9 +24,9 @@
 	.long 0x00000000 /* load_end_addr stub*/
 	.long 0x00000000 /* bss_end_addr stub*/
 	.long 0x00000000 /* entry_addr stub*/
-	.long 0	/* Linear graphics */
-	.long 0 /* These are in bytes in ToaruOS. Investigate. */
-	.long 0
+	.long 0 /* 0 for linear, 1 for text mode */
+	.long 1024
+	.long 768
 	.long 0
 
 # Reserve a stack for the initial thread.

@@ -1,4 +1,5 @@
 #include <kernel/term.h>
+#include <kernel/serial.h>
 #include <kernel/multiboot.h>
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
@@ -30,6 +31,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	assert(magic == MULTIBOOT_EAX_MAGIC);
 	assert(boot->flags & MULTIBOOT_FLAG_MMAP);
 
+	init_serial();
+	dump_multiboot_infos(boot);
 	init_gdt();
 	init_idt();
 	init_isr();

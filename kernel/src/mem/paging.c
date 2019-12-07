@@ -160,8 +160,8 @@ void paging_fault_handler(registers_t* regs) {
 
 	if (err & 0x10) {
 		printf("The fault occured during an instruction fetch.\n");
-
 	}
+
 	printf("\x1B[37;40m");
 
 	if (err & 0x04) { // user process

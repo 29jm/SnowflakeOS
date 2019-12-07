@@ -17,6 +17,7 @@
 #define MULTIBOOT_FLAG_LOADER  (1 << 9)
 #define MULTIBOOT_FLAG_APM     (1 << 10)
 #define MULTIBOOT_FLAG_VBE     (1 << 11)
+#define MULTIBOOT_FRAMEBUFFER  (1 << 12)
 
 typedef struct {
 	uint8_t drive_number;
@@ -84,13 +85,23 @@ typedef struct {
 	uintptr_t config_table;
 	uintptr_t boot_loader_name;
 	uintptr_t apm_table;
+	/* VBE */
 	uintptr_t vbe_control_info;
 	uintptr_t vbe_mode_info;
-	uintptr_t vbe_mode;
-	uintptr_t vbe_interface_seg;
-	uintptr_t vbe_interface_off;
-	uintptr_t vbe_interface_len;
-} multiboot_t;
+	uint16_t vbe_mode;
+	uint16_t vbe_interface_seg;
+	uint16_t vbe_interface_off;
+	uint16_t vbe_interface_len;
+	/* framebuffer */
+	uint64_t framebuffer_addr;
+	uint32_t framebuffer_pitch;
+	uint32_t framebuffer_width;
+	uint32_t framebuffer_height;
+	uint8_t framebuffer_bpp;
+	uint8_t framebuffer_type;
+	uint32_t framebuffer_palette_addr;
+	uint8_t framebuffer_num_colors;
+} __attribute__ ((packed)) multiboot_t;
 
 void dump_multiboot_infos(multiboot_t* boot);
 
