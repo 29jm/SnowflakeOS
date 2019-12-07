@@ -1,6 +1,6 @@
-#include <stdio.h>
-
 #include <kernel/multiboot.h>
+
+#include <stdio.h>
 
 void dump_multiboot_infos(multiboot_t* boot) {
 	printf("Flags:\n");

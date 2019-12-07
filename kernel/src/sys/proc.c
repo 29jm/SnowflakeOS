@@ -1,10 +1,10 @@
 #include <kernel/proc.h>
-#include <kernel/sys.h>
 #include <kernel/mem.h>
 #include <kernel/timer.h>
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <kernel/gdt.h>
+#include <kernel/sys.h>
 
 #include <stdio.h>
 #include <stdlib.h>

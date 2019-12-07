@@ -1,11 +1,9 @@
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-#include <stdio.h>
-
 #include <kernel/irq.h>
 #include <kernel/idt.h>
 #include <kernel/com.h>
+
+#include <stdio.h>
+#include <string.h>
 
 static handler_t irq_handlers[16];
 
@@ -98,12 +96,15 @@ void irq_send_eoi(uint8_t irq) {
  * There can only be one per IRQ; subsequent calls will do nothing.
  */
 void irq_register_handler(uint8_t irq, handler_t handler) {
-	assert(irq >= IRQ0 && irq <= IRQ15);
+	if (irq < IRQ0 || irq > IRQ15) {
+		printf("[IRQ] Tried to register a handler for an invalid IRQ\n");
+		return;
+	}
 
 	if (!irq_handlers[irq - IRQ0]) {
 		irq_handlers[irq - IRQ0] = handler;
 	} else {
-		printf("IRQ %d already registered\n", irq);
+		printf("[IRQ] IRQ %d is already registered\n", irq);
 	}
 
 	irq_unmask(irq);

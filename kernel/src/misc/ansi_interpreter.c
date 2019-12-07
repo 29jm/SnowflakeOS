@@ -1,8 +1,8 @@
-#include <stdlib.h>
-#include <ctype.h>
-
 #include <kernel/ansi_interpreter.h>
 #include <kernel/term.h>
+
+#include <stdlib.h>
+#include <ctype.h>
 
 void ansi_init_context(ansi_interpreter_context* ctx) {
 	ctx->state = NORMAL;
@@ -20,37 +20,30 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
 	if (ctx->state == NORMAL) {
 		if (c == 0x1B) { // Escape character
 			ctx->state = BRACKET;
-		}
-		else {
+		} else {
 			return 0;
 		}
-	}
-	else if (ctx->state == BRACKET) {
+	} else if (ctx->state == BRACKET) {
 		if (c == '[') {
 			ctx->state = PARAMS;
-		}
-		else {
+		} else {
 			ctx->state = NORMAL;
 			return 0;
 		}
-	}
-	else if (ctx->state == PARAMS) {
+	} else if (ctx->state == PARAMS) {
 		if (c == ';') {
 			ctx->buf[ctx->current_index] = '\0';
 			ctx->args[ctx->current_arg++] = atoi(ctx->buf);
 			ctx->current_index = 0;
-		}
-		else if (isdigit(c)) {
+		} else if (isdigit(c)) {
 			if (ctx->current_index >= ANSI_BUFFER_SIZE) {
 				ctx->current_arg = 0;
 				ctx->current_index = 0;
 				ctx->state = NORMAL;
-			}
-			else {
+			} else {
 				ctx->buf[ctx->current_index++] = c;
 			}
-		}
-		else if (isalpha(c)) {
+		} else if (isalpha(c)) {
 			ctx->buf[ctx->current_index] = '\0';
 			ctx->args[ctx->current_arg++] = atoi(ctx->buf);
 
@@ -100,7 +93,12 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
 					switch (ctx->args[i]) {
 						case 0:
 							term_set_blink(0); break;
-						case 1: break;
+						case 1: // Make foreground things bright
+							term_set_color(term_get_color() | (1 << 3));
+							break;
+						case 2: // Same for background
+							term_set_color(term_get_color() | (1 << 7));
+							break;
 						case 4: break;
 						case 5:
 							term_set_blink(1); break;

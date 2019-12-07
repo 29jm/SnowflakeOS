@@ -1,13 +1,13 @@
 #ifndef PAGING_H
 #define PAGING_H
 
+#include <kernel/isr.h>
+
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <kernel/isr.h>
-
 // Page directories are arrays of directory entries
-// Page tables are arrays of table entries (TODO: rename page_t)
+// Page tables are arrays of table entries
 typedef uint32_t directory_entry_t;
 typedef uint32_t page_t;
 

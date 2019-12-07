@@ -1,14 +1,11 @@
-#include <stdbool.h>
+#include <kernel/paging.h>
+#include <kernel/pmm.h>
+#include <kernel/term.h>
+#include <kernel/proc.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <kernel/paging.h>
-#include <kernel/pmm.h>
-#include <kernel/isr.h>
-#include <kernel/mem.h>
-#include <kernel/term.h>
-#include <kernel/proc.h>
 
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)

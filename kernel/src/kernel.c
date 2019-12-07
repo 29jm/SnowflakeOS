@@ -1,9 +1,3 @@
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-
 #include <kernel/term.h>
 #include <kernel/multiboot.h>
 #include <kernel/gdt.h>
@@ -16,6 +10,12 @@
 #include <kernel/syscall.h>
 #include <kernel/proc.h>
 
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
 extern uint32_t KERNEL_BEGIN_PHYS;
 extern uint32_t KERNEL_END_PHYS;
 extern uint32_t KERNEL_SIZE;
@@ -23,7 +23,7 @@ extern uint32_t KERNEL_SIZE;
 void kernel_main(multiboot_t* boot, uint32_t magic) {
 	init_term();
 
-	printf("\x1B[36mSnowflakeOS\x1B[37m 0.2 - Challenge Edition\n\n");
+	printf("\x1B[36;1mSnowflakeOS\x1B[37m 0.2 - Challenge Edition\n\n");
 	printf("Kernel loaded at 0x%X, ending at 0x%X (%dKiB)\n",
 		&KERNEL_BEGIN_PHYS, &KERNEL_END_PHYS, ((uint32_t) &KERNEL_SIZE) >> 10);
 

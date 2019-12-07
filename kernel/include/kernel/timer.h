@@ -1,10 +1,10 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include <kernel/isr.h>
+#include <kernel/irq.h>
 
 void init_timer();
-void timer_callback(registers_t* regs);
+void timer_callback();
 uint32_t timer_get_tick();
 double timer_get_time();
 void timer_register_callback(handler_t handler);

@@ -1,5 +1,4 @@
 #include <kernel/mouse.h>
-#include <kernel/com.h>
 #include <kernel/irq.h>
 #include <kernel/sys.h>
 

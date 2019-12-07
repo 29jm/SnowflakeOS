@@ -1,4 +1,5 @@
 #include <kernel/kbd.h>
+#include <kernel/ps2.h>
 #include <kernel/irq.h>
 #include <kernel/sys.h>
 
@@ -103,8 +104,10 @@ void kbd_handler(registers_t* regs) {
 
 	switch (next_event.key_code) {
 		case KBD_LEFT_ALT:
-		case KBD_RIGHT_ALT:
 			context.alt = next_event.pressed;
+			break;
+		case KBD_RIGHT_ALT:
+			context.alt_gr = next_event.pressed;
 			break;
 		case KBD_LEFT_CONTROL:
 		case KBD_RIGHT_CONTROL:
@@ -138,7 +141,6 @@ void kbd_handler(registers_t* regs) {
  */
 bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 	ctx->scancode[ctx->current++] = sc;
-	uint32_t sc_pos = ctx->current - 1;
 
 	switch (ctx->state) {
 		case KBD_NORMAL:
@@ -162,12 +164,13 @@ bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 
 			break;
 		case KBD_CONTINUE:
-			if (sc == 0xF0 && sc_pos == 1) {
+			if (sc == 0xF0 && (ctx->current-1) == 1) {
 				event->pressed = false;
 				break;
 			}
 
-			if (kbd_is_valid_scancode(&ctx->scancode[1], sc_pos, &event->key_code)) {
+			if (kbd_is_valid_scancode(ctx->scancode, ctx->current,
+					&event->key_code)) {
 				ctx->state = KBD_NORMAL;
 				ctx->current = 0;
 			}
@@ -180,13 +183,19 @@ bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 
 /* Returns whether `bytes` is a valid, complete multibyte scancode.
  * If it is, the corresponding key code is placed in `key_code`.
- * Note: the 0xE0 prefix should be omitted from `bytes`, but not 0xF0 if
- * present.
  * Note: hopefully this type of scancode is a "prefix code", otherwise this
  * is pure hell.
  */
 bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
-	// This prefix indicates a release event, discard it
+	if (len < 2) {
+		return false;
+	}
+
+	// Discard the 0xE0 prefix
+	bytes = &bytes[1];
+	len -= 1;
+
+	// The 0xF0 prefix indicates a release event, discard it
 	if (bytes[0] == 0xF0) {
 		bytes = &bytes[1];
 		len -= 1;
@@ -194,36 +203,21 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 
 	if (len == 1) {
 		switch (bytes[0]) {
-			case 0x6B:
-				*key_code = KBD_LEFT; return true;
-			case 0x74:
-				*key_code = KBD_RIGHT; return true;
-			case 0x75:
-				*key_code = KBD_UP; return true;
-			case 0x72:
-				*key_code = KBD_DOWN; return true;
-			case 0x4A:
-				*key_code = KBD_KP_SLASH; return true;
-			case 0x5A:
-				*key_code = KBD_KP_ENTER; return true;
-			case 0x69:
-				*key_code = KBD_END; return true;
-			case 0x6C:
-				*key_code = KBD_HOME; return true;
-			case 0x70:
-				*key_code = KBD_INSERT; return true;
-			case 0x71:
-				*key_code = KBD_DELETE; return true;
-			case 0x7A:
-				*key_code = KBD_PAGE_DOWN; return true;
-			case 0x7D:
-				*key_code = KBD_PAGE_UP; return true;
-			case 0x11:
-				*key_code = KBD_RIGHT_ALT; return true;
-			case 0x1F:
-				*key_code = KBD_SUPER; return true;
-			case 0x2F:
-				*key_code = KBD_MENU; return true;
+			case 0x75: *key_code = KBD_UP; return true;
+			case 0x72: *key_code = KBD_DOWN; return true;
+			case 0x6B: *key_code = KBD_LEFT; return true;
+			case 0x74: *key_code = KBD_RIGHT; return true;
+			case 0x4A: *key_code = KBD_KP_SLASH; return true;
+			case 0x5A: *key_code = KBD_KP_ENTER; return true;
+			case 0x69: *key_code = KBD_END; return true;
+			case 0x6C: *key_code = KBD_HOME; return true;
+			case 0x70: *key_code = KBD_INSERT; return true;
+			case 0x71: *key_code = KBD_DELETE; return true;
+			case 0x7D: *key_code = KBD_PAGE_UP; return true;
+			case 0x7A: *key_code = KBD_PAGE_DOWN; return true;
+			case 0x11: *key_code = KBD_RIGHT_ALT; return true;
+			case 0x2F: *key_code = KBD_MENU; return true;
+			case 0x1F: *key_code = KBD_SUPER; return true;
 		}
 	}
 
@@ -236,14 +230,14 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 
 	if (len == 4) {
 		if (bytes[0] == 0x7C && bytes[1] == 0xE0
-		    && bytes[2] == 0xF0 && bytes[3] == 0x12) {
+				&& bytes[2] == 0xF0 && bytes[3] == 0x12) {
 			*key_code = KBD_PRINT_SCREEN;
 			return true;
 		}
 	}
 
 	// Just assume the bytes are good, there's only one option here
-	// It also means we'll never overrun our `bytes` buffer in the calling
+	// It also means we'll never overflow our `bytes` buffer in the calling
 	// function
 	if (len == 7) {
 		*key_code = KBD_PAUSE;

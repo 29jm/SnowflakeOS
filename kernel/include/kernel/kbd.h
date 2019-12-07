@@ -1,9 +1,9 @@
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-#include <kernel/ps2.h>
-#include <kernel/irq.h>
+#include <kernel/isr.h>
 
+#include <stdint.h>
 #include <stdbool.h>
 
 // "SSC" means "Scan Code Set" here, i.e. the set of bytes corresponding to

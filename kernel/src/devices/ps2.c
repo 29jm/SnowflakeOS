@@ -4,7 +4,6 @@
 #include <kernel/kbd.h>
 
 #include <stdio.h>
-#include <stdbool.h>
 
 // Describes the available PS/2 controllers
 bool controllers[] = { true, true };

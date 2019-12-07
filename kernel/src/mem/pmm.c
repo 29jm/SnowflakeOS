@@ -1,11 +1,10 @@
+#include <kernel/pmm.h>
+#include <kernel/paging.h> // PHYS_TO_VIRT
+#include <kernel/multiboot.h>
+
 #include <string.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#include <kernel/pmm.h>
-#include <kernel/paging.h>
-#include <kernel/multiboot.h>
 
 static uint32_t mem_size;
 static uint32_t used_blocks;
@@ -39,8 +38,7 @@ void init_pmm(multiboot_t* boot) {
 		if (mmap->type == 1) {
 			pmm_init_region((uintptr_t) mmap->addr, mmap->length);
 			available += mmap->length;
-		}
-		else {
+		} else {
 			unavailable += mmap->length;
 		}
 
