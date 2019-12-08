@@ -7,7 +7,7 @@ SECTIONS
 
 	.text ALIGN(4):
 	{
-		start.o(.text)
+		src/start.o(.text)
 		*(.text*)
 	}
 
