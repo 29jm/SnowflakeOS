@@ -20,13 +20,6 @@
 #define MULTIBOOT_FRAMEBUFFER  (1 << 12)
 
 typedef struct {
-	uint8_t drive_number;
-	uint8_t part1;
-	uint8_t part2;
-	uint8_t part3;
-} __attribute__ ((packed)) boot_device_t;
-
-typedef struct {
 	uintptr_t mod_start;
 	uintptr_t mod_end;
 	uintptr_t string;
@@ -40,31 +33,20 @@ typedef struct {
 	uint32_t type;
 } __attribute__ ((packed)) mmap_t;
 
-// Taken from ToaruOS
 typedef struct {
-	uint16_t attributes;
-	uint8_t  winA, winB;
-	uint16_t granularity;
-	uint16_t winsize;
-	uint16_t segmentA, segmentB;
-	uint32_t realFctPtr;
-	uint16_t pitch;
-
-	uint16_t Xres, Yres;
-	uint8_t Wchar, Ychar, planes, bpp, banks;
-	uint8_t memory_model, bank_size, image_pages;
-	uint8_t reserved0;
-
-	uint8_t red_mask, red_position;
-	uint8_t green_mask, green_position;
-	uint8_t blue_mask, blue_position;
-	uint8_t rsv_mask, rsv_position;
-	uint8_t directcolor_attributes;
-
-	uint32_t physbase;
-	uint32_t reserved1;
-	uint16_t reserved2;
-} __attribute__ ((packed)) vbe_info_t;
+	uint64_t address;
+	uint32_t pitch;
+	uint32_t width;
+	uint32_t height;
+	uint8_t bpp;
+	uint8_t type;
+	uint8_t red_position;
+	uint8_t red_mask_size;
+	uint8_t green_position;
+	uint8_t green_mask_size;
+	uint8_t blue_position;
+	uint8_t blue_mask_size;
+} __attribute__ ((packed)) fb_info_t;
 
 typedef struct {
 	uintptr_t flags;
@@ -93,14 +75,7 @@ typedef struct {
 	uint16_t vbe_interface_off;
 	uint16_t vbe_interface_len;
 	/* framebuffer */
-	uint64_t framebuffer_addr;
-	uint32_t framebuffer_pitch;
-	uint32_t framebuffer_width;
-	uint32_t framebuffer_height;
-	uint8_t framebuffer_bpp;
-	uint8_t framebuffer_type;
-	uint32_t framebuffer_palette_addr;
-	uint8_t framebuffer_num_colors;
+	fb_info_t framebuffer;
 } __attribute__ ((packed)) multiboot_t;
 
 void dump_multiboot_infos(multiboot_t* boot);

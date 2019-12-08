@@ -19,7 +19,7 @@ CFLAGS=-g -std=gnu11 -ffreestanding -fbuiltin -Wall -Wextra
 LDFLAGS=-nostdlib
 
 # Make will be called on these folders
-PROJECTS=libc kernel modules
+PROJECTS=libc snow kernel modules
 
 # Generate project sub-targets
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
@@ -35,9 +35,9 @@ build: $(PROJECTS)
 $(PROJECTS): $(PROJECT_HEADERS)
 	$(MAKE) -C $@ build
 
-# Make sure `libc` gets built before `kernel` and `modules`
+# Specify dependencies
 kernel: libc
-modules: libc
+modules: libc snow
 
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log

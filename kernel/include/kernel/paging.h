@@ -22,7 +22,7 @@ void paging_switch_directory(uintptr_t dir_phys);
 void paging_invalidate_cache();
 void paging_invalidate_page(uintptr_t virt);
 void paging_fault_handler(registers_t* regs);
-void* paging_alloc_pages(uint32_t num, uint32_t flags);
+void* paging_alloc_pages(uint32_t virt, uint32_t num);
 void paging_free_pages(uintptr_t virt, uint32_t num);
 uintptr_t paging_virt_to_phys(uintptr_t virt);
 

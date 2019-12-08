@@ -1,6 +1,7 @@
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <kernel/term.h>
+#include <kernel/fb.h>
 #include <kernel/proc.h>
 
 #include <stdio.h>
@@ -38,10 +39,20 @@ void init_paging() {
 	// Keep the TTY alive
 	uint32_t size = sizeof(uint16_t)*TERM_WIDTH*TERM_HEIGHT;
 	uint16_t* tty_buff = (uint16_t*)kamalloc(size, 0x1000);
-	// Worth a `paging_remap_page` func?
 	page_t* p = paging_get_page((uintptr_t)tty_buff, false, 0);
 	*p = TERM_MEMORY | PAGE_PRESENT | PAGE_RW;
 	term_set_buffer(tty_buff);
+
+	// Keep the framebuffer alive
+	size = fb_get_size();
+	uintptr_t fb_buff = (uintptr_t) kamalloc(size, 0x1000);
+
+	for (uint32_t i = 0; i < size/0x1000; i++) {
+		p = paging_get_page(fb_buff + 0x1000*i, false, 0);
+		*p = (fb_get_address() + 0x1000*i) | PAGE_PRESENT | PAGE_RW;
+	}
+
+	fb_set_address(fb_buff);
 }
 
 uintptr_t paging_get_kernel_directory() {
@@ -167,6 +178,19 @@ void paging_fault_handler(registers_t* regs) {
 	if (err & 0x04) { // user process
 		proc_exit_current_process();
 	}
+}
+
+/* Allocates `num` pages of physical memory, mapped starting at `virt`.
+ * Beware, pages allocated by this function are not mapped across processes.
+ */
+void* paging_alloc_pages(uint32_t virt, uintptr_t num) {
+	for (uint32_t i = 0; i < num; i++) {
+		uintptr_t page = pmm_alloc_page();
+		page_t* p = paging_get_page(virt + i*0x1000, true, PAGE_RW | PAGE_USER);
+		*p = page | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+	}
+
+	return (void*) virt;
 }
 
 /* Rerturns the current physical mapping of `virt` if it exists, zero

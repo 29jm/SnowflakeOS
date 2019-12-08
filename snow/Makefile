@@ -1,28 +1,14 @@
-LIBK_CFLAGS:=$(CFLAGS) -D_KERNEL_
-
 OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
 OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
-
-
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
-LIBK_OBJS:=$(OBJS:.o=.libk.o)
-
-BINARIES=libc.a libg.a libk.a
-
-all: $(BINARIES)
+all: libsnow.a
 
 .PHONY: all clean build install-headers install-libs
 
-libc.a: $(OBJS)
+libsnow.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
-
-libg.a:
-	$(AR) rcs $@
-
-libk.a: $(LIBK_OBJS)
-	$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
 	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
@@ -30,14 +16,8 @@ libk.a: $(LIBK_OBJS)
 %.o: %.S
 	$(CC) -c $< -o $@ $(CFLAGS)
 
-%.libk.o: %.c
-	$(CC) -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS)
-
-%.libk.o: %.S
-	$(CC) -c $< -o $@ $(LIBK_CFLAGS)
-
 clean:
-	rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
+	rm -f *.a $(OBJS)
 
 build: install-libs
 
@@ -45,6 +25,6 @@ install-headers:
 	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
 	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
-install-libs: $(BINARIES)
+install-libs: libsnow.a
 	mkdir -p $(SYSROOT)/$(LIBDIR)
-	cp $(BINARIES) $(SYSROOT)/$(LIBDIR)
+	cp libsnow.a $(SYSROOT)/$(LIBDIR)

@@ -23,8 +23,11 @@
 			"ansi_interpreter.h": "c",
 			"random": "c",
 			"stdlib.h": "c",
+			"snowlib.h": "c",
+			"fb.h": "c"
 		},
 		"files.exclude": {
+			"**/*.a": true,
 			"**/*.o": true
 		}
 	}

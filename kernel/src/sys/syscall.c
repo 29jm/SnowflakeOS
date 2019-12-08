@@ -1,6 +1,7 @@
 #include <kernel/syscall.h>
 #include <kernel/proc.h>
 #include <kernel/timer.h>
+#include <kernel/fb.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -12,6 +13,8 @@ static void syscall_yield(registers_t* regs);
 static void syscall_exit(registers_t* regs);
 static void syscall_wait(registers_t* regs);
 static void syscall_putchar(registers_t* regs);
+static void syscall_alloc(registers_t* regs);
+static void syscall_render_framebuffer(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -22,6 +25,8 @@ void init_syscall() {
 	syscall_handlers[1] = syscall_exit;
 	syscall_handlers[2] = syscall_wait;
 	syscall_handlers[3] = syscall_putchar;
+	syscall_handlers[4] = syscall_alloc;
+	syscall_handlers[5] = syscall_render_framebuffer;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -68,4 +73,17 @@ static void syscall_wait(registers_t* regs) {
 
 static void syscall_putchar(registers_t* regs) {
 	putchar((char)regs->ebx);
+}
+
+/* Allocates n pages of memory to the current process, returns the address of
+ * the beginning of the first newly allocated page.
+ */
+static void syscall_alloc(registers_t* regs) {
+	uint32_t n = regs->ebx;
+	regs->eax = proc_alloc_pages(n);
+}
+
+static void syscall_render_framebuffer(registers_t* regs) {
+	uintptr_t addr = (uintptr_t) regs->ebx;
+	fb_render(addr);
 }

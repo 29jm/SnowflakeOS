@@ -1,4 +1,5 @@
 #include <kernel/term.h>
+#include <kernel/fb.h>
 #include <kernel/serial.h>
 #include <kernel/multiboot.h>
 #include <kernel/gdt.h>
@@ -23,6 +24,7 @@ extern uint32_t KERNEL_SIZE;
 
 void kernel_main(multiboot_t* boot, uint32_t magic) {
 	init_term();
+	init_fb(boot->framebuffer);
 
 	printf("\x1B[36;1mSnowflakeOS\x1B[37m 0.2 - Challenge Edition\n\n");
 	printf("Kernel loaded at 0x%X, ending at 0x%X (%dKiB)\n",

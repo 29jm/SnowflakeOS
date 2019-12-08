@@ -14,7 +14,7 @@
 
 .align 4
 
-# Declare a header as in the Multiboot Standard.
+# Multiboot header
 .section .multiboot
 	.long MAGIC
 	.long FLAGS
@@ -24,10 +24,10 @@
 	.long 0x00000000 /* load_end_addr stub*/
 	.long 0x00000000 /* bss_end_addr stub*/
 	.long 0x00000000 /* entry_addr stub*/
-	.long 0 /* 0 for linear, 1 for text mode */
-	.long 1024
-	.long 768
-	.long 0
+	.long 0    # 0 for linear, 1 for text mode
+	.long 1024 # width
+	.long 768  # height
+	.long 32   # bpp
 
 # Reserve a stack for the initial thread.
 .section .bootstrap_stack, "aw", @nobits

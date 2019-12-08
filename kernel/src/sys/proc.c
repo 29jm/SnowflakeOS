@@ -50,12 +50,13 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	paging_switch_directory(pd_phys);
 
 	// Map the code and copy it to physical pages
+	// TODO: don't require contiguous pages
 	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
 	paging_map_pages(0x00000000, code_phys, num_code_pages,
 	    PAGE_USER | PAGE_RW);
 	memcpy((void*) 0x00000000, (void*) code, len);
 
-	// Remove write flag on code pages
+	// Remove write flag on code pages. TODO: don't?
 	for (uint32_t i = 0; i < num_code_pages; i++) {
 		page_t* p = paging_get_page(0x00000000 + i*4096, false, 0);
 		*p &= ~PAGE_RW;
@@ -75,7 +76,8 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		.stack_len = num_stack_pages,
 		.directory = pd_phys,
 		.kernel_stack = kernel_stack,
-		.esp = kernel_stack
+		.esp = kernel_stack,
+		.mem_len = 0
 	};
 
 	// Insert the process in the ring, create it if empty
@@ -158,14 +160,19 @@ void proc_print_processes() {
 void proc_exit_current_process() {
 	printf("[PROC] Terminating process %d\n", current_process->pid);
 
+	// Free allocated pages: code, heap, stack, page directory
 	directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
 
-	uintptr_t code_page = pd[0] & PAGE_FRAME;
-	uintptr_t stack_page = pd[767] & PAGE_FRAME;
-	uintptr_t pd_page = pd[1023] & PAGE_FRAME;
+	for (uint32_t i = 0; i < 768; i++) {
+		if (!(pd[i] & PAGE_PRESENT)) {
+			continue;
+		}
 
-	pmm_free_pages(code_page, current_process->code_len);
-	pmm_free_pages(stack_page, current_process->stack_len);
+		uintptr_t page = pd[i] & PAGE_FRAME;
+		pmm_free_page(page);
+	}
+
+	uintptr_t pd_page = pd[1023] & PAGE_FRAME;
 	pmm_free_page(pd_page);
 
 	// Remove the process from our circular list
@@ -195,12 +202,6 @@ void proc_timer_callback(registers_t* regs) {
 		return;
 	}
 
-	// Update the PID text on the bottom right of the terminal
-	printf("\x1B[s\x1B[24;78H");
-	printf("\x1B[K");
-	printf("%d", current_process->pid);
-	printf("\x1B[u");
-
 	proc_switch_process();
 }
 
@@ -229,4 +230,15 @@ void proc_enter_usermode() {
 
 uint32_t proc_get_current_pid() {
 	return current_process->pid;
+}
+
+/* Extends the program's writeable memory by `num` pages.
+ */
+uintptr_t proc_alloc_pages(uint32_t num) {
+	uintptr_t end = 0x1000*(current_process->code_len + current_process->mem_len);
+
+	paging_alloc_pages(end, num);
+	current_process->mem_len += num;
+
+	return end;
 }
