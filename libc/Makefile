@@ -9,7 +9,8 @@ OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
 LIBK_OBJS:=$(OBJS:.o=.libk.o)
 
-BINARIES=libc.a libg.a libk.a
+# libk is libc but compiled with _KERNEL_ defined
+BINARIES=libc.a libk.a
 
 all: $(BINARIES)
 
@@ -17,9 +18,6 @@ all: $(BINARIES)
 
 libc.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
-
-libg.a:
-	$(AR) rcs $@
 
 libk.a: $(LIBK_OBJS)
 	$(AR) rcs $@ $(LIBK_OBJS)

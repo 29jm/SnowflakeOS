@@ -24,11 +24,14 @@
 			"random": "c",
 			"stdlib.h": "c",
 			"snowlib.h": "c",
-			"fb.h": "c"
+			"fb.h": "c",
+			"snow.h": "c"
 		},
 		"files.exclude": {
 			"**/*.a": true,
 			"**/*.o": true
-		}
+		},
+		"editor.insertSpaces": false,
+		"editor.detectIndentation": false
 	}
 }

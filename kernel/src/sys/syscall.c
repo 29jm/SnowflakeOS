@@ -15,6 +15,7 @@ static void syscall_wait(registers_t* regs);
 static void syscall_putchar(registers_t* regs);
 static void syscall_alloc(registers_t* regs);
 static void syscall_render_framebuffer(registers_t* regs);
+static void syscall_get_framebuffer_info(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -27,6 +28,7 @@ void init_syscall() {
 	syscall_handlers[3] = syscall_putchar;
 	syscall_handlers[4] = syscall_alloc;
 	syscall_handlers[5] = syscall_render_framebuffer;
+	syscall_handlers[6] = syscall_get_framebuffer_info;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -86,4 +88,12 @@ static void syscall_alloc(registers_t* regs) {
 static void syscall_render_framebuffer(registers_t* regs) {
 	uintptr_t addr = (uintptr_t) regs->ebx;
 	fb_render(addr);
+}
+
+static void syscall_get_framebuffer_info(registers_t* regs) {
+	fb_info_t fb = fb_get_info();
+	regs->eax = fb.pitch;
+	regs->ebx = fb.width;
+	regs->ecx = fb.height;
+	regs->edx = fb.bpp;
 }

@@ -1,10 +1,12 @@
 #include <string.h>
 #include <stdint.h>
 
-size_t strlen(const char* string) {
-	size_t result = 0;
+uint32_t strlen(const char* string) {
+	uint32_t result = 0;
+
 	while (string[result])
 		result++;
+
 	return result;
 }
 

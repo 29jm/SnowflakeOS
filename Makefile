@@ -37,6 +37,7 @@ $(PROJECTS): $(PROJECT_HEADERS)
 
 # Specify dependencies
 kernel: libc
+snow: libc
 modules: libc snow
 
 qemu: SnowflakeOS.iso

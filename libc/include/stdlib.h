@@ -14,4 +14,6 @@ void exit(int status);
 char* itoa(int value, char* str, int base);
 int atoi(const char* s);
 
+int abs(int n);
+
 #endif

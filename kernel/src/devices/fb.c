@@ -24,6 +24,10 @@ void fb_render(uintptr_t buffer) {
     memcpy((void*) (uintptr_t) fb.address, (void*) buffer, fb_get_size());
 }
 
+fb_info_t fb_get_info() {
+    return fb;
+}
+
 uintptr_t fb_get_address() {
     return (uintptr_t) fb.address;
 }
