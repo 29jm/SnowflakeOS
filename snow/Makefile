@@ -1,7 +1,4 @@
-OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
-OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
-OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
-OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
+OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
 
 all: libsnow.a
 
@@ -12,9 +9,6 @@ libsnow.a: $(OBJS)
 
 %.o: %.c
 	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
-
-%.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
 	rm -f *.a $(OBJS)

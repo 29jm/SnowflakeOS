@@ -15,5 +15,7 @@ install-headers:
 clean:
 	rm -fv */*.o */*.mod
 
-%.mod: %.c mod.ld src/start.o
+%.mod: %.c mod.ld src/start.o FORCE
 	$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)
+
+FORCE:
