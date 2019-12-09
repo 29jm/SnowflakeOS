@@ -78,6 +78,6 @@ typedef struct {
 	fb_info_t framebuffer;
 } __attribute__ ((packed)) multiboot_t;
 
-void dump_multiboot_infos(multiboot_t* boot);
+void multiboot_print_infos(multiboot_t* boot);
 
 #endif

@@ -56,12 +56,6 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	    PAGE_USER | PAGE_RW);
 	memcpy((void*) 0x00000000, (void*) code, len);
 
-	// Remove write flag on code pages. TODO: don't?
-	for (uint32_t i = 0; i < num_code_pages; i++) {
-		page_t* p = paging_get_page(0x00000000 + i*4096, false, 0);
-		*p &= ~PAGE_RW;
-	}
-
 	// Map the stack
 	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
 	paging_map_pages(0xC0000000 - 4096*num_stack_pages, stack_phys,

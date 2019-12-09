@@ -3,10 +3,16 @@
 #include <string.h>
 #include <stdio.h>
 
-static fb_info_t fb;
+static fb_t fb;
 
 void init_fb(fb_info_t fb_info) {
-    fb = fb_info;
+    fb = (fb_t) {
+		.address = fb_info.address,
+		.width = fb_info.width,
+		.height = fb_info.height,
+		.pitch = fb_info.pitch,
+		.bpp = fb_info.bpp
+	};
 
     if (fb.bpp != 32) {
         printf("[FB] Unsupported bit depth: %d\n", fb.bpp);
@@ -21,10 +27,10 @@ void init_fb(fb_info_t fb_info) {
  * `buffer` must be of the size returned by `fb_get_size`.
  */
 void fb_render(uintptr_t buffer) {
-    memcpy((void*) (uintptr_t) fb.address, (void*) buffer, fb_get_size());
+    memcpy((void*) fb.address, (void*) buffer, fb_get_size());
 }
 
-fb_info_t fb_get_info() {
+fb_t fb_get_info() {
     return fb;
 }
 

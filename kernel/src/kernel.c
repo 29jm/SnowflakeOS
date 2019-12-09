@@ -34,7 +34,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	assert(boot->flags & MULTIBOOT_FLAG_MMAP);
 
 	init_serial();
-	dump_multiboot_infos(boot);
+	multiboot_print_infos(boot);
 	init_gdt();
 	init_idt();
 	init_isr();

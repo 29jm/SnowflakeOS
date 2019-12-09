@@ -40,7 +40,7 @@ static void syscall_handler(registers_t* regs) {
 	}
 }
 
-/* Convention:
+/* Convention: TODO: ebx is not callee-saved, what do we do?
  * - Arguments shall be passed in this order:
  *  ebx, ecx, edx,
  *  and if more are needed, ebp shall contain a pointer to them.
@@ -91,7 +91,7 @@ static void syscall_render_framebuffer(registers_t* regs) {
 }
 
 static void syscall_get_framebuffer_info(registers_t* regs) {
-	fb_info_t fb = fb_get_info();
+	fb_t fb = fb_get_info();
 	regs->eax = fb.pitch;
 	regs->ebx = fb.width;
 	regs->ecx = fb.height;

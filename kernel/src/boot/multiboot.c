@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-void dump_multiboot_infos(multiboot_t* boot) {
+void multiboot_print_infos(multiboot_t* boot) {
 	if (boot->flags & MULTIBOOT_FRAMEBUFFER) {
 		printf("Framebuffer:\n");
 		printf("\taddress: 0x%X\n", (uint32_t) boot->framebuffer.address);
