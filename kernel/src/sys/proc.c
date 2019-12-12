@@ -53,13 +53,13 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	// TODO: don't require contiguous pages
 	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
 	paging_map_pages(0x00000000, code_phys, num_code_pages,
-	    PAGE_USER | PAGE_RW);
+		PAGE_USER | PAGE_RW);
 	memcpy((void*) 0x00000000, (void*) code, len);
 
 	// Map the stack
 	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
 	paging_map_pages(0xC0000000 - 4096*num_stack_pages, stack_phys,
-	    num_stack_pages, PAGE_USER | PAGE_RW);
+		num_stack_pages, PAGE_USER | PAGE_RW);
 
 	// Switch to the original page directory
 	paging_switch_directory(previous_pd);

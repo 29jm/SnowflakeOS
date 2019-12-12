@@ -81,7 +81,7 @@ page_t* paging_get_page(uintptr_t virt, bool create, uint32_t flags) {
 	if (!(dir[dir_index] & PAGE_PRESENT) && create) {
 		page_t* new_table = (page_t*) pmm_alloc_page();
 		dir[dir_index] = (uint32_t) new_table
-		    | PAGE_PRESENT | PAGE_RW | (flags & PAGE_FLAGS);
+			| PAGE_PRESENT | PAGE_RW | (flags & PAGE_FLAGS);
 		memset((void*) table, 0, 4096);
 	}
 
@@ -154,7 +154,7 @@ void paging_fault_handler(registers_t* regs) {
 
 	printf("\x1B[37;44m");
 	printf("[VMM] Page Fault caused by instruction at 0x%X from process %d:\n",
-	    regs->eip, proc_get_current_pid());
+		regs->eip, proc_get_current_pid());
 	printf("The page at 0x%X %s present ", cr2, err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");

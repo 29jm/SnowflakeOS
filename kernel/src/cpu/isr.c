@@ -101,8 +101,8 @@ void isr_handler(registers_t* regs) {
 	}
 	else {
 		printf("[ISR] Unhandled %s %d: %s\n",
-		    regs->int_no < 32 ? "exception" : "interrupt", regs->int_no,
-		    regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
+			regs->int_no < 32 ? "exception" : "interrupt", regs->int_no,
+			regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
 		abort();
 	}
 }
@@ -114,7 +114,7 @@ void isr_register_handler(uint32_t num, handler_t handler) {
 
 	if (isr_handlers[num]) {
 		printf("[ISR] Interrupt handler %d already registered\n", num,
-		    exception_msgs[num]);
+			exception_msgs[num]);
 	}
 	else {
 		isr_handlers[num] = handler;

@@ -7,15 +7,15 @@
 
 // Add new members to the end to avoid messing with the offsets
 typedef struct _proc_t {
-    struct _proc_t* next;
-    uint32_t pid;
-    // Length of program memory in number of pages
-    uint32_t stack_len;
-    uint32_t code_len;
-    uintptr_t directory;
-    uintptr_t kernel_stack;
-    uintptr_t esp;
-    uint32_t mem_len;
+	struct _proc_t* next;
+	uint32_t pid;
+	// Length of program memory in number of pages
+	uint32_t stack_len;
+	uint32_t code_len;
+	uintptr_t directory;
+	uintptr_t kernel_stack;
+	uintptr_t esp;
+	uint32_t mem_len;
 } process_t;
 
 void init_proc();

@@ -27,7 +27,7 @@ void init_gdt() {
 
 	// 0x2B = 0+5*8bytes | 3 (bottom 2 bits control ring number)
 	asm("mov $0x2B, %ax\n" // Flush the TSS
-	    "ltr %ax\n");
+		"ltr %ax\n");
 }
 
 /* See `gdt.h` for some "explanation" of the parameters here.
