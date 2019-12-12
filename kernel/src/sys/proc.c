@@ -229,8 +229,10 @@ uint32_t proc_get_current_pid() {
 /* Extends the program's writeable memory by `num` pages.
  */
 uintptr_t proc_alloc_pages(uint32_t num) {
-	uintptr_t end = 0x1000*(current_process->code_len + current_process->mem_len);
+	printf("[PROC] Allocating %d pages for process %d\n",
+		num, current_process->pid);
 
+	uintptr_t end = 0x1000*(current_process->code_len + current_process->mem_len);
 	paging_alloc_pages(end, num);
 	current_process->mem_len += num;
 

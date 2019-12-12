@@ -5,15 +5,16 @@
 #include <snow.h>
 
 int main() {
-	window_t* win = snow_create_window("Windows XP Install Wizard", 300, 150);
+	window_t* win = snow_open_window("SnowflakeOS Installer", 300, 150);
+	window_t* win2 = snow_open_window("Test window", 300, 100);
 
-	for (uint32_t i = 0; i < win->fb.width*win->fb.height; i++) {
-		((uint32_t*) win->fb.address)[i] = i | i*512 | i % 512;
+	while (true) {
+		snow_draw_window(win);
+		snow_draw_window(win2);
 	}
 
-	snow_draw_window(win);
-
-	while (true);
+	snow_close_window(win);
+	snow_close_window(win2);
 
 	return 0;
 }

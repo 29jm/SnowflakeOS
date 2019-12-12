@@ -2,6 +2,12 @@
 #define SNOWLIB_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
+// Sets a magic breakpoint in Bochs on the line it's called.
+#define BREAK() do { \
+                	asm ("xchgw %bx, %bx\n"); \
+                } while (false)
 
 typedef struct {
 	uintptr_t address;
@@ -15,13 +21,11 @@ typedef struct {
 	char* title;
 	uint32_t width;
 	uint32_t height;
-	uint32_t x;
-	uint32_t y;
 	fb_t fb;
+	uint32_t id;
 } window_t;
 
 void* snow_alloc(uint32_t n);
-void snow_render(fb_t fb);
 fb_t snow_get_fb_info();
 
 // Drawing functions
@@ -33,7 +37,9 @@ void snow_draw_character(fb_t fb, char c, int x, int y, uint32_t col);
 void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col);
 
 // GUI functions
-window_t* snow_create_window(char* title, int width, int height);
+window_t* snow_open_window(char* title, int width, int height);
+void snow_close_window(window_t* win);
 void snow_draw_window(window_t* win);
+void snow_render_window(window_t* win);
 
 #endif

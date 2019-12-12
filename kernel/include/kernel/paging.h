@@ -38,9 +38,9 @@ void* kamalloc(uint32_t size, uint32_t align);
  */
 #define KERNEL_BASE_VIRT 0xC0000000
 
-// Get ourselves ~4 MiB of heap space
+// Get ourselves some heap space
 #define KERNEL_HEAP_VIRT 0xD0000000
-#define KERNEL_HEAP_VIRT_MAX 0xD0400000
+#define KERNEL_HEAP_VIRT_MAX 0xD0800000
 
 #define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
 #define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)

@@ -70,7 +70,7 @@ void draw_line_horizontal(fb_t fb, int x0, int x1, int y, uint32_t col) {
 
 	uint32_t* offset = pixel_offset(fb, x0, y);
 
-	for (int i = 0; i < x1 - x0; i++) {
+	for (int i = 0; i <= x1 - x0; i++) {
 		offset[i] = col;
 	}
 }
@@ -84,7 +84,7 @@ void draw_line_vertical(fb_t fb, int x, int y0, int y1, uint32_t col) {
 
 	uint32_t* offset = pixel_offset(fb, x, y0);
 
-	for (int i = 0; i < y1 - y0; i++) {
+	for (int i = 0; i <= y1 - y0; i++) {
 		*offset = col;
 		offset = (uint32_t*)((uintptr_t) offset + fb.pitch);
 	}
@@ -109,7 +109,7 @@ void snow_draw_rect(fb_t fb, int x, int y, int w, int h, uint32_t col) {
 			offset[j] = col;
 		}
 
-		offset = (uint32_t*)((uintptr_t) offset + fb.pitch);
+		offset = (uint32_t*) ((uintptr_t) offset + fb.pitch);
 	}
 }
 
@@ -139,10 +139,10 @@ void snow_draw_line(fb_t fb, int x0, int y0, int x1, int y1, uint32_t col) {
 }
 
 void snow_draw_border(fb_t fb, int x, int y, int w, int h, uint32_t col) {
-	draw_line_horizontal(fb, x, x + w, y, col);
-	draw_line_horizontal(fb, x, x + w, y + h, col);
-	draw_line_vertical(fb, x, y, y + h, col);
-	draw_line_vertical(fb, x + w, y, y + h, col);
+	draw_line_horizontal(fb, x, x + w - 1, y, col);
+	draw_line_horizontal(fb, x, x + w - 1, y + h - 1, col);
+	draw_line_vertical(fb, x, y, y + h - 1, col);
+	draw_line_vertical(fb, x + w - 1, y, y + h - 1, col);
 }
 
 /* Font stuff */

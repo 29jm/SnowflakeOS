@@ -1,5 +1,6 @@
 #include <kernel/term.h>
 #include <kernel/fb.h>
+#include <kernel/wm.h>
 #include <kernel/serial.h>
 #include <kernel/multiboot.h>
 #include <kernel/gdt.h>
@@ -44,6 +45,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	init_pmm(boot);
 	init_paging();
 	init_syscall();
+	init_wm();
 
 	mod_t* modules = (mod_t*) boot->mods_addr;
 

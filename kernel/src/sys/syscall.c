@@ -2,6 +2,7 @@
 #include <kernel/proc.h>
 #include <kernel/timer.h>
 #include <kernel/fb.h>
+#include <kernel/wm.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -14,8 +15,10 @@ static void syscall_exit(registers_t* regs);
 static void syscall_wait(registers_t* regs);
 static void syscall_putchar(registers_t* regs);
 static void syscall_alloc(registers_t* regs);
-static void syscall_render_framebuffer(registers_t* regs);
 static void syscall_get_framebuffer_info(registers_t* regs);
+static void syscall_wm_open_window(registers_t* regs);
+static void syscall_wm_close_window(registers_t* regs);
+static void syscall_wm_render_window(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -27,8 +30,12 @@ void init_syscall() {
 	syscall_handlers[2] = syscall_wait;
 	syscall_handlers[3] = syscall_putchar;
 	syscall_handlers[4] = syscall_alloc;
-	syscall_handlers[5] = syscall_render_framebuffer;
 	syscall_handlers[6] = syscall_get_framebuffer_info;
+
+	// TODO: convert those to a single syscall with parameters
+	syscall_handlers[7] = syscall_wm_open_window;
+	syscall_handlers[8] = syscall_wm_close_window;
+	syscall_handlers[9] = syscall_wm_render_window;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -40,7 +47,7 @@ static void syscall_handler(registers_t* regs) {
 	}
 }
 
-/* Convention: TODO: ebx is not callee-saved, what do we do?
+/* Convention: TODO: ebx is not callee-saved, remove its usage
  * - Arguments shall be passed in this order:
  *  ebx, ecx, edx,
  *  and if more are needed, ebp shall contain a pointer to them.
@@ -85,15 +92,22 @@ static void syscall_alloc(registers_t* regs) {
 	regs->eax = proc_alloc_pages(n);
 }
 
-static void syscall_render_framebuffer(registers_t* regs) {
-	uintptr_t addr = (uintptr_t) regs->ebx;
-	fb_render(addr);
-}
-
 static void syscall_get_framebuffer_info(registers_t* regs) {
 	fb_t fb = fb_get_info();
 	regs->eax = fb.pitch;
 	regs->ebx = fb.width;
 	regs->ecx = fb.height;
 	regs->edx = fb.bpp;
+}
+
+static void syscall_wm_open_window(registers_t* regs) {
+	regs->eax = wm_open_window((fb_t*) regs->ecx);
+}
+
+static void syscall_wm_close_window(registers_t* regs) {
+	wm_close_window(regs->ecx);
+}
+
+static void syscall_wm_render_window(registers_t* regs) {
+	wm_render_window(regs->ecx);
 }

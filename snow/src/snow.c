@@ -19,24 +19,13 @@ void* snow_alloc(uint32_t n) {
 	return (void*) address;
 }
 
-/* Displays the specified framebuffer to the screen.
- */
-void snow_render(fb_t fb) {
-	asm (
-		"mov $5, %%eax\n"
-		"mov %[buffer], %%ebx\n"
-		"int $0x30\n"
-		:: [buffer] "r" (fb.address)
-		: "%eax", "%ebx");
-}
-
-
 /* Returns information about the display.
- * Note: does not allocate a framebuffer, the `address` field will contain
- * garbage.
+ * Note: the `address` field returned is garbage.
  */
 fb_t snow_get_fb_info() {
 	fb_t fb;
+
+	fb.address = 0;
 
 	asm (
 		"mov $6, %%eax\n"

@@ -1,0 +1,32 @@
+#ifndef COMP_H
+#define COMP_H
+
+#include <kernel/fb.h>
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#define WM_NORMAL     0
+#define WM_BACKGROUND 1
+#define WM_FOREGROUND 2
+
+#define WM_VALID_FLAGS (WM_BACKGROUND | WM_FOREGROUND)
+
+typedef struct _wm_window_t {
+	struct _wm_window_t* next;
+	struct _wm_window_t* prev; // TODO: remove prev
+	fb_t fb;
+	uint32_t x;
+	uint32_t y;
+	uint32_t z;
+	uint32_t id;
+	uint32_t flags;
+} wm_window_t;
+
+void init_wm();
+
+uint32_t wm_open_window(fb_t* fb, uint32_t flags);
+void wm_close_window(uint32_t win_id);
+void wm_render_window(uint32_t win_id);
+
+#endif

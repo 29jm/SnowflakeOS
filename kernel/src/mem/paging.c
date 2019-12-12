@@ -161,7 +161,7 @@ void paging_fault_handler(registers_t* regs) {
 
 	page_t* page = paging_get_page(cr2 & PAGE_FRAME, false, 0);
 
-	if (page) {
+	if (err & 0x01) {
 		printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
 	}
 
@@ -224,6 +224,8 @@ void* kamalloc(uint32_t size, uint32_t align) {
 	uintptr_t next = (((uintptr_t)heap_pointer / align) + 1) * align;
 
 	if (next + size >= KERNEL_HEAP_VIRT_MAX) {
+		// printf("[VMM] Kernel out of memory\n");
+		// printf("[VMM] Couldn't allocate %d kB: heap at %d\n", size/1024, next);
 		return NULL;
 	}
 
