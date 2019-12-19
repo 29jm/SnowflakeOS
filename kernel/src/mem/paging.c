@@ -3,6 +3,7 @@
 #include <kernel/term.h>
 #include <kernel/fb.h>
 #include <kernel/proc.h>
+#include <kernel/sys.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,8 @@
 static directory_entry_t* current_page_directory;
 extern directory_entry_t kernel_directory[1024];
 
-static uint8_t* heap_pointer = (uint8_t*) KERNEL_HEAP_VIRT;
+// Pointer to our kernel heap
+static uintptr_t heap;
 
 void init_paging() {
 	isr_register_handler(14, &paging_fault_handler);
@@ -31,28 +33,10 @@ void init_paging() {
 	paging_map_pages(0x00000000, 0x00000000, 512, PAGE_RW);
 	current_page_directory = kernel_directory;
 
-	// Map the kernel heap
-	uint32_t heap_pages = (KERNEL_HEAP_VIRT_MAX-KERNEL_HEAP_VIRT)/4096;
-	uintptr_t heap_phys = pmm_alloc_pages(heap_pages);
-	paging_map_pages(0xD0000000, heap_phys, heap_pages, PAGE_RW);
-
-	// Keep the TTY alive
-	uint32_t size = sizeof(uint16_t)*TERM_WIDTH*TERM_HEIGHT;
-	uint16_t* tty_buff = (uint16_t*)kamalloc(size, 0x1000);
-	page_t* p = paging_get_page((uintptr_t)tty_buff, false, 0);
-	*p = TERM_MEMORY | PAGE_PRESENT | PAGE_RW;
-	term_set_buffer(tty_buff);
-
-	// Keep the framebuffer alive
-	size = fb_get_size();
-	uintptr_t fb_buff = (uintptr_t) kamalloc(size, 0x1000);
-
-	for (uint32_t i = 0; i < size/0x1000; i++) {
-		p = paging_get_page(fb_buff + 0x1000*i, false, 0);
-		*p = (fb_get_address() + 0x1000*i) | PAGE_PRESENT | PAGE_RW;
-	}
-
-	fb_set_address(fb_buff);
+	// Setup the kernel heap
+	heap = KERNEL_HEAP_BEGIN;
+	uintptr_t heap_phys = pmm_alloc_pages(KERNEL_HEAP_SIZE/0x1000);
+	paging_map_pages(KERNEL_HEAP_BEGIN, heap_phys, KERNEL_HEAP_SIZE/0x1000, PAGE_RW);
 }
 
 uintptr_t paging_get_kernel_directory() {
@@ -217,19 +201,18 @@ void* kmalloc(uint32_t size) {
 	return kamalloc(size, 4);
 }
 
-/* Aligned memory allocator.
- * Returns `size` bytes of memory at an address multiple of `align`.
+/* Returns `size` bytes of memory at an address multiple of `align`.
+ * The 'a' stands for "aligned".
  */
 void* kamalloc(uint32_t size, uint32_t align) {
-	uintptr_t next = (((uintptr_t)heap_pointer / align) + 1) * align;
+	uintptr_t next = ALIGN(heap, align);
 
-	if (next + size >= KERNEL_HEAP_VIRT_MAX) {
-		// printf("[VMM] Kernel out of memory\n");
-		// printf("[VMM] Couldn't allocate %d kB: heap at %d\n", size/1024, next);
-		return NULL;
+	if (next + size > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
+		printf("[VMM] The kernel ran out of heap memory\n");
+		abort();
 	}
 
-	heap_pointer = (uint8_t*)(next + size);
+	heap = next + size;
 
-	return (uint8_t*)next;
+	return (void*) next;
 }

@@ -1,10 +1,11 @@
+#include <kernel/term.h>
+#include <kernel/ansi_interpreter.h>
+#include <kernel/paging.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-#include <kernel/term.h>
-#include <kernel/ansi_interpreter.h>
 
 #define ENTRY(x, y) term_buffer[(y)*TERM_WIDTH+(x)]
 
@@ -43,6 +44,13 @@ void init_term() {
 	}
 
 	ansi_init_context(&ctx);
+
+	// Remap the terminal's buffer in the kernel heap
+	uint32_t size = sizeof(uint16_t)*TERM_WIDTH*TERM_HEIGHT;
+	uintptr_t buff = (uintptr_t) kamalloc(size, 0x1000);
+	page_t* p = paging_get_page((uintptr_t) buff, false, 0);
+	*p = TERM_MEMORY | PAGE_PRESENT | PAGE_RW;
+	term_buffer = (uint16_t*) buff;
 }
 
 void term_change_bg_color(term_color_t bg) {

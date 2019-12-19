@@ -12,6 +12,7 @@
 #include <kernel/ps2.h>
 #include <kernel/syscall.h>
 #include <kernel/proc.h>
+#include <kernel/sys.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -24,27 +25,27 @@ extern uint32_t KERNEL_END_PHYS;
 extern uint32_t KERNEL_SIZE;
 
 void kernel_main(multiboot_t* boot, uint32_t magic) {
-	init_term();
-	init_fb(boot->framebuffer);
-
-	printf("\x1B[36;1mSnowflakeOS\x1B[37m 0.2 - Challenge Edition\n\n");
-	printf("Kernel loaded at 0x%X, ending at 0x%X (%dKiB)\n",
-		&KERNEL_BEGIN_PHYS, &KERNEL_END_PHYS, ((uint32_t) &KERNEL_SIZE) >> 10);
-
-	assert(magic == MULTIBOOT_EAX_MAGIC);
-	assert(boot->flags & MULTIBOOT_FLAG_MMAP);
-
 	init_serial();
-	multiboot_print_infos(boot);
+	init_pmm(boot);
+	init_paging();
+	init_term();
+
+	if (magic != MULTIBOOT_EAX_MAGIC) {
+		printf("The multiboot magic header is wrong: proceeding anyway\n");
+	}
+
+	printf("SnowflakeOS 0.3 - Challenge Edition\n");
+	printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
+
+	init_fb(boot->framebuffer);
 	init_gdt();
 	init_idt();
 	init_isr();
 	init_irq();
+	init_syscall();
+
 	init_ps2();
 	init_timer();
-	init_pmm(boot);
-	init_paging();
-	init_syscall();
 	init_wm();
 
 	mod_t* modules = (mod_t*) boot->mods_addr;

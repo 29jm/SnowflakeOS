@@ -25,25 +25,30 @@ void init_proc() {
  * and add it to the process queue, after the currently executing process.
  */
 void proc_run_code(uint8_t* code, uint32_t len) {
-	uint32_t num_code_pages = len / 4096 + 1;
+	static uintptr_t temp_page = 0;
+
+	if (!temp_page) {
+		temp_page = (uintptr_t) kamalloc(0x1000, 0x1000);
+	}
+
+	uint32_t num_code_pages = len / 0x1000 + 1;
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
 
 	process_t* process = kmalloc(sizeof(process_t));
-	uintptr_t kernel_stack = (uintptr_t) kmalloc(4096) + 4096 - 1;
+	uintptr_t kernel_stack = (uintptr_t) kmalloc(0x1000) + 0x1000 - 1;
 	uintptr_t pd_phys = pmm_alloc_page();
 
-	// Copy the kernel page directory with a temporary mapping after the heap
-	paging_map_page(KERNEL_HEAP_VIRT_MAX, pd_phys, PAGE_RW);
-	memcpy((void*) KERNEL_HEAP_VIRT_MAX, (void*) 0xFFFFF000, 4096);
-	directory_entry_t* pd = (directory_entry_t*) KERNEL_HEAP_VIRT_MAX;
+	// Copy the kernel page directory with a temporary mapping
+	page_t* p = paging_get_page(temp_page, false, 0);
+	*p = pd_phys | PAGE_PRESENT | PAGE_RW;
+	memcpy((void*) temp_page, (void*) 0xFFFFF000, 0x1000);
+	directory_entry_t* pd = (directory_entry_t*) temp_page;
 	pd[1023] = pd_phys | PAGE_PRESENT | PAGE_RW;
 
 	// ">> 22" grabs the address's index in the page directory, see `paging.c`
 	for (uint32_t i = 0; i < (KERNEL_BASE_VIRT >> 22); i++) {
 		pd[i] = 0; // Unmap everything below the kernel
 	}
-
-	paging_unmap_page(KERNEL_HEAP_VIRT_MAX);
 
 	// We can now switch to that directory to modify it easily
 	uintptr_t previous_pd = *paging_get_page(0xFFFFF000, false, 0) & PAGE_FRAME;

@@ -29,18 +29,16 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 void* kmalloc(uint32_t size);
 void* kamalloc(uint32_t size, uint32_t align);
 
-/* We assume here that the kernel code data and stack as setup by our linker
- * script ends before addresses 0xD0000000, which is a fair guess, as long as
- * our kernel occupies less than 255 MiB of memory.
- * We could also use the `KERNEl_END_PHYS` linker symbol to avoid making these
- * assumptions, and probably to gain address space, but having clear separations
- * has advantages in debugging.
- */
 #define KERNEL_BASE_VIRT 0xC0000000
 
-// Get ourselves some heap space
-#define KERNEL_HEAP_VIRT 0xD0000000
-#define KERNEL_HEAP_VIRT_MAX 0xD0800000
+/* Our kernel heap starts right after our kernel binary. Given that our kernel
+ * is small and loaded at 0xC0100000, the following address gives us around
+ * 767 MiB of kernel heap.
+ * Note: the kernel is mapped by a 4MiB page, so we make our heap begin after
+ * that.
+ */
+#define KERNEL_HEAP_BEGIN (KERNEL_BASE_VIRT + 0x1000*1024)
+#define KERNEL_HEAP_SIZE 0x1E00000
 
 #define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
 #define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)

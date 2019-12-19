@@ -1,5 +1,6 @@
 #include <kernel/wm.h>
 #include <kernel/mem.h>
+#include <kernel/sys.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -9,10 +10,6 @@ static uint32_t current_z = 0;
 static wm_window_t* windows;
 static fb_t screen_fb;
 static fb_t fb;
-
-#define BREAK() do { \
-                	asm ("xchgw %bx, %bx\n"); \
-                } while (false)
 
 void init_wm() {
 	screen_fb = fb_get_info();
