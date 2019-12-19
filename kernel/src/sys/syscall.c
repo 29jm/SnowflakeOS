@@ -101,7 +101,7 @@ static void syscall_get_framebuffer_info(registers_t* regs) {
 }
 
 static void syscall_wm_open_window(registers_t* regs) {
-	regs->eax = wm_open_window((fb_t*) regs->ecx);
+	regs->eax = wm_open_window((fb_t*) regs->ecx, regs->edx);
 }
 
 static void syscall_wm_close_window(registers_t* regs) {

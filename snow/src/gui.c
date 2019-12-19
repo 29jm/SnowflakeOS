@@ -3,16 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-uint32_t snow_wm_open_window(fb_t* fb) {
+uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
 	uint32_t id;
 
 	asm (
 		"mov $7, %%eax\n"
 		"mov %[fb], %%ecx\n"
+		"mov %[flags], %%edx\n"
 		"int $0x30\n"
 		"mov %%eax, %[win_id]\n"
 		: [win_id] "=m" (id)
-		: [fb] "r" (fb)
+		: [fb] "r" (fb),
+		  [flags] "r" (flags)
 		: "%eax", "%ecx");
 
 	return id;
@@ -20,7 +22,7 @@ uint32_t snow_wm_open_window(fb_t* fb) {
 
 /* Returns a window object that can be used to draw things in.
  */
-window_t* snow_open_window(char* title, int width, int height) {
+window_t* snow_open_window(char* title, int width, int height, uint32_t flags) {
 	window_t* win = (window_t*) malloc(sizeof(window_t));
 	uint8_t bpp = snow_get_fb_info().bpp;
 
@@ -32,10 +34,11 @@ window_t* snow_open_window(char* title, int width, int height) {
 		.pitch = width*bpp/8,
 		.width = width,
 		.height = height,
-		.bpp = bpp
+		.bpp = bpp,
 	};
 
-	win->id = snow_wm_open_window(&win->fb);
+	win->id = snow_wm_open_window(&win->fb, flags);
+	win->flags = flags;
 
 	return win;
 }
@@ -64,8 +67,6 @@ void snow_draw_window(window_t* win) {
 	snow_draw_border(win->fb, win->width-17, 3, 14, 14, 0x00000000);
 	// border of the whole window
 	snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
-
-	snow_render_window(win);
 }
 
 /* Draws the window's buffer as-is to the screen.
