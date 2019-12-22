@@ -12,7 +12,7 @@ int putchar(int c) {
 #else
 	asm (
 		"mov $3, %%eax\n"
-		"mov %[c], %%ebx\n"
+		"mov %[c], %%ecx\n"
 		"int $0x30\n"
 		:: [c] "r" (c)
 		: "%eax"

@@ -163,7 +163,9 @@ void snow_draw_character(fb_t fb, char c, int x, int y, uint32_t col) {
 }
 
 void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col) {
-	for (size_t i = 0; i < strlen(str); i++) {
+	size_t len = strlen(str);
+
+	for (size_t i = 0; i < len; i++) {
 		snow_draw_character(fb, str[i], x + 8*i, y, col);
 	}
 }

@@ -24,7 +24,7 @@ uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
  */
 window_t* snow_open_window(char* title, int width, int height, uint32_t flags) {
 	window_t* win = (window_t*) malloc(sizeof(window_t));
-	uint8_t bpp = snow_get_fb_info().bpp;
+	uint32_t bpp = 32;
 
 	win->title = strdup(title);
 	win->width = width;

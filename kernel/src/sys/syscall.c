@@ -47,12 +47,10 @@ static void syscall_handler(registers_t* regs) {
 	}
 }
 
-/* Convention: TODO: ebx is not callee-saved, remove its usage
- * - Arguments shall be passed in this order:
- *  ebx, ecx, edx,
- *  and if more are needed, ebp shall contain a pointer to them.
- * - Values shall be returned in eax, then if needed in the
- *  same order as the arguments
+/* Convention:
+ * - Arguments shall be passed in this order: ecx, edx
+ * - If more are needed, pack them into a struct pointer
+ * - Values shall be returned in eax, ecx then edx.
  */
 
 static void syscall_yield(registers_t* regs) {
@@ -81,23 +79,20 @@ static void syscall_wait(registers_t* regs) {
 }
 
 static void syscall_putchar(registers_t* regs) {
-	putchar((char)regs->ebx);
+	putchar((char) regs->ecx);
 }
 
 /* Allocates n pages of memory to the current process, returns the address of
  * the beginning of the first newly allocated page.
  */
 static void syscall_alloc(registers_t* regs) {
-	uint32_t n = regs->ebx;
+	uint32_t n = regs->ecx;
 	regs->eax = proc_alloc_pages(n);
 }
 
 static void syscall_get_framebuffer_info(registers_t* regs) {
-	fb_t fb = fb_get_info();
-	regs->eax = fb.pitch;
-	regs->ebx = fb.width;
-	regs->ecx = fb.height;
-	regs->edx = fb.bpp;
+	fb_t* fb = (fb_t*) regs->ecx;
+	*fb = fb_get_info();
 }
 
 static void syscall_wm_open_window(registers_t* regs) {

@@ -15,7 +15,7 @@ AS=$(HOST)-as
 LD=$(HOST)-ld
 CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
 
-CFLAGS=-g -std=gnu11 -ffreestanding -fbuiltin -Wall -Wextra
+CFLAGS=-Og -std=gnu11 -ffreestanding -fbuiltin -Wall -Wextra
 LDFLAGS=-nostdlib
 
 # Make will be called on these folders

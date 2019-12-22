@@ -1,5 +1,5 @@
-#ifndef SNOWLIB_H
-#define SNOWLIB_H
+#ifndef SNOW_H
+#define SNOW_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -8,6 +8,10 @@
 #define BREAK() do { \
                 	asm ("xchgw %bx, %bx\n"); \
                 } while (false)
+
+#define WM_NORMAL 0
+#define WM_BACKGROUND 1
+#define WM_FOREGROUND 2
 
 typedef struct {
 	uintptr_t address;
@@ -23,10 +27,11 @@ typedef struct {
 	uint32_t height;
 	fb_t fb;
 	uint32_t id;
+	uint32_t flags;
 } window_t;
 
 void* snow_alloc(uint32_t n);
-fb_t snow_get_fb_info();
+void snow_get_fb_info(fb_t* fb);
 
 // Drawing functions
 void snow_draw_pixel(fb_t fb, int x, int y, uint32_t col);
@@ -37,7 +42,7 @@ void snow_draw_character(fb_t fb, char c, int x, int y, uint32_t col);
 void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col);
 
 // GUI functions
-window_t* snow_open_window(char* title, int width, int height);
+window_t* snow_open_window(char* title, int width, int height, uint32_t flags);
 void snow_close_window(window_t* win);
 void snow_draw_window(window_t* win);
 void snow_render_window(window_t* win);
