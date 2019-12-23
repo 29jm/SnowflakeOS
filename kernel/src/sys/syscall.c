@@ -14,7 +14,7 @@ static void syscall_yield(registers_t* regs);
 static void syscall_exit(registers_t* regs);
 static void syscall_wait(registers_t* regs);
 static void syscall_putchar(registers_t* regs);
-static void syscall_alloc(registers_t* regs);
+static void syscall_sbrk(registers_t* regs);
 static void syscall_get_framebuffer_info(registers_t* regs);
 static void syscall_wm_open_window(registers_t* regs);
 static void syscall_wm_close_window(registers_t* regs);
@@ -29,7 +29,7 @@ void init_syscall() {
 	syscall_handlers[1] = syscall_exit;
 	syscall_handlers[2] = syscall_wait;
 	syscall_handlers[3] = syscall_putchar;
-	syscall_handlers[4] = syscall_alloc;
+	syscall_handlers[4] = syscall_sbrk;
 	syscall_handlers[6] = syscall_get_framebuffer_info;
 
 	// TODO: convert those to a single syscall with parameters
@@ -82,12 +82,9 @@ static void syscall_putchar(registers_t* regs) {
 	putchar((char) regs->ecx);
 }
 
-/* Allocates n pages of memory to the current process, returns the address of
- * the beginning of the first newly allocated page.
- */
-static void syscall_alloc(registers_t* regs) {
-	uint32_t n = regs->ecx;
-	regs->eax = proc_alloc_pages(n);
+static void syscall_sbrk(registers_t* regs) {
+	uint32_t size = regs->ecx;
+	regs->eax = (uint32_t) proc_sbrk(size);
 }
 
 static void syscall_get_framebuffer_info(registers_t* regs) {

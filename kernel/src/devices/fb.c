@@ -6,6 +6,8 @@
 
 static fb_t fb;
 
+/* "fb" stands for "framebuffer" throughout the code.
+ */
 void init_fb(fb_info_t fb_info) {
 	fb = (fb_t) {
 		.width = fb_info.width,

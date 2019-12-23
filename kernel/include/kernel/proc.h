@@ -9,13 +9,13 @@
 typedef struct _proc_t {
 	struct _proc_t* next;
 	uint32_t pid;
-	// Length of program memory in number of pages
+	// Sizes of the exectuable and of the stack in number of pages
 	uint32_t stack_len;
 	uint32_t code_len;
 	uintptr_t directory;
 	uintptr_t kernel_stack;
 	uintptr_t esp;
-	uint32_t mem_len;
+	uint32_t mem_len; // Size of program heap in bytes
 } process_t;
 
 void init_proc();
@@ -26,6 +26,6 @@ void proc_exit_current_process();
 void proc_enter_usermode();
 void proc_switch_process();
 uint32_t proc_get_current_pid();
-uintptr_t proc_alloc_pages(uint32_t num);
+void* proc_sbrk(intptr_t size);
 
 #endif

@@ -18,6 +18,11 @@ static uint32_t next_pid = 1;
 void init_proc() {
 	timer_register_callback(&proc_timer_callback);
 
+	if (!current_process) {
+		printf("[PROC] No program to start\n");
+		abort();
+	}
+
 	proc_enter_usermode();
 }
 
@@ -184,8 +189,9 @@ void proc_exit_current_process() {
 
 	process_t* p = current_process;
 
-	while (p->next != current_process)
+	while (p->next != current_process) {
 		p = p->next;
+	}
 
 	p->next = next_current;
 
@@ -231,15 +237,46 @@ uint32_t proc_get_current_pid() {
 	return current_process->pid;
 }
 
-/* Extends the program's writeable memory by `num` pages.
+/* Extends the program's writeable memory by `size` bytes.
+ * Note: the real granularity is by the page, but the program doesn't need the
+ * details.
  */
-uintptr_t proc_alloc_pages(uint32_t num) {
-	printf("[PROC] Allocating %d pages for process %d\n",
-		num, current_process->pid);
+void* proc_sbrk(intptr_t size) {
+	uintptr_t end = 0x1000*current_process->code_len + current_process->mem_len;
 
-	uintptr_t end = 0x1000*(current_process->code_len + current_process->mem_len);
-	paging_alloc_pages(end, num);
-	current_process->mem_len += num;
+	// Bytes available in the last allocated page
+	int32_t remaining_bytes = (end % 0x1000) ? (0x1000 - (end % 0x1000)) : 0;
 
-	return end;
+	if (size > 0) {
+		// We have to allocate more pages
+		if (remaining_bytes < size) {
+			uint32_t needed_size = size - remaining_bytes;
+			uint32_t num = needed_size / 0x1000 + (needed_size % 0x1000 ? 1 : 0);
+
+			paging_alloc_pages(ALIGN(end, 0x1000), num);
+		}
+	} else if (size < 0) {
+		if (end + size < 0x1000*current_process->code_len) {
+			return (void*) -1; // Can't deallocate the code
+		}
+
+		int32_t taken = 0x1000 - remaining_bytes;
+
+		// We must free at least a page
+		if (taken + size < 0) {
+			uint32_t freed_size = taken - size; // Account for sign
+			uint32_t num = freed_size / 0x1000 + (freed_size % 0x1000 ? 1 : 0);
+
+			// Align to the beginning of the last mapped page
+			uintptr_t virt = end - (end % 0x1000);
+
+			for (uint32_t i = 0; i < num; i++) {
+				paging_unmap_page(virt - 0x1000*i);
+			}
+		}
+	}
+
+	current_process->mem_len += size;
+
+	return (void*) end;
 }

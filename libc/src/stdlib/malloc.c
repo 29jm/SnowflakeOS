@@ -4,48 +4,39 @@
 
 #include <snow.h>
 
-static uintptr_t heap_pointer;
-static uint32_t remaining_bytes;
-
 /* Allocates `n` pages of memory located after the program's memory.
  * Returns a pointer to the first allocated page.
  */
-static void* alloc_syscall(uint32_t n) {
+static void* sbrk(uint32_t size) {
 	uintptr_t address;
 
 	asm volatile (
 		"mov $4, %%eax\n"
-		"mov %[n], %%ecx\n"
+		"mov %[size], %%ecx\n"
 		"int $0x30\n"
 		"mov %%eax, %[address]\n"
 		: [address] "=r" (address)
-		: [n] "r" (n)
+		: [size] "r" (size)
 		: "%eax", "%ecx"
 	);
 
 	return (void*) address;
 }
 
-/* Returns an `alignment` bytes-aligned pointer to a newly allocated memory location
- * of size `size`.
+/* Returns a pointer to a newly allocated memory location of size `size` with
+ * the specified alignment.
  */
 void* aligned_alloc(size_t alignment, size_t size) {
-	if (heap_pointer == 0) {
-		heap_pointer = (uintptr_t) alloc_syscall(1);
-		remaining_bytes = 0x1000;
-	}
+	uintptr_t heap_pointer = (uintptr_t) sbrk(0);
 
 	uintptr_t next = ((heap_pointer/alignment) + 1) * alignment;
-	remaining_bytes -= next - heap_pointer;
+	size = next - heap_pointer + size;
 
-	if (size > remaining_bytes) {
-		uint32_t pages_needed = (size - remaining_bytes)/0x1000 + 1;
-		alloc_syscall(pages_needed);
-		remaining_bytes += 0x1000*pages_needed;
+	if (sbrk(size) == (void*) -1) {
+		return (void*) -1;
 	}
 
-	heap_pointer = next + size;
-	remaining_bytes -= size;
+	heap_pointer += size;
 
 	return (void*) next;
 }

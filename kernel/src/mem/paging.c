@@ -95,8 +95,8 @@ void paging_unmap_page(uintptr_t virt) {
 	page_t* page = paging_get_page(virt, false, 0);
 
 	if (page) {
-		*page &= ~(PAGE_PRESENT);
-		paging_invalidate_page(virt);
+		pmm_free_page(*page & PAGE_FRAME);
+		*page = 0;
 	}
 }
 
@@ -116,8 +116,7 @@ void paging_unmap_pages(uintptr_t virt, uint32_t num) {
 }
 
 void paging_switch_directory(uintptr_t dir_phys) {
-	asm volatile("mov %0, %%cr3\n" :: "r"(dir_phys));
-	current_page_directory = (directory_entry_t*) PHYS_TO_VIRT(dir_phys);
+	asm volatile("mov %0, %%cr3\n" :: "r" (dir_phys));
 }
 
 void paging_invalidate_cache() {
@@ -165,10 +164,10 @@ void paging_fault_handler(registers_t* regs) {
 }
 
 /* Allocates `num` pages of physical memory, mapped starting at `virt`.
- * Beware, pages allocated by this function are not mapped across processes.
+ * Note: pages allocated by this function are not mapped across processes.
  */
-void* paging_alloc_pages(uint32_t virt, uintptr_t num) {
-	for (uint32_t i = 0; i < num; i++) {
+void* paging_alloc_pages(uint32_t virt, uintptr_t size) {
+	for (uint32_t i = 0; i < size; i++) {
 		uintptr_t page = pmm_alloc_page();
 		page_t* p = paging_get_page(virt + i*0x1000, true, PAGE_RW | PAGE_USER);
 		*p = page | PAGE_PRESENT | PAGE_RW | PAGE_USER;
