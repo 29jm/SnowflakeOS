@@ -9,13 +9,20 @@
 #define WM_NORMAL     0
 #define WM_BACKGROUND 1
 #define WM_FOREGROUND 2
+#define WM_NOT_DRAWN  4 // Window has _never_ been called wm_render_window
 
 #define WM_VALID_FLAGS (WM_BACKGROUND | WM_FOREGROUND)
 
+/* ufb: the window's buffer in userspace. Used by the client for drawing
+ *  operations. We copy this buffer on request to `kfb`.
+ * kfb: the drawn window's buffer held by the WM. This is used to redraw the
+ *  window when we're not in the window's address space.
+ */
 typedef struct _wm_window_t {
 	struct _wm_window_t* next;
 	struct _wm_window_t* prev; // TODO: remove prev
-	fb_t fb;
+	fb_t ufb;
+	fb_t kfb;
 	uint32_t x;
 	uint32_t y;
 	uint32_t z;

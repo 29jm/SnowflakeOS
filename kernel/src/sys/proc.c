@@ -23,6 +23,7 @@ void init_proc() {
 		abort();
 	}
 
+	printf("[PROC] Initial process: %d\n", current_process->pid);
 	proc_enter_usermode();
 }
 
@@ -81,7 +82,8 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 		.directory = pd_phys,
 		.kernel_stack = kernel_stack,
 		.esp = kernel_stack,
-		.mem_len = 0
+		.mem_len = 0,
+		.sleep_ticks = 0
 	};
 
 	// Insert the process in the ring, create it if empty
@@ -203,9 +205,38 @@ void proc_exit_current_process() {
 void proc_timer_callback(registers_t* regs) {
 	UNUSED(regs);
 
-	if (current_process->next == current_process) {
-		return;
-	}
+	process_t* p = current_process;
+
+	// Avoid switching to a sleeping process if possible
+	do {
+		if (p->next->sleep_ticks > 0) {
+			p->next->sleep_ticks--;
+		} else {
+			// We don't need to switch process
+			if (p->next == current_process) {
+				return;
+			}
+
+			// We don't need to modify the process queue
+			if (p->next == current_process->next) {
+				break;
+			}
+
+			// We insert the next process between the current one and the one
+			// previously scheduled to be switched to.
+			process_t* previous = p;
+			process_t* next_proc = p->next;
+			process_t* moved = current_process->next;
+
+			previous->next = next_proc->next;
+			next_proc->next = moved;
+			current_process->next = next_proc;
+
+			break;
+		}
+
+		p = p->next;
+	} while (p != current_process);
 
 	proc_switch_process();
 }
@@ -235,6 +266,11 @@ void proc_enter_usermode() {
 
 uint32_t proc_get_current_pid() {
 	return current_process->pid;
+}
+
+void proc_sleep(uint32_t ms) {
+	current_process->sleep_ticks = (uint32_t) (ms/1000.0)*TIMER_FREQ;
+	proc_timer_callback(NULL);
 }
 
 /* Extends the program's writeable memory by `size` bytes.

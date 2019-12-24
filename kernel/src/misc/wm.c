@@ -11,6 +11,7 @@ void wm_append_window(wm_window_t* win);
 void wm_assign_z_orders();
 void wm_remove_window(uint32_t id);
 wm_window_t* wm_get_window(uint32_t id);
+wm_window_t* wm_find_with_z(uint32_t id);
 
 static uint32_t id_count = 0;
 static wm_window_t* windows;
@@ -32,11 +33,14 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 	*win = (wm_window_t) {
 		.prev = 0,
 		.next = 0,
-		.fb = *buff,
+		.ufb = *buff,
+		.kfb = *buff,
 		.y = screen_fb.height/2-buff->height/2,
 		.id = id_count++,
-		.flags = flags & WM_VALID_FLAGS
+		.flags = WM_NOT_DRAWN | (flags & WM_VALID_FLAGS)
 	};
+
+	win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
 
 	win->x = wm_get_best_x(win);
 	win->z = windows ? wm_get_max_z() + 1 : 0;
@@ -44,10 +48,14 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 	wm_append_window(win);
 	wm_assign_z_orders();
 
+	printf("[WM] New window %d with z=%d\n", win->id, win->z);
+
 	return win->id;
 }
 
 void wm_close_window(uint32_t win_id) {
+	printf("[WM] Closing window %d\n", win_id);
+
 	wm_remove_window(win_id);
 	wm_assign_z_orders();
 }
@@ -58,8 +66,6 @@ void wm_close_window(uint32_t win_id) {
  * buffer is flushed to the screen.
  */
 void wm_render_window(uint32_t win_id) {
-	static uint32_t current_z = 0;
-
 	wm_window_t* win = wm_get_window(win_id);
 
 	if (!win) {
@@ -67,25 +73,35 @@ void wm_render_window(uint32_t win_id) {
 		return;
 	}
 
-	if (win->z != current_z) {
-		return;
+	fb_t* ufb = &win->ufb;
+	fb_t* kfb = &win->kfb;
+
+	// Copy the window's buffer in the kernel
+	memcpy((void*) kfb->address, (void*) ufb->address, ufb->height*ufb->pitch);
+
+	// Make sure the window is marked as drawn
+	win->flags &= ~WM_NOT_DRAWN;
+
+	// Redraw all windows in z-order
+	uint32_t max_z = wm_get_max_z();
+
+	for (uint32_t z = 0; z <= max_z; z++) {
+		win = wm_find_with_z(z);
+
+		if (win->flags & WM_NOT_DRAWN) {
+			continue;
+		}
+
+		uint32_t* off = (uint32_t*) (fb.address + win->y*fb.pitch + win->x*fb.bpp/8);
+
+		for (uint32_t i = 0; i < win->kfb.height; i++) {
+			memcpy(off, (void*) (win->kfb.address + i*win->kfb.pitch), win->kfb.pitch);
+			off = (uint32_t*) ((uintptr_t) off + fb.pitch);
+		}
 	}
 
-	// Render to off-screen buffer
-	uint32_t* off = (uint32_t*) (fb.address + win->y*fb.pitch + win->x*fb.bpp/8);
-
-	for (uint32_t i = 0; i < win->fb.height; i++) {
-		memcpy(off, (void*) (win->fb.address + i*win->fb.pitch), win->fb.pitch);
-		off = (uint32_t*) ((uintptr_t) off + fb.pitch);
-	}
-
-	// All windows are drawn, write to the screen
-	if (current_z == wm_get_max_z()) {
-		current_z = 0;
-		fb_render(fb);
-	} else {
-		current_z++;
-	}
+	// Update the screen
+	fb_render(fb);
 }
 
 /* Helpers */

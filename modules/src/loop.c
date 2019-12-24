@@ -10,8 +10,10 @@ int main() {
 		((uint32_t*) win->fb.address)[i] = i | i*512 | i % 512;
 	}
 
+	snow_render_window(win);
+
 	while (true) {
-		snow_render_window(win);
+
 	}
 
 	snow_close_window(win);

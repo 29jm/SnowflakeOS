@@ -16,6 +16,7 @@ typedef struct _proc_t {
 	uintptr_t kernel_stack;
 	uintptr_t esp;
 	uint32_t mem_len; // Size of program heap in bytes
+	uint32_t sleep_ticks;
 } process_t;
 
 void init_proc();
@@ -26,6 +27,7 @@ void proc_exit_current_process();
 void proc_enter_usermode();
 void proc_switch_process();
 uint32_t proc_get_current_pid();
+void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
 
 #endif

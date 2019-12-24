@@ -46,6 +46,7 @@ qemu: SnowflakeOS.iso
 
 bochs: SnowflakeOS.iso
 	bochs -q -rc .bochsrc_cmds
+	cat serial.log
 
 clean: $(PROJECT_CLEAN)
 	rm -rfv $(SYSROOTDIR)

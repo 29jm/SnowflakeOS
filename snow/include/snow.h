@@ -30,8 +30,8 @@ typedef struct {
 	uint32_t flags;
 } window_t;
 
-void* snow_alloc(uint32_t n);
 void snow_get_fb_info(fb_t* fb);
+void snow_sleep(uint32_t ms);
 
 // Drawing functions
 void snow_draw_pixel(fb_t fb, int x, int y, uint32_t col);

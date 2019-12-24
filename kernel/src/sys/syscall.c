@@ -67,15 +67,8 @@ static void syscall_exit(registers_t* regs) {
 }
 
 static void syscall_wait(registers_t* regs) {
-	UNUSED(regs);
-
-	// TODO
-	/* This must be implemented by the scheduler, not here:
-	 * - IRQs don't fire while in a syscall, so we can't rely on the timer
-	 *   increasing
-	 * - We can't both task switch and come back to this handler to check
-	 *   the time
-	 */
+	uint32_t ms = regs->ecx;
+	proc_sleep(ms);
 }
 
 static void syscall_putchar(registers_t* regs) {

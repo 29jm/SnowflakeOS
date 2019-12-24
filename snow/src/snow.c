@@ -12,3 +12,13 @@ void snow_get_fb_info(fb_t* fb) {
 		: "%eax"
 	);
 }
+
+void snow_sleep(uint32_t ms) {
+	asm volatile (
+		"mov $2, %%eax\n"
+		"mov %[ms], %%ecx\n"
+		"int $0x30\n"
+		:: [ms] "r" (ms)
+		: "%eax"
+	);
+}

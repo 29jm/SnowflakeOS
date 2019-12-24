@@ -3,9 +3,8 @@
 #include <kernel/timer.h>
 #include <kernel/com.h>
 
-// Globals are always initialized to 0
 static uint32_t current_tick;
-handler_t callback;
+static handler_t callback;
 
 void init_timer() {
 	irq_register_handler(IRQ0, &timer_callback);
