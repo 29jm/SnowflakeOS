@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,8 +8,9 @@
 
 static void print(const char* data, size_t data_length)
 {
-	for (size_t i = 0; i < data_length; i++)
+	for (size_t i = 0; i < data_length; i++) {
 		putchar((int) data[i]);
+	}
 }
 
 int printf(const char* restrict format, ...)
@@ -25,8 +27,11 @@ int printf(const char* restrict format, ...)
 		if (*format != '%') {
 		print_c:
 			amount = 1;
-			while (format[amount] && format[amount] != '%')
+
+			while (format[amount] && format[amount] != '%') {
 				amount++;
+			}
+
 			print(format, amount);
 			format += amount;
 			written += amount;
@@ -35,8 +40,9 @@ int printf(const char* restrict format, ...)
 
 		const char* format_begun_at = format;
 
-		if (*(++format) == '%')
+		if (*(++format) == '%') {
 			goto print_c;
+		}
 
 		if (rejected_bad_specifier) {
 		incomprehensible_conversion:
@@ -47,42 +53,44 @@ int printf(const char* restrict format, ...)
 
 		if (*format == 'c') {
 			format++;
-			char c = (char) va_arg(parameters, int /* char promotes to int */);
+			char c = (char) va_arg(parameters, int);
 			print(&c, sizeof(c));
-		}
-		else if (*format == 's') {
+		} else if (*format == 's') {
 			format++;
 			const char* s = va_arg(parameters, const char*);
 			print(s, strlen(s));
-		}
-		else if (*format == 'd') {
+		} else if (*format == 'd') {
 			format++;
-			int i = va_arg(parameters, int);
+			int32_t i = va_arg(parameters, int32_t);
 			const char* s = itoa(i, conversion_buf, 10);
 			print(s, strlen(s));
-		}
-		else if (*format == 'x') {
+		} else if (*format == 'x') {
 			format++;
-			int i = va_arg(parameters, int);
+			uint32_t i = va_arg(parameters, uint32_t);
 			itoa(i, conversion_buf, 16);
 			print(conversion_buf, strlen(conversion_buf));
-		}
-		else if (*format == 'X') {
+		} else if (*format == 'X') {
 			format++;
-			int i = va_arg(parameters, int);
+			uint32_t i = va_arg(parameters, uint32_t);
 			itoa(i, conversion_buf, 16);
 			for (size_t i = 0; i < strlen(conversion_buf); i++)
 				conversion_buf[i] = toupper(conversion_buf[i]);
 			print(conversion_buf, strlen(conversion_buf));
-		}
-		else if (*format == 'b') {
+		} else if (*format == 'p') {
+			format++;
+			uint32_t i = va_arg(parameters, uint32_t);
+			itoa(i, conversion_buf, 16);
+			for (size_t i = 0; i < strlen(conversion_buf); i++)
+				conversion_buf[i] = toupper(conversion_buf[i]);
+			print("0x", 2);
+			print(conversion_buf, strlen(conversion_buf));
+		} else if (*format == 'b') {
 			// non standard
 			format++;
-			int i = va_arg(parameters, int);
+			uint32_t i = va_arg(parameters, uint32_t);
 			itoa(i, conversion_buf, 2);
 			print(conversion_buf, strlen(conversion_buf));
-		}
-		else {
+		} else {
 			goto incomprehensible_conversion;
 		}
 	}

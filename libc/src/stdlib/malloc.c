@@ -1,8 +1,12 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef _KERNEL_
 
-#include <snow.h>
+/* Returns the next multiple of `s` greater than `a`, or `a` if it is a
+ * multiple of `s`.
+ */
+#define ALIGN(a, s) (((a)/(s) + ((a) % (s) ? 1 : 0)) * (s))
 
 /* Allocates `n` pages of memory located after the program's memory.
  * Returns a pointer to the first allocated page.
@@ -29,14 +33,12 @@ static void* sbrk(uint32_t size) {
 void* aligned_alloc(size_t alignment, size_t size) {
 	uintptr_t heap_pointer = (uintptr_t) sbrk(0);
 
-	uintptr_t next = ((heap_pointer/alignment) + 1) * alignment;
-	size = next - heap_pointer + size;
+	uintptr_t next = ALIGN(heap_pointer, alignment);
+	uint32_t needed = next - heap_pointer + size;
 
-	if (sbrk(size) == (void*) -1) {
+	if (sbrk(needed) == (void*) -1) {
 		return (void*) -1;
 	}
-
-	heap_pointer += size;
 
 	return (void*) next;
 }

@@ -40,6 +40,8 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	uint32_t num_code_pages = len / 0x1000 + 1;
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
 
+	printf("[PROC] Allocating %d pages for the program code\n", num_code_pages);
+
 	process_t* process = kmalloc(sizeof(process_t));
 	uintptr_t kernel_stack = (uintptr_t) kmalloc(0x1000) + 0x1000 - 1;
 	uintptr_t pd_phys = pmm_alloc_page();

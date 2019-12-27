@@ -11,8 +11,6 @@
 #define WM_FOREGROUND 2
 #define WM_NOT_DRAWN  4 // Window has _never_ been called wm_render_window
 
-#define WM_VALID_FLAGS (WM_BACKGROUND | WM_FOREGROUND)
-
 /* ufb: the window's buffer in userspace. Used by the client for drawing
  *  operations. We copy this buffer on request to `kfb`.
  * kfb: the drawn window's buffer held by the WM. This is used to redraw the

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-uint32_t wm_get_best_x();
+uint32_t wm_get_best_x(wm_window_t* win);
 uint32_t wm_get_max_z();
 void wm_append_window(wm_window_t* win);
 void wm_assign_z_orders();
@@ -21,7 +21,7 @@ static fb_t fb;
 void init_wm() {
 	screen_fb = fb_get_info();
 	fb = screen_fb;
-	fb.address = (uintptr_t) kamalloc(screen_fb.height*screen_fb.pitch, 0x10);
+	fb.address = (uintptr_t) kamalloc(screen_fb.height*screen_fb.pitch, 0x1000);
 }
 
 /* Associates a buffer with a window id. The calling program will then be able
@@ -31,24 +31,22 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 	wm_window_t* win = (wm_window_t*) kmalloc(sizeof(wm_window_t));
 
 	*win = (wm_window_t) {
-		.prev = 0,
-		.next = 0,
+		.prev = NULL,
+		.next = NULL,
 		.ufb = *buff,
 		.kfb = *buff,
 		.y = screen_fb.height/2-buff->height/2,
 		.id = id_count++,
-		.flags = WM_NOT_DRAWN | (flags & WM_VALID_FLAGS)
+		.flags = WM_NOT_DRAWN | flags
 	};
 
-	win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
+	win->kfb.address = (uintptr_t) kamalloc(buff->height*buff->pitch, 0x10);
 
 	win->x = wm_get_best_x(win);
 	win->z = windows ? wm_get_max_z() + 1 : 0;
 
 	wm_append_window(win);
 	wm_assign_z_orders();
-
-	printf("[WM] New window %d with z=%d\n", win->id, win->z);
 
 	return win->id;
 }
@@ -73,11 +71,10 @@ void wm_render_window(uint32_t win_id) {
 		return;
 	}
 
-	fb_t* ufb = &win->ufb;
-	fb_t* kfb = &win->kfb;
-
 	// Copy the window's buffer in the kernel
-	memcpy((void*) kfb->address, (void*) ufb->address, ufb->height*ufb->pitch);
+	// TODO: realloc kfb on size change
+	uint32_t win_size = win->ufb.height*win->ufb.pitch;
+	memcpy((void*) win->kfb.address, (void*) win->ufb.address, win_size);
 
 	// Make sure the window is marked as drawn
 	win->flags &= ~WM_NOT_DRAWN;
@@ -86,8 +83,9 @@ void wm_render_window(uint32_t win_id) {
 	uint32_t max_z = wm_get_max_z();
 
 	for (uint32_t z = 0; z <= max_z; z++) {
-		win = wm_find_with_z(z);
+		wm_window_t* win = wm_find_with_z(z);
 
+		// Skip windows which have been opened but haven't been drawn yet
 		if (win->flags & WM_NOT_DRAWN) {
 			continue;
 		}
@@ -173,10 +171,16 @@ uint32_t wm_count_windows() {
 	return count;
 }
 
-uint32_t wm_get_best_x() {
+/* TODO: revamp entirely.
+ */
+uint32_t wm_get_best_x(wm_window_t* win) {
 	wm_window_t* current = windows;
 
 	if (!windows) {
+		return 0;
+	}
+
+	if (win->kfb.width == fb.width) {
 		return 0;
 	}
 

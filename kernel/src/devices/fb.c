@@ -1,5 +1,7 @@
 #include <kernel/fb.h>
 #include <kernel/paging.h>
+#include <kernel/pmm.h>
+#include <kernel/sys.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -20,13 +22,15 @@ void init_fb(fb_info_t fb_info) {
 		printf("[FB] Unsupported bit depth: %d\n", fb.bpp);
 	}
 
+	uintptr_t address = (uintptr_t) fb_info.address;
+
 	// Remap our framebuffer
 	uint32_t size = fb.height*fb.pitch;
 	uintptr_t buff = (uintptr_t) kamalloc(size, 0x1000);
 
 	for (uint32_t i = 0; i < size/0x1000; i++) {
 		page_t* p = paging_get_page(buff + 0x1000*i, false, 0);
-		*p = (fb_info.address + 0x1000*i) | PAGE_PRESENT | PAGE_RW;
+		*p = (address + 0x1000*i) | PAGE_PRESENT | PAGE_RW;
 	}
 
 	fb.address = buff;

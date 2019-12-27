@@ -30,7 +30,7 @@ void init_paging() {
 	// We take 2 MiB to give room to GRUB modules.
 	kernel_directory[0] = 0;
 	paging_invalidate_page(0x00000000);
-	paging_map_pages(0x00000000, 0x00000000, 512, PAGE_RW);
+	paging_map_pages(0x00000000, 0x00000000, 2048, PAGE_RW);
 	current_page_directory = kernel_directory;
 
 	// Setup the kernel heap
@@ -176,14 +176,15 @@ void* paging_alloc_pages(uint32_t virt, uintptr_t size) {
 	return (void*) virt;
 }
 
-/* Rerturns the current physical mapping of `virt` if it exists, zero
+/* Returns the current physical mapping of `virt` if it exists, zero
  * otherwise.
  */
 uintptr_t paging_virt_to_phys(uintptr_t virt) {
 	page_t* p = paging_get_page(virt & PAGE_FRAME, false, 0);
 
-	if (!p)
+	if (!p) {
 		return 0;
+	}
 
 	return (((uintptr_t)*p) & PAGE_FRAME) + (virt & 0xFFF);
 }

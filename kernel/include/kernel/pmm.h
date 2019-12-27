@@ -14,11 +14,6 @@ uintptr_t pmm_alloc_aligned_large_page();
 uintptr_t pmm_alloc_pages(uint32_t num);
 void pmm_free_page(uintptr_t addr);
 void pmm_free_pages(uintptr_t addr, uint32_t num);
-void mmap_set(uint32_t bit);
-void mmap_unset(uint32_t bit);
-uint32_t mmap_test(uint32_t bit);
-uint32_t mmap_find_free();
-uint32_t mmap_find_free_frame(uint32_t num);
 
 extern uint32_t* mem_map;
 

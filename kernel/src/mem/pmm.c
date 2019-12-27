@@ -16,6 +16,12 @@ uint32_t* bitmap;
 extern uint32_t KERNEL_END;
 extern uint32_t KERNEL_END_PHYS;
 
+void mmap_set(uint32_t bit);
+void mmap_unset(uint32_t bit);
+uint32_t mmap_test(uint32_t bit);
+uint32_t mmap_find_free();
+uint32_t mmap_find_free_frame(uint32_t num);
+
 // mem is in KiB
 void init_pmm(multiboot_t* boot) {
 	mem_size = boot->mem_lower + boot->mem_upper;
@@ -57,6 +63,8 @@ uint32_t pmm_get_map_size() {
 	return max_blocks/8;
 }
 
+/* Mark an area of physical memory as available.
+ */
 void pmm_init_region(uintptr_t addr, uint32_t size) {
 	// block number this region starts at
 	uint32_t base_block = addr/PMM_BLOCK_SIZE;
@@ -72,6 +80,8 @@ void pmm_init_region(uintptr_t addr, uint32_t size) {
 	mmap_set(0);
 }
 
+/* Mark an area of physical memory as used.
+ */
 void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 	uint32_t base_block = addr/PMM_BLOCK_SIZE;
 	uint32_t num = size/PMM_BLOCK_SIZE;
@@ -81,6 +91,9 @@ void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 	}
 }
 
+/* Returns the address of a free page of physical memory.
+ * Note: of course, this address is page-aligned.
+ */
 uintptr_t pmm_alloc_page() {
 	if (max_blocks - used_blocks <= 0) {
 		printf("[PMM] Kernel is out of physical memory!");
@@ -98,7 +111,9 @@ uintptr_t pmm_alloc_page() {
 	return (uintptr_t) (block*PMM_BLOCK_SIZE);
 }
 
-/* Strategy:
+/* Returns the address of a 4 MiB area of physical memory, aligned to 4 MiB.
+ *
+ * Strategy:
  * Find an 8 MiB section of memory. In there, we are guaranteed to find an
  * address that is 4 MiB-aligned. Return that, mark 4 MiB as taken.
  */
