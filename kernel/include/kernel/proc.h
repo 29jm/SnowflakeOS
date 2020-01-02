@@ -17,6 +17,7 @@ typedef struct _proc_t {
 	uintptr_t esp;
 	uint32_t mem_len; // Size of program heap in bytes
 	uint32_t sleep_ticks;
+	uint8_t fpu_registers[512];
 } process_t;
 
 void init_proc();

@@ -3,7 +3,7 @@ ata0-master: type=cdrom, path="SnowflakeOS.iso", status=inserted
 boot: cdrom
 log: xbochs.log
 megs: 128
-display_library: sdl2, options="gui_debug"
+display_library: x, options="gui_debug"
 magic_break: enabled=1
 mouse: type=imps2, enabled=1
 com1: enabled=1, mode=file, dev=serial.log

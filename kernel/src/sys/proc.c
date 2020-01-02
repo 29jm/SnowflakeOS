@@ -4,6 +4,7 @@
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <kernel/gdt.h>
+#include <kernel/fpu.h>
 #include <kernel/sys.h>
 
 #include <stdio.h>
@@ -39,8 +40,6 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 
 	uint32_t num_code_pages = len / 0x1000 + 1;
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
-
-	printf("[PROC] Allocating %d pages for the program code\n", num_code_pages);
 
 	process_t* process = kmalloc(sizeof(process_t));
 	uintptr_t kernel_stack = (uintptr_t) kmalloc(0x1000) + 0x1000 - 1;
@@ -239,6 +238,8 @@ void proc_timer_callback(registers_t* regs) {
 
 		p = p->next;
 	} while (p != current_process);
+
+	fpu_switch(current_process, current_process->next);
 
 	proc_switch_process();
 }
