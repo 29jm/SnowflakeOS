@@ -26,9 +26,6 @@ void* paging_alloc_pages(uint32_t virt, uint32_t num);
 void paging_free_pages(uintptr_t virt, uint32_t num);
 uintptr_t paging_virt_to_phys(uintptr_t virt);
 
-void* kmalloc(uint32_t size);
-void* kamalloc(uint32_t size, uint32_t align);
-
 #define KERNEL_BASE_VIRT 0xC0000000
 
 /* Our kernel heap starts right after our kernel binary. Given that our kernel

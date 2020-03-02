@@ -14,6 +14,8 @@
 #include <kernel/proc.h>
 #include <kernel/sys.h>
 
+#include <kernel/mem.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -59,6 +61,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	}
 
 	proc_print_processes();
+
+
 
 	init_proc();
 }

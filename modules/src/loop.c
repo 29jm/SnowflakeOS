@@ -29,6 +29,7 @@ int main() {
 #endif
 
 	snow_draw_string(win->fb, "Snowflake OS 0.3", 3, 3, 0x00FFFFFF);
+
 	snow_render_window(win);
 
 	while (true) {

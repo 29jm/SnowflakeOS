@@ -1,5 +1,6 @@
 #include <kernel/fb.h>
 #include <kernel/paging.h>
+#include <kernel/mem.h>
 #include <kernel/pmm.h>
 #include <kernel/sys.h>
 

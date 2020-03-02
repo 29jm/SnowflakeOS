@@ -30,7 +30,7 @@ void init_paging() {
 	// We take 2 MiB to give room to GRUB modules.
 	kernel_directory[0] = 0;
 	paging_invalidate_page(0x00000000);
-	paging_map_pages(0x00000000, 0x00000000, 2048, PAGE_RW);
+	paging_map_pages(0x00000000, 0x00000000, 1024, PAGE_RW);
 	current_page_directory = kernel_directory;
 
 	// Setup the kernel heap
@@ -136,9 +136,9 @@ void paging_fault_handler(registers_t* regs) {
 	asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
 	printf("\x1B[37;44m");
-	printf("[VMM] Page Fault caused by instruction at 0x%X from process %d:\n",
+	printf("[VMM] Page Fault caused by instruction at %p from process %d:\n",
 		regs->eip, proc_get_current_pid());
-	printf("The page at 0x%X %s present ", cr2, err & 0x01 ? "was" : "wasn't");
+	printf("The page at %p %s present ", cr2, err & 0x01 ? "was" : "wasn't");
 	printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
 	printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 
@@ -187,32 +187,4 @@ uintptr_t paging_virt_to_phys(uintptr_t virt) {
 	}
 
 	return (((uintptr_t)*p) & PAGE_FRAME) + (virt & 0xFFF);
-}
-
-/* Used to allocate memory for use by the kernel.
- * The memory is pre-mapped, which means clones of the kernel page directory
- * (i.e processes) share their kernel memory in kernel mode, for instance
- * during syscalls.
- * There's no corresponding kfree. What the kernel takes, the kernel keeps.
- */
-void* kmalloc(uint32_t size) {
-	// Accessing basic datatypes at unaligned addresses is apparently undefined
-	// behavior. Four-bytes alignement should be enough for most things.
-	return kamalloc(size, 4);
-}
-
-/* Returns `size` bytes of memory at an address multiple of `align`.
- * The 'a' stands for "aligned".
- */
-void* kamalloc(uint32_t size, uint32_t align) {
-	uintptr_t next = ALIGN(heap, align);
-
-	if (next + size > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
-		printf("[VMM] The kernel ran out of heap memory\n");
-		abort();
-	}
-
-	heap = next + size;
-
-	return (void*) next;
 }
