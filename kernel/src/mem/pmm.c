@@ -6,13 +6,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
+#define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)
+
 static uint32_t mem_size;
 static uint32_t used_blocks;
 static uint32_t max_blocks;
+static uintptr_t kernel_end;
 
 uint32_t* bitmap;
 
-// Linker-provided symbols
+// Linker-provided symbols. Beware, those don't take into account GRUB's things
 extern uint32_t KERNEL_END;
 extern uint32_t KERNEL_END_PHYS;
 
@@ -22,15 +26,30 @@ uint32_t mmap_test(uint32_t bit);
 uint32_t mmap_find_free();
 uint32_t mmap_find_free_frame(uint32_t num);
 
-// mem is in KiB
 void init_pmm(multiboot_t* boot) {
+	// Compute where the kernel & GRUB modules ends in physical memory
+	mod_t* modules = (mod_t*) boot->mods_addr;
+
+	for (uint32_t i = 0; i < boot->mods_count; i++) {
+		mod_t mod = modules[i];
+		kernel_end = PHYS_TO_VIRT(mod.mod_end);
+	}
+
+	// In the author's case, modules come after the kernel,
+	// but there's no guarantee it'll always be true
+	if (kernel_end < (uintptr_t) KERNEL_END) {
+		kernel_end = (uintptr_t) KERNEL_END;
+	}
+
+	// Setup our bitmap right after the kernel
+	bitmap = (uint32_t*) kernel_end;
 	mem_size = boot->mem_lower + boot->mem_upper;
-	bitmap = &KERNEL_END;
-	max_blocks = (mem_size*1024) / PMM_BLOCK_SIZE;
+	max_blocks = (mem_size*1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
 	used_blocks = max_blocks;
 
-	memset(bitmap, 0xFF, max_blocks/8);
+	memset(bitmap, 0xFF, max_blocks/8); // Every block is initially taken
 
+	// Parse the memory map to mark valid areas as available
 	uint64_t available = 0;
 	uint64_t unavailable = 0;
 
@@ -53,7 +72,7 @@ void init_pmm(multiboot_t* boot) {
 	}
 
 	// Protect low memory, our glorious kernel and the PMM itself
-	pmm_deinit_region((uintptr_t) 0, (uint32_t) &KERNEL_END_PHYS + max_blocks/8);
+	pmm_deinit_region(0, pmm_get_kernel_end());
 
 	printf("[PMM] Memory stats: available: \x1B[32m%dMiB", available >> 20);
 	printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
@@ -182,7 +201,8 @@ uint32_t mmap_test(uint32_t bit) {
 	return bitmap[bit / 32] & (1 << (bit % 32));
 }
 
-// Returns the first free bit
+/* Returns the index of the first free bit in the bitmap
+ */
 uint32_t mmap_find_free() {
 	for (uint32_t i = 0; i < max_blocks/32; i++) {
 		if (bitmap[i] != 0xFFFFFFFF) {
@@ -197,7 +217,8 @@ uint32_t mmap_find_free() {
 	return 0;
 }
 
-// Returns the first block of frame_size bits
+/* Returns the first block of frame_size bits
+ */
 uint32_t mmap_find_free_frame(uint32_t frame_size) {
 	uint32_t first = 0;
 	uint32_t count = 0;
@@ -227,4 +248,10 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 	}
 
 	return 0;
+}
+
+/* Returns the first address after the kernel in physical memory.
+ */
+uintptr_t pmm_get_kernel_end() {
+	return VIRT_TO_PHYS(kernel_end + max_blocks/8);
 }

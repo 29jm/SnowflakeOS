@@ -10,6 +10,12 @@
 /* Returns the next multiple of `s` greater than `a`, or `a` if it is a
  * multiple of `s`.
  */
-#define ALIGN(a, s) (((a)/(s) + ((a) % (s) ? 1 : 0)) * (s))
+static uint32_t align_to(uint32_t n, uint32_t align) {
+    if (n % align == 0) {
+        return n;
+    }
+
+    return n + (align - n % align);
+}
 
 #endif

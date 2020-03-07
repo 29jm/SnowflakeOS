@@ -2,9 +2,7 @@
 
 #include <stdio.h>
 
-// #define RELEASE
-
-#ifdef RELEASE
+#if 0
 #include "bg.h"
 #endif
 

@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define VIRT_TO_PHYS(x) ((x) - KERNEL_BASE_VIRT)
+
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
 
@@ -26,11 +28,11 @@ void init_paging() {
 	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
 	paging_invalidate_page(0xFFC00000);
 
-	// Identity map only the first 2 MiB: in boot.S, we identity mapped the first 4 MiB
-	// We take 2 MiB to give room to GRUB modules.
+	// Identity the `0x00-kernel_end` range
+	uint32_t kernel_pages = pmm_get_kernel_end()/0x1000;
 	kernel_directory[0] = 0;
+	paging_map_pages(0x00000000, 0x00000000, kernel_pages, PAGE_RW);
 	paging_invalidate_page(0x00000000);
-	paging_map_pages(0x00000000, 0x00000000, 1024, PAGE_RW);
 	current_page_directory = kernel_directory;
 
 	// Setup the kernel heap

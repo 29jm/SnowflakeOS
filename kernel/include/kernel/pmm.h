@@ -14,6 +14,7 @@ uintptr_t pmm_alloc_aligned_large_page();
 uintptr_t pmm_alloc_pages(uint32_t num);
 void pmm_free_page(uintptr_t addr);
 void pmm_free_pages(uintptr_t addr, uint32_t num);
+uintptr_t pmm_get_kernel_end();
 
 extern uint32_t* mem_map;
 

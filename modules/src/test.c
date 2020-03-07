@@ -2,8 +2,7 @@
 #include <string.h>
 
 int main() {
-	snow_sleep(2000);
-	window_t* win = snow_open_window("A static window", 800, 120, WM_NORMAL);
+	window_t* win = snow_open_window("A static window", 200, 120, WM_NORMAL);
 
 	snow_draw_window(win); // Draws the title bar and borders
 	snow_draw_string(win->fb, "Lorem Ipsum", 45, 55, 0x00AA1100);

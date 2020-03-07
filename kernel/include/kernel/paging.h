@@ -37,9 +37,6 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 #define KERNEL_HEAP_BEGIN (KERNEL_BASE_VIRT + 0x1000*1024)
 #define KERNEL_HEAP_SIZE 0x1E00000
 
-#define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
-#define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)
-
 #define PAGE_PRESENT 1
 #define PAGE_RW      2
 #define PAGE_USER    4

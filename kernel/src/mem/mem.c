@@ -14,6 +14,8 @@ void mem_print_blocks();
 static mem_block_t* bottom = NULL;
 static mem_block_t* top = NULL;
 
+/* Returns the size of a block, including the header.
+ */
 uint32_t mem_block_size(mem_block_t* block) {
 	return sizeof(mem_block_t) + (block->size & ~1);
 }
@@ -34,7 +36,7 @@ mem_block_t* mem_new_block(uint32_t size, uint32_t align) {
 
 	// We start the heap right where the first allocation works
 	if (!top) {
-		uintptr_t addr = ALIGN(KERNEL_HEAP_BEGIN+header_size, align) - header_size;
+		uintptr_t addr = align_to(KERNEL_HEAP_BEGIN+header_size, align) - header_size;
 		bottom = (mem_block_t*) addr;
 		top = bottom;
 		top->size = size | 1;
@@ -45,7 +47,7 @@ mem_block_t* mem_new_block(uint32_t size, uint32_t align) {
 
 	// I did the math and we always have next_aligned >= next.
 	uintptr_t next = (uintptr_t) top + mem_block_size(top);
-	uintptr_t next_aligned = ALIGN(next+header_size, align) - header_size;
+	uintptr_t next_aligned = align_to(next+header_size, align) - header_size;
 
 	mem_block_t* block = (mem_block_t*) next_aligned;
 	block->size = size | 1;
@@ -53,7 +55,7 @@ mem_block_t* mem_new_block(uint32_t size, uint32_t align) {
 
 	// Insert a free block between top and our aligned block, if there's enough
 	// space. That block is 8-bytes aligned.
-	next = ALIGN(next+header_size, MIN_ALIGN) - header_size;
+	next = align_to(next+header_size, MIN_ALIGN) - header_size;
 	if (next_aligned - next > sizeof(mem_block_t) + MIN_ALIGN) {
 		mem_block_t* filler = (mem_block_t*) next;
 		filler->size = next_aligned - next - sizeof(mem_block_t);
@@ -62,7 +64,6 @@ mem_block_t* mem_new_block(uint32_t size, uint32_t align) {
 		printf("adding filler block (%p, %d)\n", filler->data, filler->size);
 #endif
 
-		filler->next = block;
 		top->next = filler;
 		top = filler;
 	}
@@ -132,7 +133,7 @@ void* kamalloc(uint32_t size, uint32_t align) {
 #ifdef MEM_DEBUG
 	printf("\nkamalloc(0x%X, %d)\n", size, align);
 #endif
-	size = ALIGN(size, 8);
+	size = align_to(size, 8);
 
 	mem_block_t* block = mem_find_block(size, align);
 
