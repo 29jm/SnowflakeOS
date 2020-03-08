@@ -65,7 +65,7 @@ void snow_draw_window(window_t* win) {
 	// title bar
 	snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
 	snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-	snow_draw_string(win->fb, win->title, 3, 3, 0x00FFFFFF);
+	snow_draw_string(win->fb, win->title, 4, 3, 0x00FFFFFF);
 	// border of the whole window
 	snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
 }

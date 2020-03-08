@@ -6,11 +6,11 @@
 #define MAX_WIN 20
 
 window_t* make_win() {
-	window_t* win = snow_open_window("A static window", 200, 120, WM_NORMAL);
+	window_t* win = snow_open_window("Congratulations!", 200, 120, WM_NORMAL);
 
 	snow_draw_window(win); // Draws the title bar and borders
-	snow_draw_string(win->fb, "Lorem Ipsum", 45, 55, 0x00AA1100);
-	snow_draw_border(win->fb, 40, 50, strlen("Lorem Ipsum")*8+10, 26, 0x00);
+	snow_draw_string(win->fb, "You won a prize!", 45, 55, 0x00AA1100);
+	snow_draw_border(win->fb, 40, 50, strlen("You won a prize!")*8+10, 26, 0x00);
 
 	snow_render_window(win);
 	snow_sleep(500);

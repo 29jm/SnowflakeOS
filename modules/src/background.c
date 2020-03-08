@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 
-#if 0
+#define RELEASE 1
+
+#if RELEASE == 1
 #include "bg.h"
 #endif
 
@@ -12,7 +14,7 @@ int main() {
 
 	window_t* win = snow_open_window("bg", scr.width, scr.height, WM_BACKGROUND);
 
-#ifdef RELEASE
+#if RELEASE == 1
 	uint32_t j = 0;
 
 	for (uint32_t i = 0; i < win->fb.width*win->fb.height; i++) {

@@ -166,13 +166,12 @@ void free(void* pointer) {
 /* Returns `size` bytes of memory at an address multiple of `align`.
  */
 void* aligned_alloc(uint32_t align, uint32_t size) {
+	const uint32_t header_size = offsetof(mem_block_t, data);
 	size = align_to(size, 8);
 
 	// If this is the first allocation, setup the block list:
 	// it starts with an empty, used block, in order to avoid edge cases.
 	if (!top) {
-		const uint32_t header_size = offsetof(mem_block_t, data);
-
 #ifdef _KERNEL_
 		uintptr_t addr = align_to(KERNEL_HEAP_BEGIN+header_size, align) - header_size;
 #else
@@ -192,19 +191,19 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 	} else {
 		// We'll have to allocate a new block, so we check if we haven't
 		// exceeded the memory we can distribute.
+		uintptr_t end = (uintptr_t) top + mem_block_size(top) + header_size, align;
+		end = align_to(end, align) + size;
 #ifdef _KERNEL_
 		// The kernel can't allocate more
-		if ((uintptr_t) top->data > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
+		if (end > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
 			printf("[VMM] Kernel ran out of memory!");
 			abort();
 		}
 #else
 		// But userspace can ask the kernel for more
 		uintptr_t brk = (uintptr_t) sbrk(0);
-		uintptr_t end = align_to((uintptr_t) top + mem_block_size(top), align) + size;
-
 		if (end > brk) {
-			sbrk(end);
+			sbrk(end - brk);
 		}
 #endif
 
