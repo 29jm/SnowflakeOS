@@ -50,6 +50,10 @@ void snow_close_window(window_t* win) {
 		"int $0x30\n"
 		:: [win_id] "r" (win->id)
 		: "%eax", "%ecx");
+
+	free(win->title);
+	free((void*) win->fb.address);
+	free(win);
 }
 
 /* Draws the given window and its components to the window's buffer then to

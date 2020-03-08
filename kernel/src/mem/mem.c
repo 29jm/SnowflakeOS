@@ -164,6 +164,5 @@ void* kamalloc(uint32_t size, uint32_t align) {
 
 void kfree(void* pointer) {
 	mem_block_t* block = mem_get_block(pointer);
-	printf("kfree called on block of size %d\n", block->size & ~1);
 	block->size &= ~1;
 }

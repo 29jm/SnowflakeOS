@@ -4,14 +4,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-uint32_t wm_get_best_x(wm_window_t* win);
+void wm_refresh_screen();
+void wm_assign_position(wm_window_t* win);
 uint32_t wm_get_max_z();
 void wm_append_window(wm_window_t* win);
 void wm_assign_z_orders();
 void wm_remove_window(uint32_t id);
 wm_window_t* wm_get_window(uint32_t id);
 wm_window_t* wm_find_with_z(uint32_t id);
+void wm_print_windows();
 
 static uint32_t id_count = 0;
 static wm_window_t* windows;
@@ -40,9 +43,9 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 		.flags = WM_NOT_DRAWN | flags
 	};
 
-	win->kfb.address = (uintptr_t) kamalloc(buff->height*buff->pitch, 0x10);
+	win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
 
-	win->x = wm_get_best_x(win);
+	wm_assign_position(win);
 	win->z = windows ? wm_get_max_z() + 1 : 0;
 
 	wm_append_window(win);
@@ -52,10 +55,18 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 }
 
 void wm_close_window(uint32_t win_id) {
-	printf("[WM] Closing window %d\n", win_id);
+	wm_window_t* win = wm_get_window(win_id);
+
+	if (win) {
+		kfree((void*) win->kfb.address);
+		kfree((void*) win);
+	} else {
+		printf("[WM] Failed to find window of id %d\n", win_id);
+	}
 
 	wm_remove_window(win_id);
 	wm_assign_z_orders();
+	wm_refresh_screen();
 }
 
 /* If the current z-order being drawn is the z-order of the given window, copy
@@ -79,6 +90,12 @@ void wm_render_window(uint32_t win_id) {
 	// Make sure the window is marked as drawn
 	win->flags &= ~WM_NOT_DRAWN;
 
+	wm_refresh_screen();
+}
+
+/* Helpers */
+
+void wm_refresh_screen() {
 	// Redraw all windows in z-order
 	uint32_t max_z = wm_get_max_z();
 
@@ -102,12 +119,38 @@ void wm_render_window(uint32_t win_id) {
 	fb_render(fb);
 }
 
-/* Helpers */
+void wm_print_windows() {
+	wm_window_t* win = windows;
+	wm_window_t* win2 = windows;
+
+	printf("straight: ");
+
+	while (win) {
+		printf("%d -> ", win->id);
+		win = win->next;
+
+		if (win) {
+			win2 = win;
+		}
+	}
+
+	printf("none\n");
+	printf("reverse: ");
+
+	win = win2;
+	while (win) {
+		printf("%d -> ", win->id);
+		win = win->prev;
+	}
+
+	printf("none\n");
+}
 
 void wm_append_window(wm_window_t* win) {
 	if (!windows) {
 		windows = win;
 		win->prev = NULL;
+		win->next = NULL;
 		return;
 	}
 
@@ -124,10 +167,11 @@ void wm_append_window(wm_window_t* win) {
 void wm_remove_window(uint32_t id) {
 	wm_window_t* current = windows;
 
-	while (current->next) {
+	while (current) {
 		if (current->id == id) {
 			if (current->prev) {
 				current->prev->next = current->next;
+				current->next->prev = current->prev;
 			} else {
 				windows = current->next;
 			}
@@ -173,22 +217,19 @@ uint32_t wm_count_windows() {
 
 /* TODO: revamp entirely.
  */
-uint32_t wm_get_best_x(wm_window_t* win) {
-	wm_window_t* current = windows;
-
-	if (!windows) {
-		return 0;
-	}
-
+void wm_assign_position(wm_window_t* win) {
 	if (win->kfb.width == fb.width) {
-		return 0;
+		win->x = 0;
+		win->y = 0;
+
+		return;
 	}
 
-	while (current->next) {
-		current = current->next;
-	}
+	int max_x = fb.width - win->ufb.width;
+	int max_y = fb.height - win->ufb.height;
 
-	return current->x + 50;
+	win->x = rand() % max_x;
+	win->y = rand() % max_y;
 }
 
 uint32_t wm_get_max_z() {

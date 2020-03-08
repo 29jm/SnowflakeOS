@@ -28,9 +28,9 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 
 #define KERNEL_BASE_VIRT 0xC0000000
 
-/* Our kernel heap starts right after our kernel binary. Given that our kernel
- * is small and loaded at 0xC0100000, the following address gives us around
- * 767 MiB of kernel heap.
+/* Our kernel heap starts after our kernel binary and physical memory manager's
+ * bitmap. Given that our kernel is small and loaded at 0xC0100000, the
+ * following address gives us around 767 MiB of kernel heap.
  * Note: the kernel is mapped by a 4MiB page, so we make our heap begin after
  * that.
  */

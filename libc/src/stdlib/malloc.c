@@ -6,7 +6,13 @@
 /* Returns the next multiple of `s` greater than `a`, or `a` if it is a
  * multiple of `s`.
  */
-#define ALIGN(a, s) (((a)/(s) + ((a) % (s) ? 1 : 0)) * (s))
+static uint32_t align_to(uint32_t n, uint32_t align) {
+    if (n % align == 0) {
+        return n;
+    }
+
+    return n + (align - n % align);
+}
 
 /* Allocates `n` pages of memory located after the program's memory.
  * Returns a pointer to the first allocated page.
@@ -33,7 +39,7 @@ static void* sbrk(uint32_t size) {
 void* aligned_alloc(size_t alignment, size_t size) {
 	uintptr_t heap_pointer = (uintptr_t) sbrk(0);
 
-	uintptr_t next = ALIGN(heap_pointer, alignment);
+	uintptr_t next = align_to(heap_pointer, alignment);
 	uint32_t needed = next - heap_pointer + size;
 
 	if (sbrk(needed) == (void*) -1) {
@@ -47,6 +53,10 @@ void* aligned_alloc(size_t alignment, size_t size) {
  */
 void* malloc(size_t size) {
 	return aligned_alloc(4, size);
+}
+
+void free(void* ptr) {
+	// TODO
 }
 
 #endif // #ifndef _KERNEL_
