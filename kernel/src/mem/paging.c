@@ -54,7 +54,7 @@ uintptr_t paging_get_kernel_directory() {
  */
 page_t* paging_get_page(uintptr_t virt, bool create, uint32_t flags) {
 	if (virt % 0x1000) {
-		printf("[VMM] Tried to access a page at an unaligned address!\n");
+		printf("[VMM] paging_get_page: unaligned address %p\n",virt);
 		abort();
 	}
 

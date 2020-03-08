@@ -1,7 +1,21 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
-#ifndef _KERNEL_
+#ifdef _KERNEL_
+#include <kernel/paging.h>
+#endif
+
+#define MIN_ALIGN 8
+
+typedef struct _mem_block_t {
+    struct _mem_block_t* next;
+    uint32_t size; // We use the last bit as a 'used' flag
+    uint8_t data[1];
+} mem_block_t;
+
+static mem_block_t* bottom = NULL;
+static mem_block_t* top = NULL;
 
 /* Returns the next multiple of `s` greater than `a`, or `a` if it is a
  * multiple of `s`.
@@ -13,6 +27,8 @@ static uint32_t align_to(uint32_t n, uint32_t align) {
 
     return n + (align - n % align);
 }
+
+#ifndef _KERNEL_
 
 /* Allocates `n` pages of memory located after the program's memory.
  * Returns a pointer to the first allocated page.
@@ -33,30 +49,175 @@ static void* sbrk(uint32_t size) {
 	return (void*) address;
 }
 
-/* Returns a pointer to a newly allocated memory location of size `size` with
- * the specified alignment.
+#endif
+
+/* Debugging function to print the block list. Only sizes are listed, and a '#'
+ * indicates a used block.
  */
-void* aligned_alloc(size_t alignment, size_t size) {
-	uintptr_t heap_pointer = (uintptr_t) sbrk(0);
+void mem_print_blocks() {
+	mem_block_t* block = bottom;
 
-	uintptr_t next = align_to(heap_pointer, alignment);
-	uint32_t needed = next - heap_pointer + size;
+	while (block) {
+		printf("0x%X%s-> ", block->size & ~1, block->size & 1 ? "# " : " ");
 
-	if (sbrk(needed) == (void*) -1) {
-		return (void*) -1;
+		if (block->next && block->next < block) {
+			printf("Chaining error: block overlaps with previous one\n");
+		}
+
+		block = block->next;
 	}
 
-	return (void*) next;
+	printf("none\n");
 }
 
-/* Allocates `size` bytes of memory.
+/* Returns the size of a block, including the header.
  */
-void* malloc(size_t size) {
-	return aligned_alloc(4, size);
+uint32_t mem_block_size(mem_block_t* block) {
+	return sizeof(mem_block_t) + (block->size & ~1);
 }
 
-void free(void* ptr) {
-	// TODO
+/* Returns the block corresponding to `pointer`, given that `pointer` was
+ * previously returned by a call to `malloc`.
+ */
+mem_block_t* mem_get_block(void* pointer) {
+	uintptr_t addr = (uintptr_t) pointer;
+
+	return (mem_block_t*) (addr - sizeof(mem_block_t) + 4);
 }
 
-#endif // #ifndef _KERNEL_
+/* Appends a new block of the desired size and alignment to the block list.
+ * Note: may insert an intermediary block before the one returned to prevent
+ * memory fragmentation. Such a block would be aligned to `MIN_ALIGN`.
+ */
+mem_block_t* mem_new_block(uint32_t size, uint32_t align) {
+	const uint32_t header_size = offsetof(mem_block_t, data);
+
+	// I did the math and we always have next_aligned >= next.
+	uintptr_t next = (uintptr_t) top + mem_block_size(top);
+	uintptr_t next_aligned = align_to(next+header_size, align) - header_size;
+
+	mem_block_t* block = (mem_block_t*) next_aligned;
+	block->size = size | 1;
+	block->next = NULL;
+
+	// Insert a free block between top and our aligned block, if there's enough
+	// space. That block is 8-bytes aligned.
+	next = align_to(next+header_size, MIN_ALIGN) - header_size;
+	if (next_aligned - next > sizeof(mem_block_t) + MIN_ALIGN) {
+		mem_block_t* filler = (mem_block_t*) next;
+		filler->size = next_aligned - next - sizeof(mem_block_t);
+		top->next = filler;
+		top = filler;
+	}
+
+	top->next = block;
+	top = block;
+
+	return block;
+}
+
+/* Returns whether the memory pointed to by `block` is a multiple of `align`.
+ */
+bool mem_is_aligned(mem_block_t* block, uint32_t align) {
+	uintptr_t addr = (uintptr_t) block->data;
+
+	return addr % align == 0;
+}
+
+/* Searches the block list for a free block of at least `size` and with the
+ * proper alignment. Returns the first corresponding block if any, NULL
+ * otherwise.
+ */
+mem_block_t* mem_find_block(uint32_t size, uint32_t align) {
+	if (!bottom) {
+		return NULL;
+	}
+
+	mem_block_t* block = bottom;
+
+	while (block->size < size || block->size & 1 || !mem_is_aligned(block, align)) {
+		block = block->next;
+
+		if (!block) {
+			return NULL;
+		}
+	}
+
+	return block;
+}
+
+/* Returns a pointer to a memory area of at least `size` bytes.
+ * Note: in the kernel, this function is renamed to `kmalloc`.
+ */
+void* malloc(uint32_t size) {
+	// Accessing basic datatypes at unaligned addresses is apparently undefined
+	// behavior. Four-bytes alignement should be enough for most things.
+	return aligned_alloc(MIN_ALIGN, size);
+}
+
+/* Frees a pointer previously returned by `malloc`.
+ * Note: in the kernel, this function is renamed to `kfree`.
+ */
+void free(void* pointer) {
+	mem_block_t* block = mem_get_block(pointer);
+	block->size &= ~1;
+}
+
+/* Returns `size` bytes of memory at an address multiple of `align`.
+ */
+void* aligned_alloc(uint32_t align, uint32_t size) {
+	size = align_to(size, 8);
+
+	// If this is the first allocation, setup the block list:
+	// it starts with an empty, used block, in order to avoid edge cases.
+	if (!top) {
+		const uint32_t header_size = offsetof(mem_block_t, data);
+
+#ifdef _KERNEL_
+		uintptr_t addr = align_to(KERNEL_HEAP_BEGIN+header_size, align) - header_size;
+#else
+		uintptr_t addr = (uintptr_t) sbrk(header_size);
+#endif
+		bottom = (mem_block_t*) addr;
+		top = bottom;
+		top->size = 1; // That means used, of size 0
+		top->next = NULL;
+	}
+
+	mem_block_t* block = mem_find_block(size, align);
+
+	if (block) {
+		block->size |= 1;
+		return block->data;
+	} else {
+		// We'll have to allocate a new block, so we check if we haven't
+		// exceeded the memory we can distribute.
+#ifdef _KERNEL_
+		// The kernel can't allocate more
+		if ((uintptr_t) top->data > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
+			printf("[VMM] Kernel ran out of memory!");
+			abort();
+		}
+#else
+		// But userspace can ask the kernel for more
+		uintptr_t brk = (uintptr_t) sbrk(0);
+		uintptr_t end = align_to((uintptr_t) top + mem_block_size(top), align) + size;
+
+		if (end > brk) {
+			sbrk(end);
+		}
+#endif
+
+		block = mem_new_block(size, align);
+	}
+
+	return block->data;
+}
+
+#ifdef _KERNEL_
+/* It's a naming habit, don't pay attention.
+ */
+void* kamalloc(uint32_t size, uint32_t align) {
+	return aligned_alloc(align, size);
+}
+#endif

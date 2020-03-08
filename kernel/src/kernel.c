@@ -14,8 +14,6 @@
 #include <kernel/proc.h>
 #include <kernel/sys.h>
 
-#include <kernel/mem.h>
-
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>

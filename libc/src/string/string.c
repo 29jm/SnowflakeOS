@@ -2,10 +2,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef _KERNEL_
-#include <kernel/mem.h>
-#endif
-
 uint32_t strlen(const char* string) {
 	uint32_t result = 0;
 

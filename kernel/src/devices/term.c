@@ -1,7 +1,6 @@
 #include <kernel/term.h>
 #include <kernel/ansi_interpreter.h>
 #include <kernel/paging.h>
-#include <kernel/mem.h>
 
 #include <stdint.h>
 #include <string.h>

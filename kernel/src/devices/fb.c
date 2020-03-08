@@ -1,10 +1,10 @@
 #include <kernel/fb.h>
 #include <kernel/paging.h>
-#include <kernel/mem.h>
 #include <kernel/pmm.h>
 #include <kernel/sys.h>
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 static fb_t fb;

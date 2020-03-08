@@ -1,5 +1,4 @@
 #include <kernel/proc.h>
-#include <kernel/mem.h>
 #include <kernel/timer.h>
 #include <kernel/paging.h>
 #include <kernel/pmm.h>

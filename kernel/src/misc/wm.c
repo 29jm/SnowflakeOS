@@ -1,5 +1,4 @@
 #include <kernel/wm.h>
-#include <kernel/mem.h>
 #include <kernel/sys.h>
 
 #include <stdio.h>
