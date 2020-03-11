@@ -1,5 +1,4 @@
-#ifndef PMM_H
-#define PMM_H
+#pragma once
 
 #include <kernel/multiboot.h>
 
@@ -19,5 +18,3 @@ uintptr_t pmm_get_kernel_end();
 extern uint32_t* mem_map;
 
 #define PMM_BLOCK_SIZE 4096
-
-#endif

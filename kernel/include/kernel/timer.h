@@ -1,5 +1,4 @@
-#ifndef TIMER_H
-#define TIMER_H
+#pragma once
 
 #include <kernel/irq.h>
 
@@ -17,5 +16,3 @@ void timer_register_callback(handler_t handler);
 #define PIT_2 0x42
 #define PIT_CMD 0x43
 #define PIT_SET 0x36
-
-#endif

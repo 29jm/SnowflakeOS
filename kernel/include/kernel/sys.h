@@ -1,5 +1,4 @@
-#ifndef SYS_H
-#define SYS_H
+#pragma once
 
 #define UNUSED(param) (void) param
 
@@ -17,5 +16,3 @@ static uint32_t align_to(uint32_t n, uint32_t align) {
 
     return n + (align - n % align);
 }
-
-#endif

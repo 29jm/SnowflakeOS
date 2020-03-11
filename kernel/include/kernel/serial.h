@@ -1,5 +1,4 @@
-#ifndef SERIAL_H
-#define SERIAL_H
+#pragma once
 
 #define SERIAL_PORT 0x3F8
 
@@ -17,5 +16,3 @@ int serial_received();
 char serial_read();
 void serial_write(char c);
 int serial_is_transmit_empty();
-
-#endif

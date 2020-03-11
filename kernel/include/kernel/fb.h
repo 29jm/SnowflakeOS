@@ -1,5 +1,4 @@
-#ifndef FB_H
-#define FB_H
+#pragma once
 
 #include <kernel/multiboot.h>
 
@@ -17,5 +16,3 @@ void init_fb(fb_info_t info);
 void fb_render(fb_t buff);
 
 fb_t fb_get_info();
-
-#endif

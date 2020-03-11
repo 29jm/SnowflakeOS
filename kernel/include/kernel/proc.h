@@ -1,5 +1,4 @@
-#ifndef PROC_H
-#define PROC_H
+#pragma once
 
 #include <stdint.h>
 
@@ -30,5 +29,3 @@ void proc_switch_process();
 uint32_t proc_get_current_pid();
 void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
-
-#endif

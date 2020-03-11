@@ -1,5 +1,4 @@
-#ifndef MULTIBOOT_H
-#define MULTIBOOT_H
+#pragma once
 
 #include <stdint.h>
 
@@ -79,5 +78,3 @@ typedef struct {
 } __attribute__ ((packed)) multiboot_t;
 
 void multiboot_print_infos(multiboot_t* boot);
-
-#endif

@@ -1,8 +1,5 @@
-#ifndef STDBOOL_H
-#define STDBOOL_H
+#pragma once
 
 #define bool int
 #define true 1
 #define false 0
-
-#endif

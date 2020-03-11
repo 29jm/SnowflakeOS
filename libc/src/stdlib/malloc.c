@@ -4,6 +4,7 @@
 
 #ifdef _KERNEL_
 #include <kernel/paging.h>
+#include <kernel/pmm.h>
 #endif
 
 #define MIN_ALIGN 8
@@ -173,7 +174,9 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 	// it starts with an empty, used block, in order to avoid edge cases.
 	if (!top) {
 #ifdef _KERNEL_
-		uintptr_t addr = align_to(KERNEL_HEAP_BEGIN+header_size, align) - header_size;
+		uintptr_t addr = KERNEL_HEAP_BEGIN;
+		uintptr_t heap_phys = pmm_alloc_pages(KERNEL_HEAP_SIZE/0x1000);
+		paging_map_pages(addr, heap_phys, KERNEL_HEAP_SIZE/0x1000, PAGE_RW);
 #else
 		uintptr_t addr = (uintptr_t) sbrk(header_size);
 #endif
@@ -191,7 +194,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 	} else {
 		// We'll have to allocate a new block, so we check if we haven't
 		// exceeded the memory we can distribute.
-		uintptr_t end = (uintptr_t) top + mem_block_size(top) + header_size, align;
+		uintptr_t end = (uintptr_t) top + mem_block_size(top) + header_size;
 		end = align_to(end, align) + size;
 #ifdef _KERNEL_
 		// The kernel can't allocate more

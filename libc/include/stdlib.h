@@ -1,5 +1,4 @@
-#ifndef STDLIB_H
-#define STDLIB_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -41,5 +40,3 @@ int abs(int n);
 
 void srand(unsigned int seed);
 int rand();
-
-#endif

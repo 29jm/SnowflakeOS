@@ -1,5 +1,4 @@
-#ifndef GDT_H
-#define GDT_H
+#pragma once
 
 #include <stdint.h>
 
@@ -76,5 +75,3 @@ void gdt_write_tss(uint32_t num, uint32_t ss0, uint32_t esp0);
 void gdt_set_kernel_stack(uintptr_t stack);
 
 extern void gdt_load(gdt_pointer_t* gdt_ptr);
-
-#endif

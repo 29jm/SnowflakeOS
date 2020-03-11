@@ -1,5 +1,4 @@
-#ifndef FPU_H
-#define FPU_H
+#pragma once
 
 #include <kernel/proc.h>
 
@@ -7,5 +6,3 @@
 
 void init_fpu();
 void fpu_switch(process_t* prev, const process_t* next);
-
-#endif

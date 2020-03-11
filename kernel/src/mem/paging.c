@@ -1,7 +1,6 @@
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
 #include <kernel/term.h>
-#include <kernel/fb.h>
 #include <kernel/proc.h>
 #include <kernel/sys.h>
 
@@ -17,9 +16,6 @@
 static directory_entry_t* current_page_directory;
 extern directory_entry_t kernel_directory[1024];
 
-// Pointer to our kernel heap
-static uintptr_t heap;
-
 void init_paging() {
 	isr_register_handler(14, &paging_fault_handler);
 
@@ -34,11 +30,6 @@ void init_paging() {
 	paging_map_pages(0x00000000, 0x00000000, kernel_pages, PAGE_RW);
 	paging_invalidate_page(0x00000000);
 	current_page_directory = kernel_directory;
-
-	// Setup the kernel heap
-	heap = KERNEL_HEAP_BEGIN;
-	uintptr_t heap_phys = pmm_alloc_pages(KERNEL_HEAP_SIZE/0x1000);
-	paging_map_pages(KERNEL_HEAP_BEGIN, heap_phys, KERNEL_HEAP_SIZE/0x1000, PAGE_RW);
 }
 
 uintptr_t paging_get_kernel_directory() {

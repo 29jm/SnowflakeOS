@@ -1,5 +1,4 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
+#pragma once
 
 #include <kernel/isr.h>
 
@@ -9,5 +8,3 @@
 
 void init_syscall();
 void syscall_register_handler(uint32_t num, handler_t handler);
-
-#endif

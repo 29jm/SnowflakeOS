@@ -1,5 +1,4 @@
-#ifndef IDT_H
-#define IDT_H
+#pragma once
 
 #include <stdint.h>
 
@@ -30,5 +29,3 @@ typedef struct {
 
 void init_idt();
 void idt_set_entry(uint8_t num, uint32_t base, uint16_t selector, uint8_t flags);
-
-#endif

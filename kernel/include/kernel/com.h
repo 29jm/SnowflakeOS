@@ -1,5 +1,4 @@
-#ifndef COM_H
-#define COM_H
+#pragma once
 
 #include <stdint.h>
 
@@ -14,5 +13,3 @@ void outportl(uint16_t port, uint32_t data);
 
 void inportsm(uint16_t port, unsigned char * data, uint32_t size);
 void outportsm(uint16_t port, unsigned char * data, uint32_t size);
-
-#endif

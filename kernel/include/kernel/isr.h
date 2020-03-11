@@ -1,5 +1,4 @@
-#ifndef ISR_H
-#define ISR_H
+#pragma once
 
 #include <stdint.h>
 
@@ -48,5 +47,3 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 extern void isr48();
-
-#endif

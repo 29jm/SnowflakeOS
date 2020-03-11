@@ -1,5 +1,4 @@
-#ifndef ASSERT_H
-#define ASSERT_H
+#pragma once
 
 #ifdef NDEBUG
 
@@ -17,7 +16,5 @@
 			abort(); \
 		} \
 	} while (0)
-
-#endif
 
 #endif

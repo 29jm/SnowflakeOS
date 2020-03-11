@@ -1,5 +1,4 @@
-#ifndef CTYPE_H
-#define CTYPE_H
+#pragma once
 
 int isalnum(int c);
 int isalpha(int c);
@@ -15,5 +14,3 @@ int isupper(int c);
 int isxdigit(int c);
 int tolower(int c);
 int toupper(int c);
-
-#endif

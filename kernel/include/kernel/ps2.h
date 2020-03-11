@@ -1,5 +1,4 @@
-#ifndef PS2_H
-#define PS2_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -77,5 +76,3 @@ bool ps2_write(uint32_t port, uint8_t b);
 bool ps2_write_device(uint32_t device, uint8_t b);
 bool ps2_expect_ack();
 bool ps2_can_read();
-
-#endif

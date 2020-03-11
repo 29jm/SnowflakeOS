@@ -1,5 +1,4 @@
-#ifndef STRING_H
-#define STRING_H
+#pragma once
 
 #include <stddef.h>
 
@@ -17,6 +16,4 @@ char* strdup(const char* src);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

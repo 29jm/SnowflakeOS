@@ -1,5 +1,4 @@
-#ifndef STDIO_H
-#define STDIO_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +10,4 @@ int puts(const char*);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

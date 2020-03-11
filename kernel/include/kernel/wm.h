@@ -1,14 +1,12 @@
-#ifndef COMP_H
-#define COMP_H
+#pragma once
 
 #include <kernel/fb.h>
 
 #include <stdint.h>
 #include <stdbool.h>
 
-#define WM_NORMAL     0
-#define WM_BACKGROUND 1
-#define WM_FOREGROUND 2
+#include <kernel/uapi/wm.h>
+
 #define WM_NOT_DRAWN  4 // Window has _never_ been called wm_render_window
 
 /* ufb: the window's buffer in userspace. Used by the client for drawing
@@ -33,5 +31,3 @@ void init_wm();
 uint32_t wm_open_window(fb_t* fb, uint32_t flags);
 void wm_close_window(uint32_t win_id);
 void wm_render_window(uint32_t win_id);
-
-#endif

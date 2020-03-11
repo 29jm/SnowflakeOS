@@ -1,17 +1,14 @@
-#ifndef SNOW_H
-#define SNOW_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
+
+#include <kernel/uapi/wm.h>
 
 // Sets a magic breakpoint in Bochs on the line it's called.
 #define BREAK() do { \
                 	asm ("xchgw %bx, %bx\n"); \
                 } while (false)
-
-#define WM_NORMAL 0
-#define WM_BACKGROUND 1
-#define WM_FOREGROUND 2
 
 typedef struct {
 	uintptr_t address;
@@ -46,5 +43,3 @@ window_t* snow_open_window(char* title, int width, int height, uint32_t flags);
 void snow_close_window(window_t* win);
 void snow_draw_window(window_t* win);
 void snow_render_window(window_t* win);
-
-#endif

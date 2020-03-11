@@ -1,5 +1,4 @@
-#ifndef TERM_H
-#define TERM_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -51,5 +50,3 @@ void term_set_color(uint8_t color);
 void term_set_fg_color(term_color_t color);
 void term_set_bg_color(term_color_t color);
 void term_set_buffer(uint16_t* buffer);
-
-#endif

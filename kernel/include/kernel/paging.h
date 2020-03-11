@@ -1,5 +1,4 @@
-#ifndef PAGING_H
-#define PAGING_H
+#pragma once
 
 #include <kernel/isr.h>
 
@@ -44,5 +43,3 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 
 #define PAGE_FRAME   0xFFFFF000
 #define PAGE_FLAGS   0x00000FFF
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef ANSI_INTERPRETER_H
-#define ANSI_INTERPRETER_H
+#pragma once
 
 #include <stdint.h>
 
@@ -21,5 +20,3 @@ typedef struct {
 
 void ansi_init_context(ansi_interpreter_context* ctx);
 int ansi_interpret_char(ansi_interpreter_context* ctx, char c);
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef MOUSE_H
-#define MOUSE_H
+#pragma once
 
 #include <kernel/ps2.h>
 #include <kernel/irq.h>
@@ -41,5 +40,3 @@ int mouse_get_x();
 int mouse_get_y();
 bool mouse_left_button();
 bool mouse_right_button();
-
-#endif
