@@ -4,20 +4,12 @@
 #include <string.h>
 
 uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
-	uint32_t id;
+	wm_param_open_t param = (wm_param_open_t) {
+		.fb = fb,
+		.flags = flags
+	};
 
-	asm (
-		"mov $7, %%eax\n"
-		"mov %[fb], %%ecx\n"
-		"mov %[flags], %%edx\n"
-		"int $0x30\n"
-		"mov %%eax, %[win_id]\n"
-		: [win_id] "=m" (id)
-		: [fb] "r" (fb),
-		  [flags] "r" (flags)
-		: "%eax", "%ecx");
-
-	return id;
+	return syscall2(SYS_WM, WM_CMD_OPEN, (uintptr_t) &param);
 }
 
 /* Returns a window object that can be used to draw things in.
@@ -44,12 +36,7 @@ window_t* snow_open_window(char* title, int width, int height, uint32_t flags) {
 }
 
 void snow_close_window(window_t* win) {
-	asm (
-		"mov $8, %%eax\n"
-		"mov %[win_id], %%ecx\n"
-		"int $0x30\n"
-		:: [win_id] "r" (win->id)
-		: "%eax", "%ecx");
+	syscall2(SYS_WM, WM_CMD_CLOSE, win->id);
 
 	free(win->title);
 	free((void*) win->fb.address);
@@ -73,10 +60,5 @@ void snow_draw_window(window_t* win) {
 /* Draws the window's buffer as-is to the screen.
  */
 void snow_render_window(window_t* win) {
-	asm (
-		"mov $9, %%eax\n"
-		"mov %[win_id], %%ecx\n"
-		"int $0x30\n"
-		:: [win_id] "r" (win->id)
-		: "%eax", "%ecx");
+	syscall2(SYS_WM, WM_CMD_RENDER, win->id);
 }

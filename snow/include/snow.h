@@ -3,20 +3,17 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <kernel/uapi/wm.h>
+#include <kernel/uapi/uapi_syscall.h>
+#include <kernel/uapi/uapi_wm.h>
+
+int32_t syscall(uint32_t eax);
+int32_t syscall1(uint32_t eax, uint32_t ebx);
+int32_t syscall2(uint32_t eax, uint32_t ebx, uint32_t ecx);
 
 // Sets a magic breakpoint in Bochs on the line it's called.
 #define BREAK() do { \
-                	asm ("xchgw %bx, %bx\n"); \
+                    asm ("xchgw %bx, %bx\n"); \
                 } while (false)
-
-typedef struct {
-	uintptr_t address;
-	uint32_t pitch;
-	uint32_t width;
-	uint32_t height;
-	uint8_t bpp;
-} fb_t;
 
 typedef struct {
 	char* title;

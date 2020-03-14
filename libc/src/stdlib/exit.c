@@ -1,14 +1,13 @@
-#include <stdlib.h>
-
 #ifndef _KERNEL_
 
+#include <stdlib.h>
+
 void exit(int status) {
-	asm (
+	asm volatile (
 		"mov $1, %%eax\n"
 		"mov %[status], %%ebx\n"
 		"int $0x30\n"
-		:
-		: [status] "r" (status)
+		:: [status] "r" (status)
 		: "%eax"
 	);
 

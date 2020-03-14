@@ -35,19 +35,19 @@ static uint32_t align_to(uint32_t n, uint32_t align) {
  * Returns a pointer to the first allocated page.
  */
 static void* sbrk(uint32_t size) {
-	uintptr_t address;
+	uintptr_t addr;
 
 	asm volatile (
 		"mov $4, %%eax\n"
-		"mov %[size], %%ecx\n"
+		"mov %[size], %%ebx\n"
 		"int $0x30\n"
-		"mov %%eax, %[address]\n"
-		: [address] "=r" (address)
+		"mov %%eax, %[addr]\n"
+		: [addr] "=r" (addr)
 		: [size] "r" (size)
-		: "%eax", "%ecx"
+		: "%eax", "%ebx"
 	);
 
-	return (void*) address;
+	return (void*) addr;
 }
 
 #endif

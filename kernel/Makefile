@@ -1,4 +1,4 @@
-CFLAGS:=$(CFLAGS) -Wno-format -D_KERNEL_
+CFLAGS:=$(CFLAGS) -D_KERNEL_
 LDFLAGS:=$(LDFLAGS) -T linker.ld
 LIBS=-lk -lgcc
 

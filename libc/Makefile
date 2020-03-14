@@ -1,4 +1,4 @@
-LIBK_CFLAGS:=$(CFLAGS) -D_KERNEL_ -Wno-format
+LIBK_CFLAGS:=$(CFLAGS) -D_KERNEL_
 CFLAGS+=-Wno-format
 
 OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))

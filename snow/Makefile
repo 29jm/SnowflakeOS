@@ -1,4 +1,5 @@
 OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
+OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
 all: libsnow.a
 

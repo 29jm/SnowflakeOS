@@ -251,7 +251,7 @@ void proc_enter_usermode() {
 	gdt_set_kernel_stack(current_process->kernel_stack);
 	paging_switch_directory(current_process->directory);
 
-	asm (
+	asm volatile (
 		"mov $0x23, %eax\n"
 		"mov %eax, %ds\n"
 		"mov %eax, %es\n"

@@ -4,21 +4,9 @@
  * Note: the `address` field returned is garbage.
  */
 void snow_get_fb_info(fb_t* fb) {
-	asm volatile (
-		"mov $6, %%eax\n"
-		"mov %[fb], %%ecx\n"
-		"int $0x30\n"
-		:: [fb] "r" (fb)
-		: "%eax"
-	);
+	syscall2(SYS_WM, WM_CMD_INFO, (uint32_t) fb);
 }
 
 void snow_sleep(uint32_t ms) {
-	asm volatile (
-		"mov $2, %%eax\n"
-		"mov %[ms], %%ecx\n"
-		"int $0x30\n"
-		:: [ms] "r" (ms)
-		: "%eax"
-	);
+	syscall1(SYS_SLEEP, ms);
 }

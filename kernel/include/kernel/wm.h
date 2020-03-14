@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <kernel/uapi/wm.h>
+#include <kernel/uapi/uapi_wm.h>
 
 #define WM_NOT_DRAWN  4 // Window has _never_ been called wm_render_window
 
