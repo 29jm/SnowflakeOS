@@ -15,13 +15,10 @@
  *  window when we're not in the window's address space.
  */
 typedef struct _wm_window_t {
-	struct _wm_window_t* next;
-	struct _wm_window_t* prev; // TODO: remove prev
 	fb_t ufb;
 	fb_t kfb;
 	uint32_t x;
 	uint32_t y;
-	uint32_t z;
 	uint32_t id;
 	uint32_t flags;
 } wm_window_t;

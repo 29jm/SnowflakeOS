@@ -1,6 +1,8 @@
 #pragma once
 
-#include <kernel/wm.h>
+#include <kernel/fb.h>
+
+#include <stdbool.h>
 
 #define WM_NORMAL     0
 #define WM_BACKGROUND 1

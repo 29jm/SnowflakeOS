@@ -26,6 +26,13 @@
 #define MOUSE_UNUSED_A (1 << 7)
 #define MOUSE_UNUSED_B (1 << 6)
 
+typedef struct {
+	int32_t x, y;
+	bool left_pressed;
+	bool right_pressed;
+	bool middle_pressed;
+} mouse_t;
+
 void init_mouse(uint32_t dev);
 void mouse_handle_packet();
 void mouse_handle_interrupt(registers_t* regs);
