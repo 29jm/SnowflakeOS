@@ -41,7 +41,7 @@ snow: libc
 modules: libc snow
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64 -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
+	qemu-system-x86_64 -display sdl -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
 	cat serial.log
 
 bochs: SnowflakeOS.iso

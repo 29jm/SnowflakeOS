@@ -1,6 +1,11 @@
 #include <kernel/list.h>
+
 #include <stdlib.h>
 
+list_node_t* list_node_new(void* data);
+
+/* Returns an empty, `kfree`-able list.
+ */
 list_t* list_new() {
     list_t* list = (list_t*) kmalloc(sizeof(list_t));
 
@@ -14,6 +19,8 @@ list_t* list_new() {
     return list;
 }
 
+/* Appends an element to the given list.
+ */
 list_t* list_add(list_t* list, void* data) {
     list_node_t* node = list_node_new(data);
 
@@ -39,6 +46,8 @@ list_t* list_add(list_t* list, void* data) {
     return list;
 }
 
+/* Preprends an element to the given list.
+ */
 list_t* list_add_front(list_t* list, void* data) {
     list_node_t* node = list_node_new(data);
 
@@ -59,6 +68,8 @@ list_t* list_add_front(list_t* list, void* data) {
     return list;
 }
 
+/* Returns the `index`th element of the given list.
+ */
 void* list_get_at(list_t* list, uint32_t index) {
     if (index >= list->count) {
         return NULL;
@@ -71,22 +82,6 @@ void* list_get_at(list_t* list, uint32_t index) {
     }
 
     return node->data;
-}
-
-void* list_get_with(list_t* list, filter_t filter, uint32_t* index) {
-    list_node_t* node = list->root;
-
-    for (uint32_t i = 0; i < list->count; i++) {
-        if (filter(node->data)) {
-            if (index) {
-                *index = i;
-            }
-
-            return node->data;
-        }
-    }
-
-    return NULL;
 }
 
 /* Returns the index of an element in the list. If the element isn't in the
@@ -139,7 +134,9 @@ void* list_remove_at(list_t* list, uint32_t index) {
     return data;
 }
 
-// Private
+/* Allocates a node on the heap containing the given data.
+ * Note: the node is uninitialized apart from its data.
+ */
 list_node_t* list_node_new(void* data) {
     list_node_t* node = (list_node_t*) kmalloc(sizeof(list_node_t));
 

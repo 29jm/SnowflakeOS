@@ -15,7 +15,7 @@ int putchar(int c) {
 		"mov %[c], %%ebx\n"
 		"int $0x30\n"
 		:: [c] "r" (c)
-		: "%eax"
+		: "%eax", "%ebx"
 	);
 #endif
 	return c;

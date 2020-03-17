@@ -14,6 +14,7 @@ void* aligned_alloc(size_t alignment, size_t size);
 
 #ifdef _KERNEL_
 void* kamalloc(size_t size, size_t align);
+uint32_t memory_usage();
 
 #define malloc kmalloc
 #define free kfree

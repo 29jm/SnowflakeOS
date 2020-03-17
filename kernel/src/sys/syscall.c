@@ -18,6 +18,7 @@ static void syscall_sleep(registers_t* regs);
 static void syscall_putchar(registers_t* regs);
 static void syscall_sbrk(registers_t* regs);
 static void syscall_wm(registers_t* regs);
+static void syscall_info(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -30,6 +31,7 @@ void init_syscall() {
 	syscall_handlers[SYS_PUTCHAR] = syscall_putchar;
 	syscall_handlers[SYS_SBRK] = syscall_sbrk;
 	syscall_handlers[SYS_WM] = syscall_wm;
+	syscall_handlers[SYS_INFO] = syscall_info;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -102,4 +104,11 @@ static void syscall_wm(registers_t* regs) {
 			regs->eax = -1;
 			break;
 	}
+}
+
+/* Returns known system information.
+ * TODO: improve.
+ */
+static void syscall_info(registers_t* regs) {
+	regs->eax = memory_usage();
 }

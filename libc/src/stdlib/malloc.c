@@ -7,7 +7,7 @@
 #include <kernel/pmm.h>
 #endif
 
-#define MIN_ALIGN 8
+#define MIN_ALIGN 4
 
 typedef struct _mem_block_t {
     struct _mem_block_t* next;
@@ -17,6 +17,7 @@ typedef struct _mem_block_t {
 
 static mem_block_t* bottom = NULL;
 static mem_block_t* top = NULL;
+static uint32_t used_memory = 0;
 
 /* Returns the next multiple of `s` greater than `a`, or `a` if it is a
  * multiple of `s`.
@@ -162,6 +163,7 @@ void* malloc(uint32_t size) {
 void free(void* pointer) {
 	mem_block_t* block = mem_get_block(pointer);
 	block->size &= ~1;
+	used_memory -= block->size;
 }
 
 /* Returns `size` bytes of memory at an address multiple of `align`.
@@ -189,6 +191,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 	mem_block_t* block = mem_find_block(size, align);
 
 	if (block) {
+		used_memory += block->size;
 		block->size |= 1;
 		return block->data;
 	} else {
@@ -213,13 +216,19 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 		block = mem_new_block(size, align);
 	}
 
+	used_memory += size;
+
 	return block->data;
 }
 
 #ifdef _KERNEL_
-/* It's a naming habit, don't pay attention.
+/* It's a naming habit, don't pay attention to it.
  */
 void* kamalloc(uint32_t size, uint32_t align) {
 	return aligned_alloc(align, size);
+}
+
+uint32_t memory_usage() {
+	return used_memory;
 }
 #endif
