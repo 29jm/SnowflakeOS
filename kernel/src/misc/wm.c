@@ -86,8 +86,7 @@ void wm_render_window(uint32_t win_id) {
 	uint32_t win_size = win->ufb.height*win->ufb.pitch;
 	memcpy((void*) win->kfb.address, (void*) win->ufb.address, win_size);
 
-	// TODO: refresh only windows above this one
-	wm_refresh_screen();
+	wm_refresh_partial(rect_from_window_val(win));
 }
 
 /* Puts `win` at the highest z-level.
@@ -120,6 +119,12 @@ rect_t* rect_new(uint32_t t, uint32_t l, uint32_t b, uint32_t r) {
 	return rect;
 }
 
+/* Copy a rect on the heap.
+ */
+rect_t* rect_new_from(rect_t r) {
+	return rect_new(r.top, r.left, r.bottom, r.right);
+}
+
 /* Pretty-prints a `rect_t`.
  */
 void print_rect(rect_t* r) {
@@ -128,14 +133,14 @@ void print_rect(rect_t* r) {
 }
 
 /* Removes a rectangle `clip` from the union of `rects` by splitting intersecting
- * rects by `clip`.
+ * rects by `clip`. Frees discarded rects.
  */
-void rect_subtract_clip_rect(list_t* rects, rect_t* clip) {
+void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
 	for (uint32_t i = 0; i < rects->count; i++) {
 		rect_t* current = list_get_at(rects, i); // O(n²)
 
-		if (rect_intersect(current, clip)) {
-			list_t* splits = rect_split_by(list_remove_at(rects, i), clip);
+		if (rect_intersect(current, &clip)) {
+			list_t* splits = rect_split_by(*(rect_t*) list_remove_at(rects, i), clip);
 			uint32_t n_splits = splits->count;
 
 			while (splits->count) {
@@ -154,11 +159,12 @@ void rect_subtract_clip_rect(list_t* rects, rect_t* clip) {
 
 /* Add a clipping rectangle to the area spanned by `rects` by splitting
  * intersecting rects by `clip`.
- * Note: `clip` isn't copied, so it mustn't be freed right after this call.
  */
-void rect_add_clip_rect(list_t* rects, rect_t* clip) {
+void rect_add_clip_rect(list_t* rects, rect_t clip) {
+	rect_t* r = rect_new_from(clip);
+
 	rect_subtract_clip_rect(rects, clip);
-	list_add_front(rects, clip);
+	list_add_front(rects, r);
 }
 
 /* Empties the list while freeing its elements.
@@ -173,36 +179,35 @@ void rect_clear_clipped(list_t* rects) {
  *     `original \ split`
  * in set-theoric terms. Returns a list of those rectangles.
  */
-list_t* rect_split_by(rect_t* original, rect_t* split) {
+list_t* rect_split_by(rect_t rect, rect_t split) {
 	list_t* list = list_new();
-	rect_t rect = *original;
 	rect_t* tmp;
 
 	// Split by the left edge
-	if (split->left > rect.left && split->left < rect.right) {
-		tmp = rect_new(rect.top, rect.left, rect.bottom, split->left - 1);
+	if (split.left > rect.left && split.left < rect.right) {
+		tmp = rect_new(rect.top, rect.left, rect.bottom, split.left - 1);
 		list_add(list, tmp);
-		rect.left = split->left;
+		rect.left = split.left;
 	}
 
 	// Split by the top edge
-	if (split->top > rect.top && split->top < rect.bottom) {
-		tmp = rect_new(rect.top, rect.left, split->top - 1, rect.right);
+	if (split.top > rect.top && split.top < rect.bottom) {
+		tmp = rect_new(rect.top, rect.left, split.top - 1, rect.right);
 		list_add(list, tmp);
-		rect.top = split->top;
+		rect.top = split.top;
 	}
 
 	// Split by the right edge
-	if (split->right > rect.left && split->right < rect.right) {
-		tmp = rect_new(rect.top, split->right + 1, rect.bottom, rect.right);
+	if (split.right > rect.left && split.right < rect.right) {
+		tmp = rect_new(rect.top, split.right + 1, rect.bottom, rect.right);
 		list_add(list, tmp);
-		rect.right = split->right;
+		rect.right = split.right;
 	}
 
-	if (split->bottom > rect.top && split->bottom < rect.bottom) {
-		tmp = rect_new(split->bottom + 1, rect.left, rect.bottom, rect.right);
+	if (split.bottom > rect.top && split.bottom < rect.bottom) {
+		tmp = rect_new(split.bottom + 1, rect.left, rect.bottom, rect.right);
 		list_add(list, tmp);
-		rect.bottom = split->bottom;
+		rect.bottom = split.bottom;
 	}
 
 	return list;
@@ -235,27 +240,29 @@ list_t* wm_get_windows_above(wm_window_t* win) {
 	list_t* list = list_new();
 
 	uint32_t idx = list_get_index_of(windows, win);
-	rect_t* win_rect = rect_from_window(win);
+	rect_t win_rect = rect_from_window_val(win);
 
 	for (uint32_t i = idx + 1; i < windows->count; i++) {
 		wm_window_t* next = list_get_at(windows, i);
 		rect_t* rect = rect_from_window(next); // TODO: remove allocation
 
+<<<<<<< HEAD
 		if (rect_intersect(win_rect, rect)) {
+=======
+		if (rect_intersect(&win_rect, &rect)) {
+>>>>>>> 206f278... Fix clipping bug with overlapping windows
 			list_add_front(list, next);
 		}
 
 		kfree(rect);
 	}
 
-	kfree(win_rect);
-
 	return list;
 }
 
-/* Draw a clipped window to the framebuffer. If the clipping rect is NULL,
- * draw the entire window.
+/* Draw the given part of the window to the framebuffer.
  */
+<<<<<<< HEAD
 void wm_partial_draw_window(wm_window_t* win, rect_t* clip) {
 	fb_t* wfb = &win->kfb;
 	rect_t rect;
@@ -282,6 +289,27 @@ void wm_partial_draw_window(wm_window_t* win, rect_t* clip) {
 
 	if (clip->right > win->x + win->kfb.width) {
 		clip->right = win->x + win->kfb.width;
+=======
+void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
+	fb_t* wfb = &win->kfb;
+	rect_t win_rect = rect_from_window_val(win);
+
+	// Clamp the clipping rect to the window rect
+	if (clip.top < win->y) {
+		clip.top = win_rect.top;
+	}
+
+	if (clip.left < win->x) {
+		clip.left = win_rect.left;
+	}
+
+	if (clip.bottom > win->y + win->kfb.height) {
+		clip.bottom = win_rect.bottom;
+	}
+
+	if (clip.right > win->x + win->kfb.width) {
+		clip.right = win_rect.right;
+>>>>>>> 206f278... Fix clipping bug with overlapping windows
 	}
 
 	// Compute offsets; remember that `right` and `bottom` are inclusive
@@ -295,43 +323,69 @@ void wm_partial_draw_window(wm_window_t* win, rect_t* clip) {
 	}
 }
 
-/* Draws the given window to the screen using the current clipping rects.
+/* Draws the visible parts of the window that are within the given clipping
+ * rect.
  */
-void wm_draw_window(wm_window_t* win) {
-	rect_t* win_rect = rect_from_window(win);
+void wm_draw_window(wm_window_t* win, rect_t rect) {
+	rect_t win_rect = rect_from_window_val(win);
+
+	if (!rect_intersect(&win_rect, &rect)) {
+		return;
+	}
+
 	list_t* clip_windows = wm_get_windows_above(win);
 	list_t* clip_rects = list_new();
 
-	rect_add_clip_rect(clip_rects, win_rect);
+	rect_add_clip_rect(clip_rects, rect);
 
+	// Convert covering windows to clipping rects
 	while (clip_windows->count) {
 		wm_window_t* cw = list_remove_at(clip_windows, 0);
 		rect_t clip = rect_from_window_val(cw);
-		rect_subtract_clip_rect(clip_rects, &clip);
+		rect_subtract_clip_rect(clip_rects, clip);
 	}
 
+<<<<<<< HEAD
 	// No need to free the elements: they're from `windows`, and we don't
 	// free `win_rect`, it's one of the clipping rectangles.
 	kfree(clip_windows);
 
+=======
+>>>>>>> 206f278... Fix clipping bug with overlapping windows
 	for (uint32_t i = 0; i < clip_rects->count; i++) {
 		rect_t* clip = list_get_at(clip_rects, i); // O(n²)
 
-		// Note that `clip` is modified by this call // TODO: fix
-		wm_partial_draw_window(win, clip);
+		wm_partial_draw_window(win, *clip);
 	}
 
 	rect_clear_clipped(clip_rects);
 	kfree(clip_rects);
+	kfree(clip_windows);
 }
 
 /* Redraws every visible area of the screen.
  */
 void wm_refresh_screen() {
+	rect_t screen_rect = {
+		// TODO: missing a +1 here?
+		.top = 0, .left = 0, .bottom = screen_fb.height, .right = screen_fb.width
+	};
+
+	wm_refresh_partial(screen_rect);
+}
+
+/* Refresh only a part of the screen.
+ * Note: for simplicity, this takes only a clipping rect and not a list of
+ *     them, though it would make sense.
+ */
+void wm_refresh_partial(rect_t clip) {
 	for (uint32_t i = 0; i < windows->count; i++) {
 		wm_window_t* win = list_get_at(windows, i); // O(n²)
+		rect_t rect = rect_from_window_val(win);
 
-		wm_draw_window(win);
+		if (rect_intersect(&clip, &rect)) {
+			wm_draw_window(win, clip);
+		}
 	}
 
 	// Update the screen

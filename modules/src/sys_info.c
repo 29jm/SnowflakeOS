@@ -7,7 +7,6 @@
 int main() {
 	window_t* win = snow_open_window("System information", 175, 60, WM_FOREGROUND);
 
-	// printf("sysinfo: ufb at %d\n", win->fb.address);
 	uint32_t mem = 0;
 	char* str = malloc(16);
 
