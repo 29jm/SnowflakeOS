@@ -85,7 +85,9 @@ void wm_render_window(uint32_t win_id) {
 	uint32_t win_size = win->ufb.height*win->ufb.pitch;
 	memcpy((void*) win->kfb.address, (void*) win->ufb.address, win_size);
 
-	wm_refresh_partial(rect_new_from_window(win));
+	rect_t rect = rect_new_from_window(win);
+	wm_draw_window(win, rect);
+	fb_partial_render(fb, rect);
 }
 
 /* Window management stuff */
@@ -213,7 +215,7 @@ void wm_refresh_partial(rect_t clip) {
 		}
 	}
 
-	fb_render(fb);
+	fb_partial_render(fb, clip);
 }
 
 /* Redraws every visible area of the screen.

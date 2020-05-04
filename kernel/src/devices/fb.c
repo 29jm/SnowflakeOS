@@ -48,6 +48,21 @@ void fb_render(fb_t buff) {
 	memcpy((void*) fb.address, (void*) buff.address, buff.height*buff.pitch);
 }
 
+void fb_partial_render(fb_t buff, rect_t rect) {
+	if (buff.height*buff.pitch != fb.height*fb.pitch) {
+		return;
+	}
+
+	uintptr_t off = rect.top*fb.pitch + rect.left*fb.bpp/8;
+	uint32_t n_line = rect.bottom - rect.top + 1;
+	uint32_t line_len = (rect.right - rect.left + 1)*fb.bpp/8;
+
+	for (uint32_t i = 0; i < n_line; i++) {
+		memcpy((void*) (fb.address + off), (void*) (buff.address + off), line_len);
+		off += fb.pitch;
+	}
+}
+
 fb_t fb_get_info() {
 	return fb;
 }

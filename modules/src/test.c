@@ -21,7 +21,7 @@ window_t* make_win() {
 
 int main() {
 	for (int i = 0; i < MAX_WIN; i++) {
-		 make_win();
+		make_win();
 	}
 
 	while (1) { }

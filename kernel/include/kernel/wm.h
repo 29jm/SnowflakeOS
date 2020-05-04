@@ -24,10 +24,6 @@ typedef struct _wm_window_t {
 	uint32_t flags;
 } wm_window_t;
 
-typedef struct {
-	uint32_t top, left, bottom, right;
-} rect_t;
-
 void init_wm();
 
 uint32_t wm_open_window(fb_t* fb, uint32_t flags);
