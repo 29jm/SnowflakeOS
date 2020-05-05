@@ -209,7 +209,11 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 		// But userspace can ask the kernel for more
 		uintptr_t brk = (uintptr_t) sbrk(0);
 		if (end > brk) {
-			sbrk(end - brk);
+			if (sbrk(end - brk) == (void*) -1) {
+				printf("[MEM] Allocation failure\n");
+
+				return NULL;
+			}
 		}
 #endif
 

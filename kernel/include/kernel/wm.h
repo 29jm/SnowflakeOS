@@ -18,8 +18,8 @@
 typedef struct _wm_window_t {
 	fb_t ufb;
 	fb_t kfb;
-	uint32_t x;
-	uint32_t y;
+	int32_t x;
+	int32_t y;
 	uint32_t id;
 	uint32_t flags;
 } wm_window_t;

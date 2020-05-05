@@ -162,6 +162,11 @@ void paging_fault_handler(registers_t* regs) {
 void* paging_alloc_pages(uint32_t virt, uintptr_t size) {
 	for (uint32_t i = 0; i < size; i++) {
 		uintptr_t page = pmm_alloc_page();
+
+		if (!page) {
+			return NULL;
+		}
+
 		page_t* p = paging_get_page(virt + i*0x1000, true, PAGE_RW | PAGE_USER);
 		*p = page | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 	}

@@ -291,7 +291,9 @@ void* proc_sbrk(intptr_t size) {
 			uint32_t needed_size = size - remaining_bytes;
 			uint32_t num = needed_size / 0x1000 + (needed_size % 0x1000 ? 1 : 0);
 
-			paging_alloc_pages(align_to(end, 0x1000), num);
+			if (!paging_alloc_pages(align_to(end, 0x1000), num)) {
+				return (void*) -1;
+			}
 		}
 	} else if (size < 0) {
 		if (end + size < 0x1000*current_process->code_len) {

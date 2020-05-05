@@ -23,9 +23,9 @@ char* strcpy(char* dest, const char* src) {
 
 char* strdup(const char* s) {
 #ifndef _KERNEL_
-	char* buff = (char*) malloc(strlen(s)*sizeof(char));
+	char* buff = (char*) malloc((strlen(s)+1)*sizeof(char));
 #else
-	char* buff = (char*) kmalloc(strlen(s)*sizeof(char));
+	char* buff = (char*) kmalloc((strlen(s)+1)*sizeof(char));
 #endif
 
 	return strcpy(buff, s);

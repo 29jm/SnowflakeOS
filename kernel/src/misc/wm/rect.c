@@ -120,6 +120,7 @@ list_t* rect_split_by(rect_t rect, rect_t split) {
 		rect.right = split.right;
 	}
 
+	// Split by the bottom edge
 	if (split.bottom > rect.top && split.bottom < rect.bottom) {
 		tmp = rect_new(split.bottom + 1, rect.left, rect.bottom, rect.right);
 		list_add(list, tmp);

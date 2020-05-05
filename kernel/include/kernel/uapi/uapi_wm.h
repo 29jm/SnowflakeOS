@@ -12,7 +12,7 @@
 #define WM_CMD_INFO   3
 
 typedef struct {
-	uint32_t top, left, bottom, right;
+	int32_t top, left, bottom, right;
 } rect_t;
 
 typedef struct {
