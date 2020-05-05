@@ -33,9 +33,12 @@ typedef struct {
 	bool middle_pressed;
 } mouse_t;
 
+typedef void (*mouse_callback_t)(mouse_t);
+
 void init_mouse(uint32_t dev);
 void mouse_handle_packet();
 void mouse_handle_interrupt(registers_t* regs);
+void mouse_set_callback(mouse_callback_t cb);
 
 void mouse_set_sample_rate(uint8_t rate);
 void mouse_set_resolution(uint8_t level);

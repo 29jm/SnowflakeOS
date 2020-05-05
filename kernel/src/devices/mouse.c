@@ -9,20 +9,15 @@ uint32_t bytes_per_packet = 3;
 uint8_t packet[4] = { 0 };
 
 uint32_t device;
-int32_t x, y;
-bool left_pressed;
-bool right_pressed;
-bool middle_pressed;
+mouse_t state;
+
+mouse_callback_t callback;
 
 /* Initializes a mouse plugged in controller `dev`.
  * Tries to enable as many of its features as possible.
  */
 void init_mouse(uint32_t dev) {
 	device = dev;
-	x = 0;
-	y = 0;
-	left_pressed = false;
-	right_pressed = false;
 
 	irq_register_handler(IRQ12, mouse_handle_interrupt);
 
@@ -62,7 +57,20 @@ void mouse_handle_interrupt(registers_t* regs) {
 	}
 }
 
+void mouse_set_callback(mouse_callback_t cb) {
+	callback = cb;
+}
+
+bool mouse_states_equal(mouse_t* a, mouse_t* b) {
+	return a->x == b->x && a->y == b->y &&
+	       a->left_pressed == b->left_pressed &&
+	       a->middle_pressed == b->middle_pressed &&
+	       a->right_pressed == b->right_pressed;
+}
+
 void mouse_handle_packet() {
+	mouse_t old_state = state;
+
 	uint8_t flags = packet[0];
 	int32_t delta_x = (int32_t) packet[1];
 	int32_t delta_y = (int32_t) packet[2];
@@ -91,17 +99,16 @@ void mouse_handle_packet() {
 		delta_y |= 0xFFFFFF00;
 	}
 
-	left_pressed = flags & MOUSE_LEFT;
-	right_pressed = flags & MOUSE_RIGHT;
-	middle_pressed = flags & MOUSE_MIDDLE;
+	state.left_pressed = flags & MOUSE_LEFT;
+	state.right_pressed = flags & MOUSE_RIGHT;
+	state.middle_pressed = flags & MOUSE_MIDDLE;
 
-	x += delta_x;
-	y -= delta_y; // Point the y-axis downward
+	state.x += delta_x;
+	state.y -= delta_y; // Point the y-axis downward
 
-	printf("\x1B[s\x1B[23;65H");
-	printf("\x1B[K");
-	printf("%d;%d", x, y);
-	printf("\x1B[u");
+	if (!mouse_states_equal(&old_state, &state) && callback) {
+		callback(state);
+	}
 }
 
 void mouse_set_sample_rate(uint8_t rate) {
