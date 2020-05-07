@@ -24,7 +24,7 @@ rect_t* rect_new_copy(rect_t r) {
 
 /* Returns a rectangle corresponding to the area spanned by the window.
  */
-rect_t rect_new_from_window(wm_window_t* win) {
+rect_t rect_from_window(wm_window_t* win) {
 	return (rect_t) {
 		.top = win->y,
 		.left = win->x,
@@ -53,7 +53,7 @@ void print_rect(rect_t* r) {
  */
 void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
 	for (uint32_t i = 0; i < rects->count; i++) {
-		rect_t* current = list_get_at(rects, i); // O(nÂ²)
+		rect_t* current = list_get_at(rects, i); // O(n²)
 
 		if (rect_intersect(current, &clip)) {
 			list_t* splits = rect_split_by(*(rect_t*) list_remove_at(rects, i), clip);
@@ -100,28 +100,28 @@ list_t* rect_split_by(rect_t rect, rect_t split) {
 	rect_t* tmp;
 
 	// Split by the left edge
-	if (split.left > rect.left && split.left < rect.right) {
+	if (split.left >= rect.left && split.left <= rect.right) {
 		tmp = rect_new(rect.top, rect.left, rect.bottom, split.left - 1);
 		list_add(list, tmp);
 		rect.left = split.left;
 	}
 
 	// Split by the top edge
-	if (split.top > rect.top && split.top < rect.bottom) {
+	if (split.top >= rect.top && split.top <= rect.bottom) {
 		tmp = rect_new(rect.top, rect.left, split.top - 1, rect.right);
 		list_add(list, tmp);
 		rect.top = split.top;
 	}
 
 	// Split by the right edge
-	if (split.right > rect.left && split.right < rect.right) {
+	if (split.right >= rect.left && split.right <= rect.right) {
 		tmp = rect_new(rect.top, split.right + 1, rect.bottom, rect.right);
 		list_add(list, tmp);
 		rect.right = split.right;
 	}
 
 	// Split by the bottom edge
-	if (split.bottom > rect.top && split.bottom < rect.bottom) {
+	if (split.bottom >= rect.top && split.bottom <= rect.bottom) {
 		tmp = rect_new(split.bottom + 1, rect.left, rect.bottom, rect.right);
 		list_add(list, tmp);
 		rect.bottom = split.bottom;

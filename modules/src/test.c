@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_WIN 10
+#define MAX_WIN 30
 
 window_t* make_win() {
-	window_t* win = snow_open_window("Congratulations!", 200, 120, WM_NORMAL);
+	window_t* win = snow_open_window("Hellspawn", 200, 120, WM_NORMAL);
 	char id_str[5];
 	itoa(win->id, id_str, 10);
 

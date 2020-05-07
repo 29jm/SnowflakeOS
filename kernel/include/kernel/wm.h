@@ -33,7 +33,7 @@ void wm_render_window(uint32_t win_id);
 // rect-handling functions
 rect_t* rect_new_copy(rect_t r);
 list_t* rect_split_by(rect_t a, rect_t b);
-rect_t rect_new_from_window(wm_window_t* win);
+rect_t rect_from_window(wm_window_t* win);
 void rect_subtract_clip_rect(list_t* rects, rect_t clip);
 void rect_add_clip_rect(list_t* rects, rect_t clip);
 void print_rect(rect_t* r);
