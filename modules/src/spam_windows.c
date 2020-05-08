@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAX_WIN 30
+#define MAX_WIN 0
 
 window_t* make_win() {
 	window_t* win = snow_open_window("Congratulations!", 200, 120, WM_NORMAL);

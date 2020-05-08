@@ -36,9 +36,9 @@ rect_t rect_from_window(wm_window_t* win) {
 /* Returns whether two rectangular areas intersect.
  * Note that touching isn't intersecting.
  */
-bool rect_intersect(rect_t* a, rect_t* b) {
-	return a->left <= b->right && a->right >= b->left &&
-	       a->top <= b->bottom && a->bottom >= b->top;
+bool rect_intersect(rect_t a, rect_t b) {
+	return a.left <= b.right && a.right >= b.left &&
+		   a.top <= b.bottom && a.bottom >= b.top;
 }
 
 /* Pretty-prints a `rect_t`.
@@ -55,7 +55,7 @@ void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
 	for (uint32_t i = 0; i < rects->count; i++) {
 		rect_t* current = list_get_at(rects, i); // O(n²)
 
-		if (rect_intersect(current, &clip)) {
+		if (rect_intersect(*current, clip)) {
 			list_t* splits = rect_split_by(*(rect_t*) list_remove_at(rects, i), clip);
 			uint32_t n_splits = splits->count;
 

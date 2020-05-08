@@ -206,7 +206,7 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
 	for (uint32_t i = 0; i < clip_rects->count; i++) {
 		rect_t* clip = list_get_at(clip_rects, i); // O(n²)
 
-		if (!rect_intersect(clip, &win_rect)) {
+		if (!rect_intersect(*clip, win_rect)) {
 			continue;
 		}
 
@@ -226,7 +226,7 @@ void wm_refresh_partial(rect_t clip) {
 		wm_window_t* win = list_get_at(windows, i); // O(n²)
 		rect_t rect = rect_from_window(win);
 
-		if (rect_intersect(&clip, &rect)) {
+		if (rect_intersect(clip, rect)) {
 			wm_draw_window(win, clip);
 		}
 	}
@@ -265,7 +265,7 @@ list_t* wm_get_windows_above(wm_window_t* win) {
 		wm_window_t* next = list_get_at(windows, i);
 		rect_t rect = rect_from_window(next);
 
-		if (rect_intersect(&win_rect, &rect)) {
+		if (rect_intersect(win_rect, rect)) {
 			list_add_front(list, next);
 		}
 	}
