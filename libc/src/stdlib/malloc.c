@@ -226,12 +226,15 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 }
 
 #ifdef _KERNEL_
-/* It's a naming habit, don't pay attention to it.
+/* Alias for `aligned_alloc`.
+ * It's a naming habit, don't pay mind it.
  */
 void* kamalloc(uint32_t size, uint32_t align) {
 	return aligned_alloc(align, size);
 }
 
+/* Returns the memory allocated on the heap by the kernel, in bytes.
+ */
 uint32_t memory_usage() {
 	return used_memory;
 }

@@ -28,7 +28,10 @@ int main() {
 	while (MAX_WIN) {
 		snow_close_window(wins[c_win]);
 		wins[c_win] = make_win();
+
+#if MAX_WIN != 0
 		c_win = (c_win + 1) % MAX_WIN;
+#endif
 	}
 
 	return 0;

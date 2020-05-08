@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_WIN 100
+#define MAX_WIN 3
 
 window_t* make_win(char* title) {
 	window_t* win = snow_open_window(title, 250, 120, WM_NORMAL);
@@ -12,7 +12,7 @@ window_t* make_win(char* title) {
 	itoa(win->id, id_str, 10);
 
 	snow_draw_window(win); // Draws the title bar and borders
-	// snow_draw_string(win->fb, id_str, 175, 55, 0x00AA1100);
+	snow_draw_string(win->fb, id_str, 175, 55, 0x00AA1100);
 
 	snow_render_window(win);
 

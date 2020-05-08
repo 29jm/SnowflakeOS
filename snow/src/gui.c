@@ -60,5 +60,23 @@ void snow_draw_window(window_t* win) {
 /* Draws the window's buffer as-is to the screen.
  */
 void snow_render_window(window_t* win) {
-	syscall2(SYS_WM, WM_CMD_RENDER, win->id);
+	wm_param_render_t param = {
+		.win_id = win->id,
+		.clip = NULL
+	};
+
+	syscall2(SYS_WM, WM_CMD_RENDER, (uintptr_t) &param);
+}
+
+wm_event_t snow_get_event(window_t* win) {
+	wm_event_t event;
+
+	wm_param_event_t param = {
+		.win_id = win->id,
+		.event = &event
+	};
+
+	syscall2(SYS_WM, WM_CMD_EVENT, (uintptr_t) &param);
+
+	return event;
 }

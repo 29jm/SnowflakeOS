@@ -7,4 +7,4 @@
 #define SYS_SBRK 4
 #define SYS_WM 5
 #define SYS_INFO 6
-#define SYS_MAX 7
+#define SYS_MAX 7 // First invalid syscall number

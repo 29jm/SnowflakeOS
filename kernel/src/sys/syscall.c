@@ -92,13 +92,18 @@ static void syscall_wm(registers_t* regs) {
 		case WM_CMD_CLOSE:
 			wm_close_window(regs->ecx);
 			break;
-		case WM_CMD_RENDER:
-			wm_render_window(regs->ecx);
-			break;
+		case WM_CMD_RENDER: {
+				wm_param_render_t* param = (wm_param_render_t*) regs->ecx;
+				wm_render_window(param->win_id, param->clip);
+			} break;
 		case WM_CMD_INFO: {
 				fb_t* fb = (fb_t*) regs->ecx;
 				*fb = fb_get_info();
 			} break;
+		case WM_CMD_EVENT: {
+				wm_param_event_t* param = (wm_param_event_t*) regs->ecx;
+				wm_get_event(param->win_id, param->event);
+		} break;
 		default:
 			printf("[WM] Wrong command: %d\n", cmd);
 			regs->eax = -1;

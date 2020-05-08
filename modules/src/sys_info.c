@@ -11,6 +11,12 @@ int main() {
 	char* str = malloc(16);
 
 	while (1) {
+		wm_event_t evt = snow_get_event(win);
+
+		if (evt.type & WM_EVENT_CLICK) {
+			printf("I was clicked at %d;%d\n", evt.position.left, evt.position.top);
+		}
+
 		uint32_t new_mem = snow_get_kernel_mem_usage();
 
 		if (new_mem == mem) {

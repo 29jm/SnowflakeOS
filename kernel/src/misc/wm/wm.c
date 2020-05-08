@@ -80,20 +80,37 @@ void wm_close_window(uint32_t win_id) {
 	wm_refresh_partial(rect);
 }
 
-void wm_render_window(uint32_t win_id) {
+/* System call interface to draw a window. `clip` specifies which part to copy
+ * from userspace and redraw. If `clip` is NULL, the whole window is redrawn.
+ */
+void wm_render_window(uint32_t win_id, rect_t* clip) {
 	wm_window_t* win = wm_get_window(win_id);
+	rect_t rect;
 
 	if (!win) {
 		printf("[WM] Render called by invalid window, id %d\n", win_id);
 		return;
 	}
 
-	// Copy the window's buffer in the kernel
-	uint32_t win_size = win->ufb.height*win->ufb.pitch;
-	memcpy((void*) win->kfb.address, (void*) win->ufb.address, win_size);
+	if (!clip) {
+		clip = &rect;
+		*clip = (rect_t) {
+			.top = 0, .left = 0,
+			.bottom = win->ufb.height - 1, .right = win->ufb.width - 1
+		};
+	}
 
-	rect_t rect = rect_from_window(win);
-	wm_draw_window(win, rect);
+	// Copy the window's buffer in the kernel
+	uintptr_t off = clip->top*win->ufb.pitch + clip->left*win->ufb.bpp/8;
+	uint32_t len = (clip->right - clip->left + 1)*win->ufb.bpp/8;
+
+	for (int32_t i = clip->top; i <= clip->bottom; i++) {
+		memcpy((void*) (win->kfb.address + off), (void*) (win->ufb.address + off), len);
+		off += win->ufb.pitch;
+	}
+
+	rect = rect_from_window(win);
+	wm_draw_window(win, *clip);
 
 	if (win->flags & WM_NOT_DRAWN) {
 		rect_t r = wm_mouse_to_rect(mouse);
@@ -101,6 +118,18 @@ void wm_render_window(uint32_t win_id) {
 
 		wm_draw_mouse(r, r);
 	}
+}
+
+void wm_get_event(uint32_t win_id, wm_event_t* event) {
+	wm_window_t* win = wm_get_window(win_id);
+
+	if (!win) {
+		printf("[WM] Invalid window %d\n", win_id);
+		return;
+	}
+
+	*event = win->event;
+	memset(&win->event, 0, sizeof(wm_event_t));
 }
 
 /* Window management stuff */
@@ -383,8 +412,12 @@ void wm_mouse_callback(mouse_t raw_curr) {
 	// Clicks and drag ends
 	if (raw_prev.left_pressed && !raw_curr.left_pressed) {
 		if (!been_dragged) {
-			printf("click\n");
-			// TODO: generate a click event
+			rect_t r = rect_from_window(dragged);
+
+			dragged->event.type |= WM_EVENT_CLICK;
+			dragged->event.position = wm_mouse_to_rect(mouse);
+			dragged->event.position.top -= r.top;
+			dragged->event.position.left -= r.left;
 		}
 
 		been_dragged = false;

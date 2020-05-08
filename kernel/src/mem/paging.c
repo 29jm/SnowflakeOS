@@ -151,9 +151,7 @@ void paging_fault_handler(registers_t* regs) {
 
 	printf("\x1B[37;40m");
 
-	if (err & 0x04) { // user process
-		proc_exit_current_process();
-	}
+	proc_exit_current_process();
 }
 
 /* Allocates `num` pages of physical memory, mapped starting at `virt`.

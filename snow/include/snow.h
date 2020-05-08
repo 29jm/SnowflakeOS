@@ -41,3 +41,4 @@ window_t* snow_open_window(char* title, int width, int height, uint32_t flags);
 void snow_close_window(window_t* win);
 void snow_draw_window(window_t* win);
 void snow_render_window(window_t* win);
+wm_event_t snow_get_event(window_t* win);
