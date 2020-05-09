@@ -62,7 +62,7 @@ SnowflakeOS.iso: build misc/grub.cfg
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
 
 misc/grub.cfg: build misc/gen-grub-config.sh
-	./misc/gen-grub-config.sh
+	bash ./misc/gen-grub-config.sh
 
 # Automatic rules for our generated sub-targets
 %.headers: %/
