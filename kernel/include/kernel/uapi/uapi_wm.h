@@ -13,6 +13,7 @@
 #define WM_CMD_EVENT  4
 
 #define WM_EVENT_CLICK 1
+#define WM_EVENT_KBD   2
 
 typedef struct {
 	int32_t top, left, bottom, right;
@@ -27,8 +28,26 @@ typedef struct {
 } fb_t;
 
 typedef struct {
-	uint32_t type;
 	rect_t position;
+	bool left_button;
+	bool right_button;
+} wm_click_event_t;
+
+typedef struct {
+	uint32_t key_code;
+	bool pressed;
+	// TODO include modifiers
+} wm_kbd_event_t;
+
+/* This structure is how a window can get its user input.
+ * The bits set in `type` indicate which members of the structure are valid,
+ * for instance if `type` is `WM_EVENT_CLICK | WM_EVENT_KBD`, both the `mouse`
+ * and `kbd` members contain new and valid input.
+ */
+typedef struct {
+	uint32_t type;
+	wm_click_event_t mouse;
+	wm_kbd_event_t kbd;
 } wm_event_t;
 
 typedef struct {

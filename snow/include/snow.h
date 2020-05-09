@@ -5,6 +5,7 @@
 
 #include <kernel/uapi/uapi_syscall.h>
 #include <kernel/uapi/uapi_wm.h>
+#include <kernel/uapi/uapi_kbd.h>
 
 int32_t syscall(uint32_t eax);
 int32_t syscall1(uint32_t eax, uint32_t ebx);

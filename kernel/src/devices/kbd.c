@@ -56,10 +56,11 @@ char kc_to_char[] = {
 	'/', '\x0A'
 };
 
-uint32_t device;
-kbd_context_t context;
-bool key_states[256] = { false };
-kbd_event_t next_event;
+static uint32_t device;
+static kbd_context_t context;
+static bool key_states[256] = { false };
+static kbd_event_t next_event;
+static kbd_callback_t callback;
 
 void init_kbd(uint32_t dev) {
 	device = dev;
@@ -122,14 +123,8 @@ void kbd_handler(registers_t* regs) {
 			break;
 	}
 
-	if (next_event.key_code <= KBD_KP_ENTER && next_event.pressed) {
-		char c = kc_to_char[next_event.key_code];
-
-		if (context.shift) {
-			c = kbd_make_shift(c);
-		}
-
-		printf("%c", c);
+	if (callback) {
+		callback(next_event);
 	}
 }
 
@@ -284,4 +279,14 @@ char kbd_make_shift(char c) {
 	}
 
 	return c;
+}
+
+/* Sets the function to call when a keyboard event is received.
+ */
+void kbd_set_callback(kbd_callback_t handler) {
+	if (callback) {
+		printf("[KBD] Overwriting callback\n");
+	}
+
+	callback = handler;
 }

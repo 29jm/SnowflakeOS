@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 int main() {
-	window_t* win = snow_open_window("System information", 175, 60, WM_FOREGROUND);
+	window_t* win = snow_open_window("System information", 175, 60, WM_NORMAL);
 
 	uint32_t mem = 0;
 	char* str = malloc(16);
@@ -14,7 +14,13 @@ int main() {
 		wm_event_t evt = snow_get_event(win);
 
 		if (evt.type & WM_EVENT_CLICK) {
-			printf("I was clicked at %d;%d\n", evt.position.left, evt.position.top);
+			printf("sys_info was clicked at %d;%d\n", evt.mouse.position.left, evt.mouse.position.top);
+		}
+
+		if (evt.type & WM_EVENT_KBD) {
+			if (evt.kbd.key_code == KBD_ESCAPE) {
+				break;
+			}
 		}
 
 		uint32_t new_mem = snow_get_kernel_mem_usage();
@@ -42,6 +48,8 @@ int main() {
 
 		snow_render_window(win);
 	}
+
+	snow_close_window(win);
 
 	return 0;
 }

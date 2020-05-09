@@ -227,7 +227,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 
 #ifdef _KERNEL_
 /* Alias for `aligned_alloc`.
- * It's a naming habit, don't pay mind it.
+ * It's a naming habit, don't mind it.
  */
 void* kamalloc(uint32_t size, uint32_t align) {
 	return aligned_alloc(align, size);

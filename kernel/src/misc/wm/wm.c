@@ -1,5 +1,6 @@
 #include <kernel/wm.h>
 #include <kernel/mouse.h>
+#include <kernel/kbd.h>
 #include <kernel/list.h>
 #include <kernel/sys.h>
 
@@ -22,6 +23,7 @@ list_t* wm_get_windows_above(wm_window_t* win);
 rect_t wm_mouse_to_rect(mouse_t mouse);
 void wm_draw_mouse(rect_t old, rect_t new);
 void wm_mouse_callback(mouse_t curr);
+void wm_kbd_callback(kbd_event_t event);
 
 /* Windows are ordered by z-index in this list, e.g. the foremost window is in
  * the last position.
@@ -39,6 +41,7 @@ void init_wm() {
 	mouse.y = fb.height/2;
 
 	mouse_set_callback(wm_mouse_callback);
+	kbd_set_callback(wm_kbd_callback);
 }
 
 /* Associates a buffer with a window id. The calling program will then be able
@@ -415,9 +418,9 @@ void wm_mouse_callback(mouse_t raw_curr) {
 			rect_t r = rect_from_window(dragged);
 
 			dragged->event.type |= WM_EVENT_CLICK;
-			dragged->event.position = wm_mouse_to_rect(mouse);
-			dragged->event.position.top -= r.top;
-			dragged->event.position.left -= r.left;
+			dragged->event.mouse.position = wm_mouse_to_rect(mouse);
+			dragged->event.mouse.position.top -= r.top;
+			dragged->event.mouse.position.left -= r.left;
 		}
 
 		been_dragged = false;
@@ -434,4 +437,14 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
 	// Update the saved state
 	raw_prev = raw_curr;
+}
+
+void wm_kbd_callback(kbd_event_t event) {
+	if (windows->count) {
+		wm_window_t* win = list_get_at(windows, windows->count - 1);
+
+		win->event.type |= WM_EVENT_KBD;
+		win->event.kbd.key_code = event.key_code;
+		win->event.kbd.pressed = event.pressed;
+	}
 }
