@@ -4,16 +4,25 @@
 #include <kernel/pmm.h>
 #include <kernel/gdt.h>
 #include <kernel/fpu.h>
+#include <kernel/list.h>
 #include <kernel/sys.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct {
+	char* name;
+	uint8_t* code;
+	uint32_t size;
+} program_t;
+
 extern uint32_t irq_handler_end;
 
 process_t* current_process;
+
 static uint32_t next_pid = 1;
+static list_t* programs;
 
 void init_proc() {
 	timer_register_callback(&proc_timer_callback);
@@ -30,14 +39,14 @@ void init_proc() {
 /* Creates a process running the code specified at `code` in raw instructions
  * and add it to the process queue, after the currently executing process.
  */
-void proc_run_code(uint8_t* code, uint32_t len) {
+void proc_run_code(uint8_t* code, uint32_t size) {
 	static uintptr_t temp_page = 0;
 
 	if (!temp_page) {
 		temp_page = (uintptr_t) kamalloc(0x1000, 0x1000);
 	}
 
-	uint32_t num_code_pages = len / 0x1000 + 1;
+	uint32_t num_code_pages = size / 0x1000 + 1;
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
 
 	process_t* process = kmalloc(sizeof(process_t));
@@ -65,7 +74,7 @@ void proc_run_code(uint8_t* code, uint32_t len) {
 	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
 	paging_map_pages(0x00000000, code_phys, num_code_pages,
 		PAGE_USER | PAGE_RW);
-	memcpy((void*) 0x00000000, (void*) code, len);
+	memcpy((void*) 0x00000000, (void*) code, size);
 
 	// Map the stack
 	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
@@ -319,4 +328,32 @@ void* proc_sbrk(intptr_t size) {
 	current_process->mem_len += size;
 
 	return (void*) end;
+}
+
+void proc_register_program(char* name, uint8_t* code, uint32_t size) {
+	if (!programs) {
+		programs = list_new();
+	}
+
+	program_t* prog = kmalloc(sizeof(program_t));
+
+	prog->name = strdup(name);
+	prog->code = code;
+	prog->size = size;
+
+	list_add(programs, prog);
+	printf("added program %s\n", prog->name);
+}
+
+int32_t proc_exec(const char* name) {
+	for (uint32_t i = 0; i < programs->count; i++) {
+		program_t* prog = list_get_at(programs, i);
+
+		if (!strcmp(prog->name, name)) {
+			proc_run_code(prog->code, prog->size);
+			return 0;
+		}
+	}
+
+	return -1;
 }

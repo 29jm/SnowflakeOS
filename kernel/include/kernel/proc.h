@@ -20,7 +20,7 @@ typedef struct _proc_t {
 } process_t;
 
 void init_proc();
-void proc_run_code(uint8_t* code, uint32_t len);
+void proc_run_code(uint8_t* code, uint32_t size);
 void proc_print_processes();
 void proc_timer_callback();
 void proc_exit_current_process();
@@ -29,3 +29,5 @@ void proc_switch_process();
 uint32_t proc_get_current_pid();
 void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
+void proc_register_program(char* name, uint8_t* code, uint32_t size);
+int32_t proc_exec(const char* name);
