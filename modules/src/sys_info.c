@@ -18,7 +18,7 @@ int main() {
 		}
 
 		if (evt.type & WM_EVENT_KBD) {
-			if (evt.kbd.key_code == KBD_ESCAPE) {
+			if (evt.kbd.keycode == KBD_ESCAPE) {
 				break;
 			}
 		}

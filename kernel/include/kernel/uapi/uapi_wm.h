@@ -34,8 +34,9 @@ typedef struct {
 } wm_click_event_t;
 
 typedef struct {
-	uint32_t key_code;
+	uint32_t keycode;
 	bool pressed;
+	char repr;
 	// TODO include modifiers
 } wm_kbd_event_t;
 

@@ -26,8 +26,9 @@ enum {
 };
 
 typedef struct {
-	uint32_t key_code;
+	uint32_t keycode;
 	bool pressed;
+	char repr;
 } kbd_event_t;
 
 typedef struct {
@@ -46,7 +47,8 @@ typedef void (*kbd_callback_t)(kbd_event_t);
 void init_kbd(uint32_t dev);
 void kbd_handler(registers_t* regs);
 bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event);
-bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code);
-bool kbd_is_key_pressed(uint32_t key_code);
+bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* keycode);
+bool kbd_is_key_pressed(uint32_t keycode);
 char kbd_make_shift(char c);
+char kbd_keycode_to_char(uint32_t keycode, bool shift);
 void kbd_set_callback(kbd_callback_t handler);

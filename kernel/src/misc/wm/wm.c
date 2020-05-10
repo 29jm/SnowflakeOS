@@ -444,7 +444,8 @@ void wm_kbd_callback(kbd_event_t event) {
 		wm_window_t* win = list_get_at(windows, windows->count - 1);
 
 		win->event.type |= WM_EVENT_KBD;
-		win->event.kbd.key_code = event.key_code;
+		win->event.kbd.keycode = event.keycode;
 		win->event.kbd.pressed = event.pressed;
+		win->event.kbd.repr = event.repr;
 	}
 }

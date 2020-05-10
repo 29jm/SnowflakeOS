@@ -46,6 +46,7 @@ uint32_t simple_sc_to_kc[] = {
 
 // Maps relevant scancodes to their printable ASCII counterparts
 char kc_to_char[] = {
+	' ',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
 	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
@@ -101,9 +102,9 @@ void kbd_handler(registers_t* regs) {
 	}
 
 	// We've received a full scancode
-	key_states[next_event.key_code] = next_event.pressed;
+	key_states[next_event.keycode] = next_event.pressed;
 
-	switch (next_event.key_code) {
+	switch (next_event.keycode) {
 		case KBD_LEFT_ALT:
 			context.alt = next_event.pressed;
 			break;
@@ -122,6 +123,8 @@ void kbd_handler(registers_t* regs) {
 			context.super = next_event.pressed;
 			break;
 	}
+
+	next_event.repr = kbd_keycode_to_char(next_event.keycode, context.shift);
 
 	if (callback) {
 		callback(next_event);
@@ -147,14 +150,14 @@ bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 				ctx->state = KBD_CONTINUE;
 			} else {
 				ctx->current = 0;
-				event->key_code = simple_sc_to_kc[sc];
+				event->keycode = simple_sc_to_kc[sc];
 			}
 
 			break;
 		case KBD_RELEASE_SHORT:
 			ctx->state = KBD_NORMAL;
 			ctx->current = 0;
-			event->key_code = simple_sc_to_kc[sc];
+			event->keycode = simple_sc_to_kc[sc];
 			event->pressed = false;
 
 			break;
@@ -165,7 +168,7 @@ bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 			}
 
 			if (kbd_is_valid_scancode(ctx->scancode, ctx->current,
-					&event->key_code)) {
+					&event->keycode)) {
 				ctx->state = KBD_NORMAL;
 				ctx->current = 0;
 			}
@@ -177,11 +180,11 @@ bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
 }
 
 /* Returns whether `bytes` is a valid, complete multibyte scancode.
- * If it is, the corresponding key code is placed in `key_code`.
+ * If it is, the corresponding key code is placed in `keycode`.
  * Note: hopefully this type of scancode is a "prefix code", otherwise this
  * is pure hell.
  */
-bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
+bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* keycode) {
 	if (len < 2) {
 		return false;
 	}
@@ -198,27 +201,27 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 
 	if (len == 1) {
 		switch (bytes[0]) {
-			case 0x75: *key_code = KBD_UP; return true;
-			case 0x72: *key_code = KBD_DOWN; return true;
-			case 0x6B: *key_code = KBD_LEFT; return true;
-			case 0x74: *key_code = KBD_RIGHT; return true;
-			case 0x4A: *key_code = KBD_KP_SLASH; return true;
-			case 0x5A: *key_code = KBD_KP_ENTER; return true;
-			case 0x69: *key_code = KBD_END; return true;
-			case 0x6C: *key_code = KBD_HOME; return true;
-			case 0x70: *key_code = KBD_INSERT; return true;
-			case 0x71: *key_code = KBD_DELETE; return true;
-			case 0x7D: *key_code = KBD_PAGE_UP; return true;
-			case 0x7A: *key_code = KBD_PAGE_DOWN; return true;
-			case 0x11: *key_code = KBD_RIGHT_ALT; return true;
-			case 0x2F: *key_code = KBD_MENU; return true;
-			case 0x1F: *key_code = KBD_SUPER; return true;
+			case 0x75: *keycode = KBD_UP; return true;
+			case 0x72: *keycode = KBD_DOWN; return true;
+			case 0x6B: *keycode = KBD_LEFT; return true;
+			case 0x74: *keycode = KBD_RIGHT; return true;
+			case 0x4A: *keycode = KBD_KP_SLASH; return true;
+			case 0x5A: *keycode = KBD_KP_ENTER; return true;
+			case 0x69: *keycode = KBD_END; return true;
+			case 0x6C: *keycode = KBD_HOME; return true;
+			case 0x70: *keycode = KBD_INSERT; return true;
+			case 0x71: *keycode = KBD_DELETE; return true;
+			case 0x7D: *keycode = KBD_PAGE_UP; return true;
+			case 0x7A: *keycode = KBD_PAGE_DOWN; return true;
+			case 0x11: *keycode = KBD_RIGHT_ALT; return true;
+			case 0x2F: *keycode = KBD_MENU; return true;
+			case 0x1F: *keycode = KBD_SUPER; return true;
 		}
 	}
 
 	if (len == 3) {
 		if (bytes[0] == 0x12 && bytes[1] == 0xE0 && bytes[2] == 0x7C) {
-			*key_code = KBD_PRINT_SCREEN;
+			*keycode = KBD_PRINT_SCREEN;
 			return true;
 		}
 	}
@@ -226,7 +229,7 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 	if (len == 4) {
 		if (bytes[0] == 0x7C && bytes[1] == 0xE0
 				&& bytes[2] == 0xF0 && bytes[3] == 0x12) {
-			*key_code = KBD_PRINT_SCREEN;
+			*keycode = KBD_PRINT_SCREEN;
 			return true;
 		}
 	}
@@ -235,15 +238,15 @@ bool kbd_is_valid_scancode(uint8_t* bytes, uint32_t len, uint32_t* key_code) {
 	// It also means we'll never overflow our `bytes` buffer in the calling
 	// function
 	if (len == 7) {
-		*key_code = KBD_PAUSE;
+		*keycode = KBD_PAUSE;
 		return true;
 	}
 
 	return false;
 }
 
-bool kbd_is_key_pressed(uint32_t key_code) {
-	return key_states[key_code];
+bool kbd_is_key_pressed(uint32_t keycode) {
+	return key_states[keycode];
 }
 
 /* Returns the shifted version of printable character `c` if applicable, and
@@ -276,6 +279,23 @@ char kbd_make_shift(char c) {
 		case '.': return '>';
 		case '/': return '?';
 		case '\\': return '|';
+	}
+
+	return c;
+}
+
+/* Returns the character that corresponds to the given keycode+modifiers combo.
+ * TODO: handle all relevant modifiers.
+ */
+char kbd_keycode_to_char(uint32_t keycode, bool shift) {
+	if (keycode >= KBD_KP_ENTER) {
+		return '\0';
+	}
+
+	char c = kc_to_char[keycode];
+
+	if (shift) {
+		c = kbd_make_shift(c);
 	}
 
 	return c;
