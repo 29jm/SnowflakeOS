@@ -53,10 +53,17 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
 	for (uint32_t i = 0; i < boot->mods_count; i++) {
 		mod_t mod = modules[i];
-		uint32_t len = mod.mod_end - mod.mod_start;
-		uint8_t* code = (uint8_t*) kmalloc(len);
-		memcpy((void*) code, (void*) mod.mod_start, len);
-		proc_run_code(code, len);
+		uint32_t size = mod.mod_end - mod.mod_start;
+		char* name = (char*) mod.string;
+
+		uint8_t* code = (uint8_t*) kmalloc(size);
+		memcpy((void*) code, (void*) mod.mod_start, size);
+
+		proc_register_program(name, code, size);
+
+		if (!strcmp(name, "terminal")) {
+			proc_run_code(code, size);
+		}
 	}
 
 	proc_print_processes();
