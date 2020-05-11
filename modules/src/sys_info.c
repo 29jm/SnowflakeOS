@@ -23,10 +23,12 @@ int main() {
 			}
 		}
 
-		uint32_t new_mem = snow_get_kernel_mem_usage();
+		sys_info_t info;
+		syscall1(SYS_INFO, (uintptr_t) &info);
+		uint32_t new_mem = info.kernel_heap_usage;
 
 		if (new_mem == mem) {
-			syscall(SYS_YIELD);
+			snow_sleep(15);
 			continue;
 		}
 

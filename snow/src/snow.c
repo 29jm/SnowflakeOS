@@ -10,7 +10,3 @@ void snow_get_fb_info(fb_t* fb) {
 void snow_sleep(uint32_t ms) {
 	syscall1(SYS_SLEEP, ms);
 }
-
-uint32_t snow_get_kernel_mem_usage() {
-	return syscall(SYS_INFO);
-}

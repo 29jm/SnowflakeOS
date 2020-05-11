@@ -47,6 +47,7 @@ int main() {
 
 		// Redraw only on input
 		if (!(event.type & WM_EVENT_KBD && event.kbd.pressed)) {
+			snow_sleep(1);
 			continue;
 		}
 

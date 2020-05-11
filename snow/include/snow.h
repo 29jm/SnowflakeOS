@@ -27,7 +27,6 @@ typedef struct {
 
 void snow_get_fb_info(fb_t* fb);
 void snow_sleep(uint32_t ms);
-uint32_t snow_get_kernel_mem_usage();
 
 // Drawing functions
 void snow_draw_pixel(fb_t fb, int x, int y, uint32_t col);
@@ -42,4 +41,5 @@ window_t* snow_open_window(char* title, int width, int height, uint32_t flags);
 void snow_close_window(window_t* win);
 void snow_draw_window(window_t* win);
 void snow_render_window(window_t* win);
+void snow_render_window_partial(window_t* win, rect_t clip);
 wm_event_t snow_get_event(window_t* win);

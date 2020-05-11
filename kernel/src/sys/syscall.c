@@ -117,7 +117,9 @@ static void syscall_wm(registers_t* regs) {
  * TODO: improve.
  */
 static void syscall_info(registers_t* regs) {
-	regs->eax = memory_usage();
+	sys_info_t* info = (sys_info_t*) regs->ebx;
+	info->kernel_heap_usage = memory_usage();
+	info->uptime = timer_get_time();
 }
 
 static void syscall_exec(registers_t* regs) {

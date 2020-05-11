@@ -280,7 +280,7 @@ uint32_t proc_get_current_pid() {
 }
 
 void proc_sleep(uint32_t ms) {
-	current_process->sleep_ticks = (uint32_t) (ms/1000.0)*TIMER_FREQ;
+	current_process->sleep_ticks = (uint32_t) ((ms*TIMER_FREQ)/1000.0);
 	proc_timer_callback(NULL);
 }
 

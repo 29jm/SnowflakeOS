@@ -1,5 +1,7 @@
 #include <snow.h>
 
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #define RELEASE 0
@@ -10,6 +12,7 @@
 
 int main() {
 	fb_t scr;
+	char time_text[20] = "uptime: ";
 	snow_get_fb_info(&scr);
 
 	window_t* win = snow_open_window("bg", scr.width, scr.height, WM_BACKGROUND);
@@ -30,10 +33,28 @@ int main() {
 
 	snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
 	snow_draw_string(win->fb, "Snowflake OS 0.4", 3, 3, 0x00FFFFFF);
-
 	snow_render_window(win);
 
-	while (true) { }
+	while (true) {
+		sys_info_t info;
+		syscall1(SYS_INFO, (uintptr_t) &info);
+
+		uint32_t time = info.uptime;
+		itoa(time, time_text+8, 10);
+		int x = win->fb.width / 2 - strlen(time_text)*8/2;
+		int y = 3;
+
+		rect_t redraw = {
+			.left = x, .top = y, .bottom = y+16, .right = x+strlen(time_text)*8
+		};
+
+		snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
+		snow_draw_string(win->fb, "Snowflake OS 0.4", 3, 3, 0x00FFFFFF);
+		snow_draw_string(win->fb, time_text, x, y, 0xFFFFFF);
+		snow_render_window_partial(win, redraw);
+
+		snow_sleep(500);
+	}
 
 	snow_close_window(win);
 
