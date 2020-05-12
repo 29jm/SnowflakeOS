@@ -80,7 +80,10 @@ void wm_close_window(uint32_t win_id) {
 		printf("[WM] Close: failed to find window of id %d\n", win_id);
 	}
 
-	wm_raise_window(list_last(windows));
+	if (windows->count) {
+		wm_raise_window(list_last(windows));
+	}
+
 	wm_refresh_partial(rect);
 }
 
@@ -472,6 +475,17 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
 		been_dragged = false;
 		dragged = NULL;
+	}
+
+	// Simple moves
+	if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
+		wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
+		rect_t r = rect_from_window(under_cursor);
+
+		under_cursor->event.type |= WM_EVENT_MOUSE_MOVE;
+		under_cursor->event.mouse.position = wm_mouse_to_rect(mouse);
+		under_cursor->event.mouse.position.top -= r.top;
+		under_cursor->event.mouse.position.left -= r.left;
 	}
 
 	// Redraw the mouse if needed

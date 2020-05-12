@@ -16,6 +16,7 @@
 #define WM_EVENT_KBD          2
 #define WM_EVENT_GAINED_FOCUS 4
 #define WM_EVENT_LOST_FOCUS   8
+#define WM_EVENT_MOUSE_MOVE   16
 
 typedef struct {
 	int32_t top, left, bottom, right;
