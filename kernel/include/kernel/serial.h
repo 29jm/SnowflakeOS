@@ -12,7 +12,6 @@
 #define SERIAL_IE 7
 
 void init_serial();
-int serial_received();
 char serial_read();
 void serial_write(char c);
-int serial_is_transmit_empty();
+char* serial_get_log();

@@ -37,7 +37,7 @@ int main() {
 
 	while (true) {
 		sys_info_t info;
-		syscall1(SYS_INFO, (uintptr_t) &info);
+		syscall2(SYS_INFO, SYS_INFO_UPTIME, (uintptr_t) &info);
 
 		uint32_t time = info.uptime;
 		itoa(time, time_text+8, 10);

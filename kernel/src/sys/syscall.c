@@ -3,10 +3,12 @@
 #include <kernel/timer.h>
 #include <kernel/fb.h>
 #include <kernel/wm.h>
+#include <kernel/serial.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <kernel/uapi/uapi_syscall.h>
 
@@ -114,12 +116,22 @@ static void syscall_wm(registers_t* regs) {
 }
 
 /* Returns known system information.
- * TODO: improve.
  */
 static void syscall_info(registers_t* regs) {
-	sys_info_t* info = (sys_info_t*) regs->ebx;
-	info->kernel_heap_usage = memory_usage();
-	info->uptime = timer_get_time();
+	uint32_t request = regs->ebx;
+	sys_info_t* info = (sys_info_t*) regs->ecx;
+
+	if (request & SYS_INFO_MEMORY) {
+		info->kernel_heap_usage = memory_usage();
+	}
+
+	if (request & SYS_INFO_UPTIME) {
+		info->uptime = timer_get_time();
+	}
+
+	if (request & SYS_INFO_LOG && info->kernel_log) {
+		strcpy(info->kernel_log, serial_get_log());
+	}
 }
 
 static void syscall_exec(registers_t* regs) {

@@ -24,7 +24,7 @@ int main() {
 		}
 
 		sys_info_t info;
-		syscall1(SYS_INFO, (uintptr_t) &info);
+		syscall2(SYS_INFO, SYS_INFO_MEMORY, (uintptr_t) &info);
 		uint32_t new_mem = info.kernel_heap_usage;
 
 		if (new_mem == mem) {
