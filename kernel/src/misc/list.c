@@ -150,3 +150,11 @@ list_node_t* list_node_new(void* data) {
 
     return node;
 }
+
+void* list_first(list_t* list) {
+    return list->root;
+}
+
+void* list_last(list_t* list) {
+    return list_get_at(list, list->count - 1);
+}

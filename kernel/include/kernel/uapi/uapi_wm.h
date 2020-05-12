@@ -12,8 +12,10 @@
 #define WM_CMD_INFO   3
 #define WM_CMD_EVENT  4
 
-#define WM_EVENT_CLICK 1
-#define WM_EVENT_KBD   2
+#define WM_EVENT_CLICK        1
+#define WM_EVENT_KBD          2
+#define WM_EVENT_GAINED_FOCUS 4
+#define WM_EVENT_LOST_FOCUS   8
 
 typedef struct {
 	int32_t top, left, bottom, right;

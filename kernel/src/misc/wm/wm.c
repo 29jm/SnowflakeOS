@@ -29,6 +29,7 @@ void wm_kbd_callback(kbd_event_t event);
  * the last position.
  */
 static list_t* windows;
+static wm_window_t* focused;
 static uint32_t id_count = 0;
 static fb_t fb;
 static mouse_t mouse;
@@ -59,9 +60,9 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 
 	win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
 
-	list_add(windows, win);
+	list_add_front(windows, win);
 	wm_assign_position(win);
-	wm_assign_z_orders();
+	wm_raise_window(win);
 
 	return win->id;
 }
@@ -79,7 +80,7 @@ void wm_close_window(uint32_t win_id) {
 		printf("[WM] Close: failed to find window of id %d\n", win_id);
 	}
 
-	wm_assign_z_orders();
+	wm_raise_window(list_last(windows));
 	wm_refresh_partial(rect);
 }
 
@@ -112,9 +113,11 @@ void wm_render_window(uint32_t win_id, rect_t* clip) {
 		off += win->ufb.pitch;
 	}
 
+	// Draw the window for real
 	rect = rect_from_window(win);
 	wm_draw_window(win, *clip);
 
+	// The window can spawn over the cursor
 	if (win->flags & WM_NOT_DRAWN) {
 		rect_t r = wm_mouse_to_rect(mouse);
 		win->flags &= ~WM_NOT_DRAWN;
@@ -137,16 +140,42 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
 
 /* Window management stuff */
 
-/* Puts `win` at the highest z-level.
+/* Puts a window to the front, giving it focus.
+ * In some case, this may not be possible, for instance if a modal window
+ * has the focus, or if the given window is marked as a background window.
+ * By design, _only_ this function affects focus.
  */
 void wm_raise_window(wm_window_t* win) {
 	uint32_t idx = list_get_index_of(windows, win);
+
+	// This is the first window to be opened
+	if (!focused) {
+		focused = win;
+		win->event.type |= WM_EVENT_GAINED_FOCUS;
+
+		return;
+	}
+
+	// We can't affect the focus on those
+	if (focused->flags & WM_FOREGROUND || win->flags & WM_BACKGROUND) {
+		return;
+	}
+
+	// Nothing to do
+	if (focused == win) {
+		return;
+	}
+
+	// Change focus only then
 	list_add(windows, list_remove_at(windows, idx));
+	focused->event.type |= WM_EVENT_LOST_FOCUS;
+	win->event.type |= WM_EVENT_GAINED_FOCUS;
+	focused = win;
 
-	wm_assign_z_orders();
-
-	rect_t rect = rect_from_window(win);
-	wm_draw_window(win, rect);
+	// Redraw if possible. Not sure this is this function's responsibility.
+	if (!(win->flags & WM_NOT_DRAWN)) {
+		wm_draw_window(win, rect_from_window(win));
+	}
 }
 
 /* Sets the position of the window according to obscure rules.
@@ -354,7 +383,8 @@ void wm_draw_mouse(rect_t old, rect_t new) {
 	}
 }
 
-/* Handles mouse events.
+/* Handles mouse events. This includes moving the cursor, moving windows along
+ * with it, and distributing clicks.
  */
 void wm_mouse_callback(mouse_t raw_curr) {
 	static mouse_t raw_prev;
@@ -382,9 +412,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 	if (!raw_prev.left_pressed && raw_curr.left_pressed) {
 		wm_window_t* clicked = wm_window_at(mouse.x, mouse.y);
 
-		if (clicked && !(clicked->flags & WM_BACKGROUND)) {
+		if (clicked) {
 			wm_raise_window(clicked);
-
 			dragged = clicked;
 		}
 	}
@@ -394,8 +423,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 		if (dragged && (dx || dy)) {
 			rect_t rect = rect_from_window(dragged);
 
-			if (!(rect.left + dx < 0 || rect.right + dx > (int32_t) fb.width ||
-			    	rect.top + dy < 0 || rect.bottom + dy > (int32_t) fb.height)) {
+			if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
+					rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
 				been_dragged = true;
 
 				dragged->x += dx;

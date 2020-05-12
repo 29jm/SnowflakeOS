@@ -19,3 +19,5 @@ list_t* list_add_front(list_t* list, void* data);
 void* list_get_at(list_t* list, uint32_t index);
 uint32_t list_get_index_of(list_t* list, void* data);
 void* list_remove_at(list_t* list, uint32_t index);
+void* list_first(list_t* list);
+void* list_last(list_t* list);
