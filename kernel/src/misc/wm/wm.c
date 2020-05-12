@@ -117,12 +117,9 @@ void wm_render_window(uint32_t win_id, rect_t* clip) {
 	rect = rect_from_window(win);
 	wm_draw_window(win, *clip);
 
-	// The window can spawn over the cursor
+	// Mark as drawn once
 	if (win->flags & WM_NOT_DRAWN) {
-		rect_t r = wm_mouse_to_rect(mouse);
 		win->flags &= ~WM_NOT_DRAWN;
-
-		wm_draw_mouse(r, r);
 	}
 }
 
@@ -264,6 +261,11 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
 		rect_subtract_clip_rect(clip_rects, clip);
 	}
 
+	// Clip the mouse cursor too
+	rect_t mouse_rect = wm_mouse_to_rect(mouse);
+	rect_subtract_clip_rect(clip_rects, mouse_rect);
+
+	// Draw what's left
 	for (uint32_t i = 0; i < clip_rects->count; i++) {
 		rect_t* clip = list_get_at(clip_rects, i); // O(n²)
 
@@ -283,12 +285,28 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
  * TODO: allow refreshing empty space, filled with black.
  */
 void wm_refresh_partial(rect_t clip) {
+	list_t* to_refresh = list_new();
+	list_add(to_refresh, rect_new_copy(clip));
+
 	for (uint32_t i = 0; i < windows->count; i++) {
 		wm_window_t* win = list_get_at(windows, i); // O(n²)
 		rect_t rect = rect_from_window(win);
 
 		if (rect_intersect(clip, rect)) {
 			wm_draw_window(win, clip);
+			rect_subtract_clip_rect(to_refresh, rect);
+		}
+	}
+
+	// Draw black areas where a refresh was needed but no window was present
+	for (uint32_t i = 0; i < to_refresh->count; i++) {
+		rect_t* r = list_get_at(to_refresh, i);
+		uintptr_t off = fb.address + r->top*fb.pitch + r->left*fb.bpp/8;
+		uint32_t size = (r->right - r->left + 1)*fb.bpp/8;
+
+		for (int32_t j = r->top; j <= r->bottom; j++) {
+			memset((void*) off, 0, size);
+			off += fb.pitch;
 		}
 	}
 }

@@ -342,7 +342,8 @@ void proc_register_program(char* name, uint8_t* code, uint32_t size) {
 	prog->size = size;
 
 	list_add(programs, prog);
-	printf("added program %s\n", prog->name);
+
+	printf("[PROC] Added program %s\n", prog->name);
 }
 
 int32_t proc_exec(const char* name) {
