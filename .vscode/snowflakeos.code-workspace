@@ -17,12 +17,14 @@
 			"${workspaceRoot}/libc/include",
 			"${workspaceRoot}/snow/include",
 			"${workspaceRoot}/modules/include",
+			"${workspaceRoot}/ui/include",
 		],
 		"C_Cpp.default.browse.path": [
 			"${workspaceRoot}/kernel/include",
 			"${workspaceRoot}/libc/include",
 			"${workspaceRoot}/snow/include",
 			"${workspaceRoot}/modules/include",
+			"${workspaceRoot}/ui/include",
 		],
 		"C_Cpp.default.compilerPath": "${workspaceRoot}/compiler/bin/i686-elf-gcc",
 		"C_Cpp.default.compilerArgs": [

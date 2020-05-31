@@ -20,7 +20,7 @@
 
 typedef struct {
 	int32_t top, left, bottom, right;
-} rect_t;
+} wm_rect_t;
 
 typedef struct {
     uintptr_t address;
@@ -31,7 +31,7 @@ typedef struct {
 } fb_t;
 
 typedef struct {
-	rect_t position;
+	wm_rect_t position;
 	bool left_button;
 	bool right_button;
 } wm_click_event_t;
@@ -61,7 +61,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t win_id;
-	rect_t* clip;
+	wm_rect_t* clip;
 } wm_param_render_t;
 
 typedef struct {

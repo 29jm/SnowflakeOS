@@ -44,7 +44,7 @@ int main() {
 		int x = win->fb.width / 2 - strlen(time_text)*8/2;
 		int y = 3;
 
-		rect_t redraw = {
+		wm_rect_t redraw = {
 			.left = x, .top = y, .bottom = y+16, .right = x+strlen(time_text)*8
 		};
 

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 
 #ifdef _KERNEL_
@@ -161,6 +162,12 @@ void* malloc(uint32_t size) {
 	// Accessing basic datatypes at unaligned addresses is apparently undefined
 	// behavior. Four-bytes alignement should be enough for most things.
 	return aligned_alloc(MIN_ALIGN, size);
+}
+
+void* calloc(uint32_t size) {
+	void* ptr = malloc(size);
+
+	return memset(ptr, 0, size);
 }
 
 /* Frees a pointer previously returned by `malloc`.

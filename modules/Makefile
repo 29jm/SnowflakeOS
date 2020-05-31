@@ -1,6 +1,6 @@
 CFLAGS:=$(CFLAGS) -nostartfiles
 LDFLAGS:=$(LDFLAGS) -T mod.ld
-LIBS=-lsnow -lc -lgcc
+LIBS=-lui -lsnow -lc -lgcc
 
 MODS=$(patsubst %.c,%.mod,$(wildcard src/*.c))
 

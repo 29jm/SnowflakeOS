@@ -16,7 +16,7 @@ SnowflakeOS.kernel: $(OBJS) linker.ld
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
 	$(CC) -c $< -o $@ $(CFLAGS)

@@ -68,7 +68,7 @@ void snow_render_window(window_t* win) {
 	syscall2(SYS_WM, WM_CMD_RENDER, (uintptr_t) &param);
 }
 
-void snow_render_window_partial(window_t* win, rect_t clip) {
+void snow_render_window_partial(window_t* win, wm_rect_t clip) {
 	wm_param_render_t param = {
 		.win_id = win->id,
 		.clip = &clip

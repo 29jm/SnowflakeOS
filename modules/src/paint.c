@@ -1,4 +1,5 @@
 #include <snow.h>
+#include <ui.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -73,25 +74,28 @@ int main() {
 
         if (event.type & WM_EVENT_CLICK) {
             drawing = !drawing;
-            pos = event.mouse.position;
-            pos.left -= fb_x;
-            pos.top -= fb_y;
+            pos = (rect_t) {
+                .x = event.mouse.position.left, .y = event.mouse.position.top
+            };
+
+            pos.x -= fb_x;
+            pos.y -= fb_y;
         }
 
         if (!(event.type & WM_EVENT_MOUSE_MOVE)) {
             continue;
         }
 
-        rect_t npos = event.mouse.position;
-        uint32_t x = npos.left - fb_x;
-        uint32_t y = npos.top - fb_y;
+        rect_t npos = *(rect_t*) &event.mouse.position;
+        uint32_t x = npos.x - fb_x;
+        uint32_t y = npos.y - fb_y;
 
         if (drawing && x > 0 && x < fb_width-1 && y > 0 && y < fb_height-1) {
-            snow_draw_line(draw_fb, pos.left, pos.top, x, y, color);
+            snow_draw_line(draw_fb, pos.x, pos.y, x, y, color);
         }
 
-        pos.left = x;
-        pos.top = y;
+        pos.x = x;
+        pos.y = y;
 
         redraw();
     }

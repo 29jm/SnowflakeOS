@@ -25,6 +25,9 @@ typedef struct _wm_window_t {
 	wm_event_t event;
 } wm_window_t;
 
+// We exposed `wm_rect_t` to userspace, rename it here for convenience
+typedef wm_rect_t rect_t;
+
 void init_wm();
 
 uint32_t wm_open_window(fb_t* fb, uint32_t flags);
