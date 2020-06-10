@@ -11,3 +11,6 @@ misc/grub.cfg
 Session.vim
 isodir
 sysroot
+toolchain/build
+toolchain/compiler
+toolchain/src

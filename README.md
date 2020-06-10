@@ -1,6 +1,6 @@
 # SnowflakeOS
 
-![A picture is worth, like, a few words](https://29jm.github.io/assets/snowy_bg.png)
+![A picture is worth, like, a few words](https://29jm.github.io/assets/sos-paint.png)
 
 A hobby OS to help me learn about kernel stuff, to eventually get into linux kernel developpement. Currently it supports:
 + booting in higher half
@@ -19,41 +19,31 @@ A hobby OS to help me learn about kernel stuff, to eventually get into linux ker
 
 I aim to make the code readable and well-organized. A blog follows the development of this project, here https://29jm.github.io/.
 
-## Installing dependencies
+## Dependencies
 
-### An i686 cross-compiler
+### Packages
 
-This is the only dependency you will need to build yourself, others can be installed through your package manager.
+Install the following packages:
 
-Follow this guide to build a working cross-compiler:  
-> https://wiki.osdev.org/GCC_Cross-Compiler
-
-It should be in your `$PATH`, so that `i686-elf-*` executables are available.
-
-### xorriso
-
-+ `xorriso` (Debian/Ubuntu)
-+ `libisoburn` (Archlinux)
-
-### GRUB
-
++ `xorriso` for Debian/Ubuntu; `libisoburn` on Archlinux
 + `grub`
 + `mtools`
-
-### An emulator
-
-Install at least one of the following packages:
 + `qemu` (recommended)
-+ `bochs`
++ `bochs` (optional)
+
+### Cross-compiler
+
+Run
+
+    make toolchain
+
+to build the cross-compiler needed to compile SnowflakeOS. This command will download and run build scripts for `gcc` and `binutils` from GNU FTP servers, and install the cross-compiler in `toolchain/compiler`.
 
 ## Running SnowflakeOS
 
 Run either
 
-    make qemu
-
-or
-
+    make qemu # or
     make bochs
 
 to test SnowflakeOS.

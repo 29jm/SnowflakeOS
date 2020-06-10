@@ -24,7 +24,7 @@
 			"${workspaceRoot}/snow/include",
 			"${workspaceRoot}/modules/include",
 		],
-		"C_Cpp.default.compilerPath": "/home/johan/opt/cross/bin/i686-elf-gcc",
+		"C_Cpp.default.compilerPath": "${workspaceRoot}/compiler/bin/i686-elf-gcc",
 		"C_Cpp.default.compilerArgs": [
 			"-include stdint",
 			"-include stddef"

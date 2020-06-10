@@ -10,12 +10,14 @@ ISO=$(PWD)/$(ISODIR)
 SYSROOTDIR=sysroot
 SYSROOT=$(PWD)/$(SYSROOTDIR)
 
+PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
+
 AR=$(HOST)-ar
 AS=$(HOST)-as
 LD=$(HOST)-ld
 CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
 
-CFLAGS=-O2 -std=gnu11 -ffreestanding -fbuiltin -Wall -Wextra -Wno-format
+CFLAGS=-O2 -std=gnu11 -ffreestanding -Wall -Wextra -Wno-format
 LDFLAGS=-nostdlib
 
 # Make will be called on these folders
@@ -25,7 +27,7 @@ PROJECTS=libc snow kernel modules
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
 PROJECT_CLEAN=$(PROJECTS:=.clean)
 
-.PHONY: all build qemu bochs clean $(PROJECTS)
+.PHONY: all build qemu bochs clean toolchain $(PROJECTS)
 
 all: build SnowflakeOS.iso
 
@@ -63,6 +65,9 @@ SnowflakeOS.iso: build misc/grub.cfg
 
 misc/grub.cfg: build misc/gen-grub-config.sh
 	bash ./misc/gen-grub-config.sh
+
+toolchain:
+	cd toolchain; env -i ./build-toolchain.sh
 
 # Automatic rules for our generated sub-targets
 %.headers: %/
