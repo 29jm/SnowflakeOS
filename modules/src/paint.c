@@ -7,6 +7,28 @@
 void redraw();
 void copy_fb(fb_t src, fb_t dest, uint32_t x, uint32_t y);
 
+typedef struct {
+	widget_t widget;
+	bool needs_drawing;
+	bool needs_clearing;
+	point_t last_pos;
+} canvas_t;
+
+void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
+	// TODO
+}
+
+void canvas_on_draw(canvas_t canvas, fb_t fb) {
+
+}
+
+canvas_t* canvas_new() {
+	canvas_t* canvas = calloc(sizeof(canvas_t));
+
+	canvas->widget.flags |= UI_EXPAND;
+	canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
+}
+
 const uint32_t width = 550;
 const uint32_t height = 320;
 const uint32_t title_height = 20;
