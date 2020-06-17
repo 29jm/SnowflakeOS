@@ -1,12 +1,17 @@
 #!/usr/bin/env sh
 
+log() {
+	printf "\033[33m->\033[m %s\n" "$*"
+}
+
 download() {
-	wget "$1" -O "$2"
-	tar xvf "$2"
+	log "Downloading $2"
+	wget -c "$1"
+	log "Inflating $2"
+	tar xf "$2"
 }
 
 download_binutils() {
-	printf " - binutils\n"
 	version="2.34"
 	binutils="binutils-$version.tar.xz"
 	download "https://ftp.gnu.org/gnu/binutils/$binutils" "$binutils"
@@ -14,15 +19,14 @@ download_binutils() {
 }
 
 download_gcc() {
-	printf " - gcc\n"
-	version="9.3.0"
+	version="10.1.0"
 	gcc="gcc-$version.tar.xz"
 	download "ftp://ftp.gnu.org/gnu/gcc/gcc-$version/$gcc" "$gcc"
 	export gcc_src="$PWD/gcc-$version"
 }
 
 build_binutils() {
-	printf "Building binutils\n"
+	log "Building binutils"
 	cd binutils
 	"$binutils_src/configure" --target="$TARGET" 	\
 					    	  --prefix="$PREFIX" 	\
@@ -35,7 +39,7 @@ build_binutils() {
 }
 
 build_gcc() {
-	printf "Building gcc\n"
+	log "Building gcc"
 	cd gcc
 	"$gcc_src/configure" --target="$TARGET"			\
 					 	 --prefix="$PREFIX" 		\
@@ -66,7 +70,6 @@ main() {
 
 	# download sources
 	cd src
-	printf "Downloading dependancies\n"
 	download_binutils
 	download_gcc
 	cd .. # toolchain/
