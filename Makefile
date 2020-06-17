@@ -67,7 +67,7 @@ misc/grub.cfg: build misc/gen-grub-config.sh
 	bash ./misc/gen-grub-config.sh
 
 toolchain:
-	cd toolchain; env -i ./build-toolchain.sh
+	env -i toolchain/build-toolchain.sh
 
 # Automatic rules for our generated sub-targets
 %.headers: %/

@@ -1,69 +1,80 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
-MAKE_OPTIONS="-j1"
-
-function download() { # $1=url, $2=file
-	if [ ! -f $2 ]; then
-		curl "$1$2" > "$2"
-	fi
-
-	if [ ! -d "${2%.tar.xz}" ]; then
-		tar xf "$2"
-	fi
+download() {
+	wget "$1" -O "$2"
+	tar xvf "$2"
 }
 
-function download-binutils() {
-	url="ftp://ftp.gnu.org/gnu/binutils/"
-	file=$(curl -sl $url | grep -E 'binutils-[0-9.]+.tar.xz$' | sort -V | tail -n1)
-	download "$url" "$file"
-	echo "$PWD/${file%.tar.xz}"
+download_binutils() {
+	printf " - binutils\n"
+	version="2.34"
+	binutils="binutils-$version.tar.xz"
+	download "https://ftp.gnu.org/gnu/binutils/$binutils" "$binutils"
+	export binutils_src="$PWD/binutils-$version"
 }
 
-function download-gcc() {
-	url="ftp://ftp.gnu.org/gnu/gcc/"
-	folder=$(curl -sl $url | grep -E 'gcc-[0-9.]+$' | sort -V | tail -n1)
-	url="$url$folder/"
-	file="$folder.tar.xz"
-	download "$url" "$file"
-	echo "$PWD/$folder"
+download_gcc() {
+	printf " - gcc\n"
+	version="9.3.0"
+	gcc="gcc-$version.tar.xz"
+	download "ftp://ftp.gnu.org/gnu/gcc/gcc-$version/$gcc" "$gcc"
+	export gcc_src="$PWD/gcc-$version"
 }
 
-echo "Downloading dependencies"
+build_binutils() {
+	printf "Building binutils\n"
+	cd binutils
+	"$binutils_src/configure" --target="$TARGET" 	\
+					    	  --prefix="$PREFIX" 	\
+						      --with-sysroot 		\
+					      	  --disable-nls 		\
+						      --disable-werror
+	make
+	make install
+	cd ..
+}
 
-mkdir -p src
-cd src || exit 1
-echo " - binutils"
-binutils_src=$(download-binutils)
-echo " - gcc"
-gcc_src=$(download-gcc)
-cd ..
+build_gcc() {
+	printf "Building gcc\n"
+	cd gcc
+	"$gcc_src/configure" --target="$TARGET"			\
+					 	 --prefix="$PREFIX" 		\
+					 	 --disable-nls				\
+					  	 --enable-languages=c,c++	\
+					 	 --without-headers
+	make all-gcc
+	make all-target-libgcc
+	make install-gcc
+	make install-target-libgcc
+	cd ..
+}
 
-echo "Building binutils"
+main() {
+	# exit if any commands fails
+	set -e
+	# disable word globbing
+	set -f
 
-mkdir -p compiler
-export PREFIX="$PWD/compiler"
-export TARGET=i686-elf
-export PATH="$PREFIX/bin:$PATH"
+	cd toolchain
 
-mkdir -p build
-cd build || exit 2
+	mkdir -p src compiler build
+	mkdir -p build/binutils build/gcc
 
-mkdir -p binutils
-cd binutils || exit 3
-"$binutils_src/configure" --target="$TARGET" --prefix="$PREFIX" --with-sysroot --disable-nls --disable-werror
-make $MAKE_OPTIONS
-make install
-cd ..
+	export PREFIX="$PWD/compiler"
+	export TARGET="i686-elf"
+	export PATH="$PREFIX/bin:$PATH"
 
-echo "Building GCC"
+	# download sources
+	cd src
+	printf "Downloading dependancies\n"
+	download_binutils
+	download_gcc
+	cd .. # toolchain/
 
-mkdir -p gcc
-cd gcc || exit 4
-"$gcc_src/configure" --target="$TARGET" --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers
-make all-gcc $MAKE_OPTIONS
-make all-target-libgcc $MAKE_OPTIONS
-make install-gcc
-make install-target-libgcc
-cd ..
+	# build binutils
+	cd build
+	build_binutils 
+	build_gcc
+}
 
-cd .. # toolchain
+main "$@"
