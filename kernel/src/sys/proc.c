@@ -4,7 +4,7 @@
 #include <kernel/pmm.h>
 #include <kernel/gdt.h>
 #include <kernel/fpu.h>
-#include <kernel/list.h>
+#include <kernel/fs.h>
 #include <kernel/sys.h>
 
 #include <stdio.h>
@@ -92,8 +92,11 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 		.kernel_stack = kernel_stack,
 		.esp = kernel_stack,
 		.mem_len = 0,
-		.sleep_ticks = 0
+		.sleep_ticks = 0,
+		.fds = list_new()
 	};
+
+	printf("[proc] run pid %d\n", process->pid);
 
 	// Insert the process in the ring, create it if empty
 	if (current_process && current_process->next) {
@@ -190,6 +193,14 @@ void proc_exit_current_process() {
 	uintptr_t pd_page = pd[1023] & PAGE_FRAME;
 	pmm_free_page(pd_page);
 
+	// Free the file descriptor list
+	while (current_process->fds->count) {
+		fs_close((int32_t) list_first(current_process->fds));
+		list_remove_at(current_process->fds, 0);
+	}
+
+	kfree(current_process->fds);
+
 	// Remove the process from our circular list
 	process_t* next_current = current_process->next;
 
@@ -248,7 +259,9 @@ void proc_timer_callback(registers_t* regs) {
 	} while (p != current_process);
 
 	fpu_switch(current_process, current_process->next);
-
+	if (current_process->next->pid == 2) {
+		BREAK();
+	}
 	proc_switch_process();
 }
 
@@ -343,7 +356,7 @@ void proc_register_program(char* name, uint8_t* code, uint32_t size) {
 
 	list_add(programs, prog);
 
-	printf("[PROC] Added program %s\n", prog->name);
+	// printf("[PROC] Added program %s\n", prog->name);
 }
 
 int32_t proc_exec(const char* name) {
@@ -351,10 +364,38 @@ int32_t proc_exec(const char* name) {
 		program_t* prog = list_get_at(programs, i);
 
 		if (!strcmp(prog->name, name)) {
+			printf("[proc] exec program %s\n", name);
 			proc_run_code(prog->code, prog->size);
 			return 0;
 		}
 	}
 
 	return -1;
+}
+
+/* Returns whether the current process posesses the file descriptor.
+ * TODO: include mode check?
+ */
+bool proc_has_fd(int32_t fd) {
+	return list_get_index_of(current_process->fds, (void*) fd) < current_process->fds->count;
+}
+
+int32_t proc_open(const char* path, uint32_t mode) {
+	int32_t fd = fs_open(path, mode);
+
+	if (fd != -1) {
+		list_add_front(current_process->fds, (void*) fd);
+	}
+
+	return fd;
+}
+
+void proc_close(int32_t fd) {
+	uint32_t idx = list_get_index_of(current_process->fds, (void*) fd);
+
+	if (idx < current_process->fds->count) {
+		list_remove_at(current_process->fds, idx);
+	}
+
+	fs_close(fd);
 }

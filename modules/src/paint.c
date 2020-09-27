@@ -15,11 +15,14 @@ typedef struct {
 } canvas_t;
 
 void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
+	(void) canvas;
+	(void) p;
 	// TODO
 }
 
-void canvas_on_draw(canvas_t canvas, fb_t fb) {
-
+void canvas_on_draw(canvas_t* canvas, fb_t fb) {
+	(void) canvas;
+	(void) fb;
 }
 
 canvas_t* canvas_new() {
@@ -27,6 +30,8 @@ canvas_t* canvas_new() {
 
 	canvas->widget.flags |= UI_EXPAND;
 	canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
+
+	return canvas;
 }
 
 const uint32_t width = 550;

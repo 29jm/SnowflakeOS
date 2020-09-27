@@ -32,3 +32,18 @@ syscall2: # eax, ebx, ecx
     pop %ecx
     pop %ebx
     ret
+
+.global syscall3
+syscall3: # eax, ebx, ecx, edx
+    push %ebx
+    push %ecx
+    push %edx
+    mov 16(%esp), %eax
+    mov 20(%esp), %ebx
+    mov 24(%esp), %ecx
+    mov 28(%esp), %edx
+    int $0x30
+    pop %edx
+    pop %ecx
+    pop %ebx
+    ret

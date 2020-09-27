@@ -21,6 +21,7 @@ static uint32_t used_memory = 0;
 
 /* Returns the next multiple of `s` greater than `a`, or `a` if it is a
  * multiple of `s`.
+ * Copy of the same function in <kernel/sys.h>
  */
 static uint32_t align_to(uint32_t n, uint32_t align) {
     if (n % align == 0) {
@@ -29,6 +30,16 @@ static uint32_t align_to(uint32_t n, uint32_t align) {
 
     return n + (align - n % align);
 }
+
+typedef struct _mem_block_t {
+	struct _mem_block_t* next;
+	uint32_t size; // We use the last bit as a 'used' flag
+	uint8_t data[1];
+} mem_block_t;
+
+static mem_block_t* bottom = NULL;
+static mem_block_t* top = NULL;
+static uint32_t used_memory = 0;
 
 #ifndef _KERNEL_
 
@@ -179,6 +190,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 		uintptr_t addr = KERNEL_HEAP_BEGIN;
 		uintptr_t heap_phys = pmm_alloc_pages(KERNEL_HEAP_SIZE/0x1000);
 		paging_map_pages(addr, heap_phys, KERNEL_HEAP_SIZE/0x1000, PAGE_RW);
+
 #else
 		uintptr_t addr = (uintptr_t) sbrk(header_size);
 #endif
@@ -193,6 +205,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 	if (block) {
 		used_memory += block->size;
 		block->size |= 1;
+
 		return block->data;
 	} else {
 		// We'll have to allocate a new block, so we check if we haven't
@@ -202,7 +215,7 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 #ifdef _KERNEL_
 		// The kernel can't allocate more
 		if (end > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
-			printf("[VMM] Kernel ran out of memory!");
+			printf("[MEM] Kernel ran out of memory!");
 			abort();
 		}
 #else

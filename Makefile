@@ -17,7 +17,7 @@ AS=$(HOST)-as
 LD=$(HOST)-ld
 CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
 
-CFLAGS=-O2 -std=gnu11 -ffreestanding -Wall -Wextra -Wno-format
+CFLAGS=-g -std=gnu11 -ffreestanding -Wall -Wextra -Wno-format
 LDFLAGS=-nostdlib
 
 # Make will be called on these folders
@@ -30,6 +30,9 @@ PROJECT_CLEAN=$(PROJECTS:=.clean)
 .PHONY: all build qemu bochs clean toolchain $(PROJECTS)
 
 all: build SnowflakeOS.iso
+
+strict: CFLAGS += -Werror
+strict: build
 
 build: $(PROJECTS)
 
@@ -63,8 +66,13 @@ SnowflakeOS.iso: build misc/grub.cfg
 	cp misc/grub.cfg $(ISODIR)/boot/grub
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
 
-misc/grub.cfg: build misc/gen-grub-config.sh
+misc/grub.cfg: build misc/gen-grub-config.sh $(ISODIR)/modules/disk.img
 	bash ./misc/gen-grub-config.sh
+
+$(ISODIR)/modules/disk.img:
+	touch $(ISODIR)/modules/disk.img
+	dd if=/dev/zero of=$(ISODIR)/modules/disk.img bs=1024 count=512
+	mkfs.ext2 $(ISODIR)/modules/disk.img
 
 toolchain:
 	env -i toolchain/build-toolchain.sh

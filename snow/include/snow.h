@@ -10,6 +10,7 @@
 int32_t syscall(uint32_t eax);
 int32_t syscall1(uint32_t eax, uint32_t ebx);
 int32_t syscall2(uint32_t eax, uint32_t ebx, uint32_t ecx);
+int32_t syscall3(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx);
 
 // Sets a magic breakpoint in Bochs on the line it's called.
 #define BREAK() do { \

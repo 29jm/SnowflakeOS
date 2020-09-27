@@ -32,20 +32,21 @@ void init_pmm(multiboot_t* boot) {
 
 	for (uint32_t i = 0; i < boot->mods_count; i++) {
 		mod_t mod = modules[i];
-		kernel_end = PHYS_TO_VIRT(mod.mod_end);
+		kernel_end = mod.mod_end;
 	}
 
 	// In the author's case, modules come after the kernel,
 	// but there's no guarantee it'll always be true
-	if (kernel_end < (uintptr_t) KERNEL_END) {
-		kernel_end = (uintptr_t) KERNEL_END;
+	if (kernel_end < (uintptr_t) &KERNEL_END_PHYS) {
+		kernel_end = (uintptr_t) &KERNEL_END_PHYS;
 	}
 
 	// Setup our bitmap right after the kernel
-	bitmap = (uint32_t*) kernel_end;
+	bitmap = (uint32_t*) PHYS_TO_VIRT(kernel_end);
 	mem_size = boot->mem_lower + boot->mem_upper;
-	max_blocks = (mem_size*1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
+	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
 	used_blocks = max_blocks;
+	printf("[pmm] bitmap at %p-%p\n", bitmap, bitmap + max_blocks / 4);
 
 	memset(bitmap, 0xFF, max_blocks/8); // Every block is initially taken
 
@@ -72,10 +73,12 @@ void init_pmm(multiboot_t* boot) {
 	}
 
 	// Protect low memory, our glorious kernel and the PMM itself
-	pmm_deinit_region(0, pmm_get_kernel_end());
+	pmm_deinit_region(0, kernel_end + max_blocks/8);
 
 	printf("[PMM] Memory stats: available: \x1B[32m%dMiB", available >> 20);
 	printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
+	printf("[PMM] Taken by modules: \x1B[32m%dKiB\x1B[37m\n",
+		((uintptr_t) bitmap - (uintptr_t) &KERNEL_END) >> 10);
 }
 
 uint32_t pmm_get_map_size() {
@@ -253,5 +256,5 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 /* Returns the first address after the kernel in physical memory.
  */
 uintptr_t pmm_get_kernel_end() {
-	return VIRT_TO_PHYS(kernel_end + max_blocks/8);
+	return (uintptr_t) kernel_end + max_blocks/8;
 }

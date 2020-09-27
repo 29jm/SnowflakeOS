@@ -4,6 +4,7 @@
 #include <kernel/fb.h>
 #include <kernel/wm.h>
 #include <kernel/serial.h>
+#include <kernel/fs.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -22,6 +23,10 @@ static void syscall_sbrk(registers_t* regs);
 static void syscall_wm(registers_t* regs);
 static void syscall_info(registers_t* regs);
 static void syscall_exec(registers_t* regs);
+static void syscall_open(registers_t* regs);
+static void syscall_close(registers_t* regs);
+static void syscall_read(registers_t* regs);
+static void syscall_readdir(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -36,6 +41,10 @@ void init_syscall() {
 	syscall_handlers[SYS_WM] = syscall_wm;
 	syscall_handlers[SYS_INFO] = syscall_info;
 	syscall_handlers[SYS_EXEC] = syscall_exec;
+	syscall_handlers[SYS_OPEN] = syscall_open;
+	syscall_handlers[SYS_CLOSE] = syscall_close;
+	syscall_handlers[SYS_READ] = syscall_read;
+	syscall_handlers[SYS_READDIR] = syscall_readdir;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -52,7 +61,7 @@ static void syscall_handler(registers_t* regs) {
  * - Syscall number in eax,
  * - Arguments shall be passed in this order: ebx, ecx, edx, esi,
  * - If more are needed, pack them into a struct pointer,
- * - Values shall be returned first in eax, then in user-given pointers.
+ * - Values shall be returned first in eax, then in user-provided pointers.
  */
 
 static void syscall_yield(registers_t* regs) {
@@ -138,4 +147,43 @@ static void syscall_exec(registers_t* regs) {
 	char* name = (char*) regs->ebx;
 
 	regs->eax = proc_exec(name);
+}
+
+static void syscall_open(registers_t* regs) {
+	const char* path = (const char*) regs->ebx;
+	uint32_t mode = regs->ecx;
+
+	regs->eax = proc_open(path, mode);
+}
+
+static void syscall_close(registers_t* regs) {
+	int32_t fd = regs->ebx;
+
+	proc_close(fd);
+}
+
+static void syscall_read(registers_t* regs) {
+	int32_t fd = regs->ebx;
+	uint8_t* buf = (uint8_t*) regs->ecx;
+	uint32_t size = regs->edx;
+
+	if (!proc_has_fd(fd)) {
+		regs->eax = 0;
+		return;
+	}
+
+	regs->eax = fs_read(fd, buf, size);
+}
+
+static void syscall_readdir(registers_t* regs) {
+	uint32_t fd = regs->ebx;
+	sos_directory_entry_t* d_ent = (sos_directory_entry_t*) regs->ecx;
+
+	if (!proc_has_fd(fd)) {
+		regs->eax = -1;
+		return;
+	}
+
+	int32_t err = fs_readdir(fd, d_ent, d_ent->entry_size);
+	regs->eax = err;
 }

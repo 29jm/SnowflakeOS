@@ -24,10 +24,13 @@ void init_fb(fb_info_t fb_info) {
 	}
 
 	uintptr_t address = (uintptr_t) fb_info.address;
+	printf("[fb] address %p\n", address);
 
 	// Remap our framebuffer
 	uint32_t size = fb.height*fb.pitch;
 	uintptr_t buff = (uintptr_t) kamalloc(size, 0x1000);
+	printf("[fb] buff at %p\n", buff);
+	// while (1);
 
 	for (uint32_t i = 0; i < size/0x1000; i++) {
 		page_t* p = paging_get_page(buff + 0x1000*i, false, 0);

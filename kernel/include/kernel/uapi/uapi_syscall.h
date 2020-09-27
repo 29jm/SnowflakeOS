@@ -1,5 +1,7 @@
 #pragma once
 
+#include <kernel/uapi/uapi_fs.h>
+
 #include <stdint.h>
 
 #define SYS_YIELD 0
@@ -10,7 +12,11 @@
 #define SYS_WM 5
 #define SYS_INFO 6
 #define SYS_EXEC 7
-#define SYS_MAX 8 // First invalid syscall number
+#define SYS_OPEN 9
+#define SYS_CLOSE 10
+#define SYS_READ 11
+#define SYS_READDIR 12
+#define SYS_MAX 13 // First invalid syscall number
 
 #define SYS_INFO_UPTIME 1
 #define SYS_INFO_MEMORY 2
@@ -21,3 +27,8 @@ typedef struct {
 	double uptime;
 	char* kernel_log; // Must be at least 2048 bytes long
 } sys_info_t;
+
+typedef struct {
+	uint8_t* buf;
+	uint32_t size;
+} sys_buf_t;

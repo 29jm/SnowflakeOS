@@ -1,8 +1,12 @@
 #pragma once
 
+#include <kernel/list.h>
+
 #include <stdint.h>
+#include <stdbool.h>
 
 #define PROC_KERNEL_STACK_PAGES 10 // In pages
+#define PROC_MAX_FD 1024
 
 // Add new members to the end to avoid messing with the offsets
 typedef struct _proc_t {
@@ -17,6 +21,7 @@ typedef struct _proc_t {
 	uint32_t mem_len; // Size of program heap in bytes
 	uint32_t sleep_ticks;
 	uint8_t fpu_registers[512];
+	list_t* fds;
 } process_t;
 
 void init_proc();
@@ -31,3 +36,6 @@ void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
 void proc_register_program(char* name, uint8_t* code, uint32_t size);
 int32_t proc_exec(const char* name);
+bool proc_has_fd(int32_t fd);
+int32_t proc_open(const char* path, uint32_t mode);
+void proc_close(int32_t fd);
