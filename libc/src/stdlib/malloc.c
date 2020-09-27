@@ -5,31 +5,14 @@
 #ifdef _KERNEL_
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
+#include <kernel/sys.h>
+#endif
+
+#ifndef _KERNEL_
+#include <snow.h>
 #endif
 
 #define MIN_ALIGN 4
-
-typedef struct _mem_block_t {
-    struct _mem_block_t* next;
-    uint32_t size; // We use the last bit as a 'used' flag
-    uint8_t data[1];
-} mem_block_t;
-
-static mem_block_t* bottom = NULL;
-static mem_block_t* top = NULL;
-static uint32_t used_memory = 0;
-
-/* Returns the next multiple of `s` greater than `a`, or `a` if it is a
- * multiple of `s`.
- * Copy of the same function in <kernel/sys.h>
- */
-static uint32_t align_to(uint32_t n, uint32_t align) {
-    if (n % align == 0) {
-        return n;
-    }
-
-    return n + (align - n % align);
-}
 
 typedef struct _mem_block_t {
 	struct _mem_block_t* next;
@@ -42,6 +25,18 @@ static mem_block_t* top = NULL;
 static uint32_t used_memory = 0;
 
 #ifndef _KERNEL_
+
+/* Returns the next multiple of `s` greater than `a`, or `a` if it is a
+ * multiple of `s`.
+ * Copy of the same function in <kernel/sys.h>
+ */
+static uint32_t align_to(uint32_t n, uint32_t align) {
+	if (n % align == 0) {
+		return n;
+	}
+
+	return n + (align - n % align);
+}
 
 /* Allocates `n` pages of memory located after the program's memory.
  * Returns a pointer to the first allocated page.

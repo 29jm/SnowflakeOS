@@ -12,7 +12,6 @@ static list_t* file_table;
 static int32_t current_fd;
 
 void init_fs() {
-	BREAK();
 	file_table = list_new();
 }
 

@@ -75,13 +75,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 		uint8_t* code = (uint8_t*) kmalloc(size);
 		memcpy((void*) code, (void*) 0xC0000000 + mod.mod_start, size);
 
-		if (!strcmp(name, "terminal")) {
-			printf("[kernel] beginning of \"terminal\" module at %p\n", mod.mod_start);
-			for (uint32_t i = 0; i < 128; i++) {
-				printf("%x ", ((uint8_t*) 0xC0000000 + mod.mod_start)[i]);
-			}
-		}
-
 		if (!strcmp(name, "disk")) {
 			init_ext2(code, size);
 			continue;

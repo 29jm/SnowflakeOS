@@ -11,13 +11,10 @@
 #endif
 
 int main() {
-	BREAK();
 	fb_t scr;
 	char time_text[20] = "uptime: ";
-	BREAK();
 	snow_get_fb_info(&scr);
 
-	BREAK();
 	window_t* win = snow_open_window("bg", scr.width, scr.height, WM_BACKGROUND);
 
 #if RELEASE == 1
@@ -29,7 +26,6 @@ int main() {
 		j += 3;
 	}
 #else
-	BREAK();
 	for (uint32_t i = 0; i < win->fb.height*win->fb.width; i++) {
 		((uint32_t*) win->fb.address)[i] = i | i % 512 | i * 512;
 	}

@@ -46,7 +46,9 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 		temp_page = (uintptr_t) kamalloc(0x1000, 0x1000);
 	}
 
-	uint32_t num_code_pages = size / 0x1000 + 1;
+	// Allocate one page more than the program size to accomodate static
+	// variables. TODO: fix, critical. -> ELF loader?
+	uint32_t num_code_pages = divide_up(size, 0x1000) + 1;
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
 
 	process_t* process = kmalloc(sizeof(process_t));
@@ -95,8 +97,6 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 		.sleep_ticks = 0,
 		.fds = list_new()
 	};
-
-	printf("[proc] run pid %d\n", process->pid);
 
 	// Insert the process in the ring, create it if empty
 	if (current_process && current_process->next) {
@@ -259,9 +259,6 @@ void proc_timer_callback(registers_t* regs) {
 	} while (p != current_process);
 
 	fpu_switch(current_process, current_process->next);
-	if (current_process->next->pid == 2) {
-		BREAK();
-	}
 	proc_switch_process();
 }
 
@@ -366,6 +363,7 @@ int32_t proc_exec(const char* name) {
 		if (!strcmp(prog->name, name)) {
 			printf("[proc] exec program %s\n", name);
 			proc_run_code(prog->code, prog->size);
+
 			return 0;
 		}
 	}

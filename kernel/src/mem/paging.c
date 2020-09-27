@@ -95,14 +95,8 @@ void paging_unmap_page(uintptr_t virt) {
 }
 
 void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num, uint32_t flags) {
-	// printf("[paging] mapping from %p-%p to %p-%p\n", virt, virt+num*0x1000, phys, phys+num*0x1000);
-
 	for (uint32_t i = 0; i < num; i++) {
 		paging_map_page(virt, phys, flags);
-		if (virt + 0x1000 == 0xc0600000) {
-			BREAK();
-			// while (1);
-		}
 		phys += 0x1000;
 		virt += 0x1000;
 	}
