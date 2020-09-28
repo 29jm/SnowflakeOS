@@ -78,6 +78,7 @@ void init_pmm(multiboot_t* boot) {
 	printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
 	printf("[PMM] Taken by modules: \x1B[32m%dKiB\x1B[37m\n",
 		((uintptr_t) bitmap - (uintptr_t) &KERNEL_END) >> 10);
+	printf("[PMM] Modules margin: %d bytes\n", 0x400000 - pmm_get_kernel_end());
 }
 
 uint32_t pmm_get_map_size() {

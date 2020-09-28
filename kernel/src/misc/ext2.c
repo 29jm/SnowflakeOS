@@ -260,12 +260,49 @@ void ext2_read_block(uint32_t block, uint8_t* buf) {
  * `n` is relative to the inode, i.e. it's not an absolute block number.
  */
 void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
-	if (n >= 12) {
-		printf("[ext2] unimplemented\n");
-		return;
-	}
+	// Number of block pointers in an indirect block
+	uint32_t p = block_size / sizeof(uint32_t);
 
-	ext2_read_block(inode->dbp[n], buf);
+	if (n < 12) {
+		ext2_read_block(inode->dbp[n], buf);
+	} else if (n < 12 + p) {
+		uint32_t* tmp = kmalloc(block_size);
+		uint32_t relblock = n - 12;
+
+		ext2_read_block(inode->sibp, (uint8_t*) tmp);
+		ext2_read_block(tmp[relblock], buf);
+
+		free(tmp);
+		return;
+	} else if (n < 12 + p + p*p) {
+		uint32_t* tmp = kmalloc(block_size);
+		uint32_t relblock = n - 12 - p;
+		uint32_t offset_a = relblock / p;
+		uint32_t offset_b = relblock % p;
+
+		ext2_read_block(inode->dibp, (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_b], buf);
+
+		free(tmp);
+		return;
+	} else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
+		uint32_t* tmp = kmalloc(block_size);
+		uint32_t relblock = n - 12 - p - p*p;
+		uint32_t offset_a = relblock / (p*p);
+		uint32_t offset_b = relblock % (p*p);
+		uint32_t offset_c = relblock % p;
+
+		ext2_read_block(inode->tibp, (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_b], (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_c], (uint8_t*) tmp);
+
+		free(tmp);
+		return;
+	} else {
+		printf("[EXT2] Invalid inode block\n");
+	}
 }
 
 /* Reads at most `size` bytes from `inode`, and returns the number of bytes read.

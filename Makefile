@@ -87,12 +87,12 @@ misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh
 
 misc/disk.img: misc/pisos_16.rgb misc/wallpaper.rgb
 	touch misc/disk.img
-	dd if=/dev/zero of=misc/disk.img bs=1024 count=256
+	dd if=/dev/zero of=misc/disk.img bs=1024 count=2500
 	mkdir -p misc/root/etc
 	echo "hello ext2 world" > misc/root/motd
 	echo "version: 0.5" > misc/root/etc/config
 	mv misc/pisos_16.rgb misc/root/pisos_16.rgb
-	# mv misc/wallpaper.rgb misc/root/wallpaper.rgb
+	mv misc/wallpaper.rgb misc/root/wallpaper.rgb
 	mkfs.ext2 misc/disk.img -d misc/root
 	rm -r misc/root
 

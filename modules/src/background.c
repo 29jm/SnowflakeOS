@@ -4,12 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define RELEASE 0
-
-#if RELEASE == 1
-#include "bg.h"
-#endif
-
 int main() {
 	fb_t scr;
 	char time_text[20] = "uptime: ";
@@ -17,20 +11,25 @@ int main() {
 
 	window_t* win = snow_open_window("bg", scr.width, scr.height, WM_BACKGROUND);
 
-#if RELEASE == 1
-	uint8_t* bg = misc_wallpaper_rgb;
-	uint32_t j = 0;
+	FILE* wp = fopen("/wallpaper.rgb", "r");
 
-	for (uint32_t i = 0; i < win->fb.width*win->fb.height; i++) {
-		uint32_t px = bg[j] << 16 | bg[j+1] << 8 | bg[j+2];
-		((uint32_t*) win->fb.address)[i] = px;
-		j += 3;
+	if (wp) {
+		uint32_t n_pixels = win->fb.width*win->fb.height;
+		uint8_t* bg = malloc(n_pixels * 3);
+		fread(bg, 3, n_pixels, wp);
+
+		for (uint32_t i = 0, j = 0; i < n_pixels; i++, j += 3) {
+			uint32_t px = bg[j] << 16 | bg[j+1] << 8 | bg[j+2];
+			((uint32_t*) win->fb.address)[i] = px;
+		}
+
+		free(bg);
+		fclose(wp);
+	} else {
+		for (uint32_t i = 0; i < win->fb.height*win->fb.width; i++) {
+			((uint32_t*) win->fb.address)[i] = 0x9AC4F8;
+		}
 	}
-#else
-	for (uint32_t i = 0; i < win->fb.height*win->fb.width; i++) {
-		((uint32_t*) win->fb.address)[i] = 0x9AC4F8;
-	}
-#endif
 
 	snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
 	snow_draw_string(win->fb, "Snowflake OS 0.5", 3, 3, 0x00FFFFFF);
