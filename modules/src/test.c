@@ -30,9 +30,7 @@ void tree(char* path, int level) {
 		strcpy(p, path);
 	}
 
-	printf("p");
 	d = opendir(p);
-	printf("b");
 
 	while (d && (e = readdir(d))) {
 		for (int i = 0; i < level; i++) {
@@ -58,33 +56,15 @@ void tree(char* path, int level) {
 int main() {
 	char buf[BUF_SIZE];
 
+	printf("Treeing /:\n");
 	tree("/", 0);
+	printf("\n");
 
 	DIR* root = opendir("/");
-
-	if (root) {
-		printf("[test] opened / as fd %d\n", root->fd);
-		struct dirent* ent = NULL;
-		while ((ent = readdir(root))) {
-			printf("- %s (inode %d, type %d)\n", ent->d_name, ent->d_ino, ent->d_type);
-			if (ent->d_type == 1) {
-				buf[0] = '/';
-				strcpy(buf+1, ent->d_name);
-				buf[1+strlen(ent->d_name)] = 0;
-				FILE* f = fopen(buf, "r");
-				printf("  opened %s as fd %d, ", buf, f->fd);
-				fread(buf, 300, 1, f);
-				printf("content: %s\n", buf);
-				fclose(f);
-				buf[1] = 0;
-			}
-		}
-	}
-
-	FILE* hello = fopen("/hello", "r");
+	FILE* hello = fopen("/motd", "r");
 
 	if (hello) {
-		printf("[test] opened file /hello\n");
+		printf("[test] opened file /motd\n");
 		int c = EOF;
 		int i = 0;
 

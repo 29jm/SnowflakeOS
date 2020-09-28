@@ -312,6 +312,9 @@ void wm_refresh_partial(rect_t clip) {
 			off += fb.pitch;
 		}
 	}
+
+	rect_clear_clipped(to_refresh);
+	kfree(to_refresh);
 }
 
 /* Redraws every visible area of the screen.
@@ -418,8 +421,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 	const int32_t max_y = fb.height - MOUSE_SIZE;
 
 	// Move the cursor
-	int32_t dx = (raw_curr.x - raw_prev.x)*sens;
-	int32_t dy = (raw_curr.y - raw_prev.y)*sens;
+	float dx = (raw_curr.x - raw_prev.x)*sens;
+	float dy = (raw_curr.y - raw_prev.y)*sens;
 
 	mouse.x += dx;
 	mouse.y += dy;
@@ -502,7 +505,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
 void wm_kbd_callback(kbd_event_t event) {
 	if (windows->count) {
-		wm_window_t* win = list_get_at(windows, windows->count - 1);
+		wm_window_t* win = list_last(windows);
 
 		win->event.type |= WM_EVENT_KBD;
 		win->event.kbd.keycode = event.keycode;

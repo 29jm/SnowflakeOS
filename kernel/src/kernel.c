@@ -40,19 +40,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 	printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
 
 	init_fb(boot->framebuffer);
-	// mod_t* m = (mod_t*) boot->mods_addr;
-	// for (uint32_t i = 0; i < boot->mods_count; i++) {
-	// 	mod_t mod = m[i];
-	// 	char* name = (char*) mod.string;
-	// 	printf("[kernel] loading %s: %p to %p\n", name, 0xC0000000 + mod.mod_start, 0xC0000000 + mod.mod_end);
-
-	// 	if (!strcmp(name, "background")) {
-	// 		printf("[kernel] beginning of \"background\" module at %p\n", mod.mod_start);
-	// 		for (uint32_t i = 0; i < 32; i++) {
-	// 			printf("%x ", ((uint8_t*) 0xC0000000 + mod.mod_start)[i]);
-	// 		}
-	// 	}
-	// }
 	init_gdt();
 	init_idt();
 	init_isr();

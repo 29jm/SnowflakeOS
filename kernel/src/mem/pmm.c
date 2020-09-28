@@ -46,7 +46,6 @@ void init_pmm(multiboot_t* boot) {
 	mem_size = boot->mem_lower + boot->mem_upper;
 	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
 	used_blocks = max_blocks;
-	printf("[pmm] bitmap at %p-%p\n", bitmap, bitmap + max_blocks / 4);
 
 	memset(bitmap, 0xFF, max_blocks/8); // Every block is initially taken
 

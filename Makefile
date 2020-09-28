@@ -44,7 +44,7 @@ $(PROJECTS): $(PROJECT_HEADERS)
 kernel: libc
 snow: libc
 ui: libc snow
-modules: libc snow ui
+modules: libc snow ui modules/src/bg.h # TODO: cleanup
 
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -display sdl -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
@@ -55,25 +55,46 @@ bochs: SnowflakeOS.iso
 	cat serial.log
 
 clean: $(PROJECT_CLEAN)
-	rm -rfv $(SYSROOTDIR)
-	rm -rfv $(ISODIR)
-	rm -fv SnowflakeOS.iso
-	rm -fv misc/grub.cfg
-	rm -fv xbochs.log
-	rm -fv irq.log
+	rm -rf $(SYSROOTDIR)
+	rm -rf $(ISODIR)
+	rm -f SnowflakeOS.iso
+	rm -f misc/grub.cfg
+	rm -f misc/disk.img
+	rm -f misc/*.rgb
+	rm -f xbochs.log
+	rm -f irq.log
 
-SnowflakeOS.iso: build misc/grub.cfg
+SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	mkdir -p $(ISODIR)/boot/grub
 	cp misc/grub.cfg $(ISODIR)/boot/grub
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
 
-misc/grub.cfg: build misc/gen-grub-config.sh $(ISODIR)/modules/disk.img
+modules/src/bg.h: assets/wallpaper.png
+	convert assets/wallpaper.png misc/wallpaper.rgb
+	xxd -i misc/wallpaper.rgb > modules/src/bg.h
+	rm misc/wallpaper.rgb
+
+misc/pisos_16.rgb: assets/pisos_16.png
+	convert assets/pisos_16.png misc/pisos_16.rgb
+
+misc/wallpaper.rgb: assets/wallpaper.png
+	convert assets/wallpaper.png misc/wallpaper.rgb
+
+# The dependency on disk stuff is temporary
+misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh
+	cp misc/disk.img $(ISODIR)/modules/disk.img
 	bash ./misc/gen-grub-config.sh
 
-$(ISODIR)/modules/disk.img:
-	touch $(ISODIR)/modules/disk.img
-	dd if=/dev/zero of=$(ISODIR)/modules/disk.img bs=1024 count=512
-	mkfs.ext2 $(ISODIR)/modules/disk.img
+misc/disk.img: misc/pisos_16.rgb misc/wallpaper.rgb
+	touch misc/disk.img
+	dd if=/dev/zero of=misc/disk.img bs=1024 count=256
+	mkdir -p misc/root/etc
+	echo "hello ext2 world" > misc/root/motd
+	echo "version: 0.5" > misc/root/etc/config
+	mv misc/pisos_16.rgb misc/root/pisos_16.rgb
+	# mv misc/wallpaper.rgb misc/root/wallpaper.rgb
+	mkfs.ext2 misc/disk.img -d misc/root
+	rm -r misc/root
 
 toolchain:
 	env -i toolchain/build-toolchain.sh

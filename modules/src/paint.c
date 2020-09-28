@@ -49,86 +49,104 @@ rect_t pos;
 uint32_t color = 0x000000;
 bool running = true;
 bool drawing = false;
+uint8_t* icon = NULL;
 
 int main() {
-    win = snow_open_window("Pisos - pissing on snow", width, height, WM_NORMAL);
-    draw_fb = (fb_t) {
-        .address = (uintptr_t) malloc(fb_width*fb_height*win->fb.bpp/8),
-        .pitch = fb_width*win->fb.bpp/8,
-        .width = fb_width,
-        .height = fb_height,
-        .bpp = win->fb.bpp
-    };
+	win = snow_open_window("Pisos", width, height, WM_NORMAL);
+	draw_fb = (fb_t) {
+		.address = (uintptr_t) malloc(fb_width*fb_height*win->fb.bpp/8),
+		.pitch = fb_width*win->fb.bpp/8,
+		.width = fb_width,
+		.height = fb_height,
+		.bpp = win->fb.bpp
+	};
 
-    // Snow white default
-    memset((void*) draw_fb.address, 0xFFFFFF, draw_fb.height*draw_fb.pitch);
+	icon = calloc(3*16*16);
+	FILE* fd = fopen("/pisos_16.rgb", "r");
 
-    redraw();
+	if (fd) {
+		fread(icon, 3, 16*16, fd);
+		fclose(fd);
+	}
 
-    while (running) {
-        wm_event_t event = snow_get_event(win);
+	// Snow white default
+	memset((void*) draw_fb.address, 0xFFFFFF, draw_fb.height*draw_fb.pitch);
 
-        if (event.type & WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
-            running = false;
-        }
+	redraw();
 
-        if (event.type & WM_EVENT_CLICK) {
-            drawing = !drawing;
-            pos = (rect_t) {
-                .x = event.mouse.position.left, .y = event.mouse.position.top
-            };
+	while (running) {
+		wm_event_t event = snow_get_event(win);
 
-            pos.x -= fb_x;
-            pos.y -= fb_y;
-        }
+		if (event.type & WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
+			running = false;
+		}
 
-        if (!(event.type & WM_EVENT_MOUSE_MOVE)) {
-            continue;
-        }
+		if (event.type & WM_EVENT_CLICK) {
+			drawing = !drawing;
+			pos = (rect_t) {
+				.x = event.mouse.position.left, .y = event.mouse.position.top
+			};
 
-        rect_t npos = *(rect_t*) &event.mouse.position;
-        uint32_t x = npos.x - fb_x;
-        uint32_t y = npos.y - fb_y;
+			pos.x -= fb_x;
+			pos.y -= fb_y;
+		}
 
-        if (drawing && x > 0 && x < fb_width-1 && y > 0 && y < fb_height-1) {
-            snow_draw_line(draw_fb, pos.x, pos.y, x, y, color);
-        }
+		if (!(event.type & WM_EVENT_MOUSE_MOVE)) {
+			continue;
+		}
 
-        pos.x = x;
-        pos.y = y;
+		rect_t npos = (rect_t) {
+			.x = event.mouse.position.left, .y = event.mouse.position.top
+		};
 
-        redraw();
-    }
+		int32_t x = npos.x - fb_x;
+		int32_t y = npos.y - fb_y;
 
-    free((void*) draw_fb.address);
-    snow_close_window(win);
+		if (x < 0 || y < 0 || x >= (int32_t) fb_width || y >= (int32_t) fb_height) {
+			continue;
+		}
 
-    return 0;
+		if (drawing) {
+			snow_draw_line(draw_fb, pos.x, pos.y, x, y, color);
+		}
+
+		pos.x = x;
+		pos.y = y;
+
+		redraw();
+	}
+
+	free((void*) draw_fb.address);
+	free(icon);
+	snow_close_window(win);
+
+	return 0;
 }
 
 void redraw() {
 	// title bar
 	snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
+	snow_draw_rgb(win->fb, icon, 3, 3, 16, 16, 0xFFFFFF);
+	snow_draw_string(win->fb, win->title, 16+2+4, 3, 0x00FFFFFF);
 	snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-	snow_draw_string(win->fb, win->title, 4, 3, 0x00FFFFFF);
 	// border of the whole window
 	snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
 
-    copy_fb(draw_fb, win->fb, fb_x, fb_y);
+	copy_fb(draw_fb, win->fb, fb_x, fb_y);
 
-    snow_render_window(win);
+	snow_render_window(win);
 }
 
 /* Copy a whole framebuffer to another, at some specified offset.
  * It must fit, no protections offered at this time.
  */
 void copy_fb(fb_t src, fb_t dest, uint32_t x, uint32_t y) {
-    uintptr_t d_off = dest.address + y*dest.pitch + x*dest.bpp/8;
-    uintptr_t s_off = src.address;
+	uintptr_t d_off = dest.address + y*dest.pitch + x*dest.bpp/8;
+	uintptr_t s_off = src.address;
 
-    for (uint32_t i = 0; i < src.height; i++) {
-        memcpy((void*) d_off, (void*) s_off, src.pitch);
-        d_off += dest.pitch;
-        s_off += src.pitch;
-    }
+	for (uint32_t i = 0; i < src.height; i++) {
+		memcpy((void*) d_off, (void*) s_off, src.pitch);
+		d_off += dest.pitch;
+		s_off += src.pitch;
+	}
 }

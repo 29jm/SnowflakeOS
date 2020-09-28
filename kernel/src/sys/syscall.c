@@ -157,13 +157,13 @@ static void syscall_open(registers_t* regs) {
 }
 
 static void syscall_close(registers_t* regs) {
-	int32_t fd = regs->ebx;
+	uint32_t fd = regs->ebx;
 
 	proc_close(fd);
 }
 
 static void syscall_read(registers_t* regs) {
-	int32_t fd = regs->ebx;
+	uint32_t fd = regs->ebx;
 	uint8_t* buf = (uint8_t*) regs->ecx;
 	uint32_t size = regs->edx;
 
@@ -184,6 +184,6 @@ static void syscall_readdir(registers_t* regs) {
 		return;
 	}
 
-	int32_t err = fs_readdir(fd, d_ent, d_ent->entry_size);
-	regs->eax = err;
+	uint32_t read = fs_readdir(fd, d_ent, d_ent->entry_size);
+	regs->eax = read;
 }

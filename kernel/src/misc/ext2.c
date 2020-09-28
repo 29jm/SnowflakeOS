@@ -133,6 +133,10 @@ static uint32_t block_size;
 static superblock_t* superblock;
 static group_descriptor_t* group_descriptors;
 
+/* Parses an ext2 superblock from the ext2 partition buffer stored at `data`.
+ * Updates `num_block_groups`, and `block_size`.
+ * Returns a kmalloc'ed superblock_t struct.
+ */
 superblock_t* parse_superblock(uint8_t* data) {
 	superblock_t* sb = kmalloc(1024);
 	memcpy((void*) sb, (void*) data, 1024);
@@ -140,8 +144,6 @@ superblock_t* parse_superblock(uint8_t* data) {
 	if (sb->magic != 0xEF53) {
 		printf("[EXT2] Invalid signature: %x, %x, %x, %x\n", data[56], data[57]);
 		return NULL;
-	} else {
-		printf("[EXT2] Valid volume signature\n");
 	}
 
 	num_block_groups = divide_up(sb->blocks_count, sb->blocks_per_group);
@@ -152,18 +154,20 @@ superblock_t* parse_superblock(uint8_t* data) {
 		return NULL;
 	}
 
-	printf("[EXT2] Block count: %d\n", sb->blocks_count);
-	printf("[EXT2] Blocks per group: %d\n", sb->blocks_per_group);
-	printf("[EXT2] inode count: %d\n", sb->inodes_count);
-	printf("[EXT2] inodes per group: %d\n", sb->inodes_per_group);
-	printf("[EXT2] Block groups: %d\n", num_block_groups);
-	printf("[EXT2] version: %d-%d\n", sb->version_major, sb->version_minor);
-	printf("[EXT2] inode size: %d\n", sb->inode_size);
-	printf("[EXT2] block size: %d\n", block_size);
+	// printf("[EXT2] Block count: %d\n", sb->blocks_count);
+	// printf("[EXT2] Blocks per group: %d\n", sb->blocks_per_group);
+	// printf("[EXT2] inode count: %d\n", sb->inodes_count);
+	// printf("[EXT2] inodes per group: %d\n", sb->inodes_per_group);
+	// printf("[EXT2] Block groups: %d\n", num_block_groups);
+	// printf("[EXT2] version: %d-%d\n", sb->version_major, sb->version_minor);
+	// printf("[EXT2] inode size: %d\n", sb->inode_size);
+	// printf("[EXT2] block size: %d\n", block_size);
 
 	return sb;
 }
 
+/* Returns a kmalloc'ed array of `num_block_groups` block group descriptors.
+ */
 group_descriptor_t* parse_group_descriptors(uint8_t* data) {
 	uint32_t size = num_block_groups*sizeof(group_descriptor_t);
 	group_descriptor_t* bgd = kmalloc(size);
@@ -172,6 +176,9 @@ group_descriptor_t* parse_group_descriptors(uint8_t* data) {
 	return bgd;
 }
 
+/* Returns an inode struct from an inode number.
+ * Expects `parse_superblock` to have been called.
+ */
 inode_t* ext2_get_inode(uint32_t inode) {
 	if (inode == 0) {
 		return NULL;
@@ -250,6 +257,7 @@ void ext2_read_block(uint32_t block, uint8_t* buf) {
 }
 
 /* Reads the content of n-th block of the given inode.
+ * `n` is relative to the inode, i.e. it's not an absolute block number.
  */
 void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
 	if (n >= 12) {
@@ -357,4 +365,6 @@ void init_ext2(uint8_t* data, uint32_t len) {
 	}
 
 	group_descriptors = parse_group_descriptors(&data[2048]);
+
+	printf("[EXT2] Initialized volume of size %d KiB\n", len >> 10);
 }

@@ -19,7 +19,7 @@ typedef struct {
 
 extern uint32_t irq_handler_end;
 
-process_t* current_process;
+process_t* current_process = 0;
 
 static uint32_t next_pid = 1;
 static list_t* programs;
@@ -195,7 +195,7 @@ void proc_exit_current_process() {
 
 	// Free the file descriptor list
 	while (current_process->fds->count) {
-		fs_close((int32_t) list_first(current_process->fds));
+		fs_close((uint32_t) list_first(current_process->fds));
 		list_remove_at(current_process->fds, 0);
 	}
 
@@ -374,21 +374,21 @@ int32_t proc_exec(const char* name) {
 /* Returns whether the current process posesses the file descriptor.
  * TODO: include mode check?
  */
-bool proc_has_fd(int32_t fd) {
+bool proc_has_fd(uint32_t fd) {
 	return list_get_index_of(current_process->fds, (void*) fd) < current_process->fds->count;
 }
 
-int32_t proc_open(const char* path, uint32_t mode) {
-	int32_t fd = fs_open(path, mode);
+uint32_t proc_open(const char* path, uint32_t mode) {
+	uint32_t fd = fs_open(path, mode);
 
-	if (fd != -1) {
+	if (fd != FS_INVALID_FD) {
 		list_add_front(current_process->fds, (void*) fd);
 	}
 
 	return fd;
 }
 
-void proc_close(int32_t fd) {
+void proc_close(uint32_t fd) {
 	uint32_t idx = list_get_index_of(current_process->fds, (void*) fd);
 
 	if (idx < current_process->fds->count) {

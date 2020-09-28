@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define FS_INVALID_FD 0
+
 #define O_READ 1
 
 typedef struct {

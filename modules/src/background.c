@@ -18,6 +18,7 @@ int main() {
 	window_t* win = snow_open_window("bg", scr.width, scr.height, WM_BACKGROUND);
 
 #if RELEASE == 1
+	uint8_t* bg = misc_wallpaper_rgb;
 	uint32_t j = 0;
 
 	for (uint32_t i = 0; i < win->fb.width*win->fb.height; i++) {
@@ -27,7 +28,7 @@ int main() {
 	}
 #else
 	for (uint32_t i = 0; i < win->fb.height*win->fb.width; i++) {
-		((uint32_t*) win->fb.address)[i] = i | i % 512 | i * 512;
+		((uint32_t*) win->fb.address)[i] = 0x9AC4F8;
 	}
 #endif
 
@@ -40,7 +41,12 @@ int main() {
 		syscall2(SYS_INFO, SYS_INFO_UPTIME, (uintptr_t) &info);
 
 		uint32_t time = info.uptime;
-		itoa(time, time_text+8, 10);
+		uint32_t m = time / 60;
+		uint32_t s = time % 60;
+		itoa(m, time_text+8, 10);
+		strcpy(time_text+strlen(time_text), "m");
+		itoa(s, time_text + strlen(time_text), 10);
+		strcpy(time_text+strlen(time_text), "s");
 		int x = win->fb.width / 2 - strlen(time_text)*8/2;
 		int y = 3;
 

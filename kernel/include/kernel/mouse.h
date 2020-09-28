@@ -27,7 +27,7 @@
 #define MOUSE_UNUSED_B (1 << 6)
 
 typedef struct {
-	int32_t x, y;
+	float x, y;
 	bool left_pressed;
 	bool right_pressed;
 	bool middle_pressed;

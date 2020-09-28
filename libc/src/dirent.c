@@ -1,3 +1,5 @@
+#ifndef _KERNEL_
+
 #include <kernel/uapi/uapi_fs.h>
 
 #include <dirent.h>
@@ -7,6 +9,10 @@
 
 #include <snow.h>
 
+/* Opens the directory pointed to by `path` and returns a directory handle.
+ * This handle can later be freed by calling `closedir`.
+ * Returns NULL on error.
+ */
 DIR* opendir(const char* path) {
 	DIR* dir = malloc(sizeof(DIR));
 
@@ -15,9 +21,7 @@ DIR* opendir(const char* path) {
 		return NULL;
 	}
 
-	printf("c");
 	dir->stream = fopen(path, "r");
-	printf("d");
 
 	if (!dir->stream) {
 		free(dir);
@@ -31,14 +35,17 @@ DIR* opendir(const char* path) {
 	return dir;
 }
 
+/* Returns the next entry in the given directory stream.
+ * Returns NULL when no more entries are present.
+ */
 struct dirent* readdir(DIR* dir) {
 	uint32_t ent_size = sizeof(sos_directory_entry_t) + MAX_PATH;
 	sos_directory_entry_t* dir_entry = malloc(ent_size);
 	dir_entry->entry_size = ent_size;
 
-	int32_t err = syscall2(SYS_READDIR, dir->fd, (uintptr_t) dir_entry);
+	uint32_t read = syscall2(SYS_READDIR, dir->fd, (uintptr_t) dir_entry);
 
-	if (err) {
+	if (!read) {
 		free(dir_entry);
 
 		return NULL;
@@ -54,6 +61,8 @@ struct dirent* readdir(DIR* dir) {
 	return d_ent;
 }
 
+/* Closes a directory stream previously returned by `opendir`.
+ */
 int closedir(DIR* dir) {
 	if (!dir) {
 		return -1;
@@ -65,3 +74,5 @@ int closedir(DIR* dir) {
 
 	return 0;
 }
+
+#endif

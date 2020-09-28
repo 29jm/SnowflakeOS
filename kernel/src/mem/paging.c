@@ -14,6 +14,7 @@
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
 
 static directory_entry_t* current_page_directory;
+
 extern directory_entry_t kernel_directory[1024];
 
 void init_paging() {
@@ -26,7 +27,6 @@ void init_paging() {
 
 	// Identity map the first MiB
 	uint32_t n = 1024*1024/0x1000;
-	printf("[paging] id mapping %d pages\n", n);
 	kernel_directory[0] = 0;
 	paging_map_pages(0x00000000, 0x00000000, n, PAGE_RW);
 	paging_invalidate_page(0x00000000);
