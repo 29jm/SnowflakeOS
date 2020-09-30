@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "SnowflakeOS",
+            "includePath": [
+                "${workspaceFolder}/kernel/include",
+                "${workspaceFolder}/libc/include",
+                "${workspaceFolder}/snow/include",
+                "${workspaceFolder}/modules/include",
+                "${workspaceFolder}/ui/include"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/kernel",
+                    "${workspaceFolder}/libc",
+                    "${workspaceFolder}/snow",
+                    "${workspaceFolder}/modules",
+                    "${workspaceFolder}/ui"
+                ]
+            },
+            "defines": [
+                "__STDC_HOSTED__ 0"
+            ],
+            "compilerPath": "${workspaceFolder}/toolchain/compiler/bin/i686-elf-gcc",
+            "intelliSenseMode": "gcc-x86",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}

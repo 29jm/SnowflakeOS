@@ -3,6 +3,8 @@
 #include <stdbool.h>
 
 #define UNUSED(param) (void) param
+#define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
+#define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)
 
 #define BREAK() do { \
                     asm ("xchgw %bx, %bx\n"); \

@@ -1,4 +1,5 @@
 #include <kernel/syscall.h>
+#include <kernel/pmm.h>
 #include <kernel/proc.h>
 #include <kernel/timer.h>
 #include <kernel/fb.h>
@@ -132,6 +133,8 @@ static void syscall_info(registers_t* regs) {
 
 	if (request & SYS_INFO_MEMORY) {
 		info->kernel_heap_usage = memory_usage();
+		info->ram_usage = pmm_used_memory();
+		info->ram_total = pmm_total_memory();
 	}
 
 	if (request & SYS_INFO_UPTIME) {

@@ -71,16 +71,17 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 	uintptr_t previous_pd = *paging_get_page(0xFFFFF000, false, 0) & PAGE_FRAME;
 	paging_switch_directory(pd_phys);
 
-	// Map the code and copy it to physical pages
+	// Map the code and copy it to physical pages, zero out the excess memory
+	// for static variables
 	// TODO: don't require contiguous pages
 	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
-	paging_map_pages(0x00000000, code_phys, num_code_pages,
-		PAGE_USER | PAGE_RW);
+	paging_map_pages(0x00000000, code_phys, num_code_pages, PAGE_USER | PAGE_RW);
 	memcpy((void*) 0x00000000, (void*) code, size);
+	memset((void*) 0x00000000 + size, 0, num_code_pages * 0x1000 - size);
 
 	// Map the stack
 	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
-	paging_map_pages(0xC0000000 - 4096*num_stack_pages, stack_phys,
+	paging_map_pages(0xC0000000 - 0x1000 * num_stack_pages, stack_phys,
 		num_stack_pages, PAGE_USER | PAGE_RW);
 
 	// Switch to the original page directory
@@ -308,7 +309,7 @@ void* proc_sbrk(intptr_t size) {
 		// We have to allocate more pages
 		if (remaining_bytes < size) {
 			uint32_t needed_size = size - remaining_bytes;
-			uint32_t num = needed_size / 0x1000 + (needed_size % 0x1000 ? 1 : 0);
+			uint32_t num = divide_up(needed_size, 0x1000);
 
 			if (!paging_alloc_pages(align_to(end, 0x1000), num)) {
 				return (void*) -1;
@@ -324,7 +325,7 @@ void* proc_sbrk(intptr_t size) {
 		// We must free at least a page
 		if (taken + size < 0) {
 			uint32_t freed_size = taken - size; // Account for sign
-			uint32_t num = freed_size / 0x1000 + (freed_size % 0x1000 ? 1 : 0);
+			uint32_t num = divide_up(freed_size, 0x1000);
 
 			// Align to the beginning of the last mapped page
 			uintptr_t virt = end - (end % 0x1000);

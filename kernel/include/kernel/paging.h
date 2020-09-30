@@ -27,6 +27,11 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 
 #define KERNEL_BASE_VIRT 0xC0000000
 
+/* The kernel is mapped in higher half using a 4 MiB page.
+ * This is where it ends.
+ */
+#define KERNEL_END_MAP 0xC0400000
+
 /* Our kernel heap starts after our kernel binary and physical memory manager's
  * bitmap. Given that our kernel is small and loaded at 0xC0100000, the
  * following address gives us around 767 MiB of kernel heap.

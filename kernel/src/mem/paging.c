@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VIRT_TO_PHYS(x) ((x) - KERNEL_BASE_VIRT)
-
 #define DIRECTORY_INDEX(x) ((x) >> 22)
 #define TABLE_INDEX(x) (((x) >> 12) & 0x3FF)
 

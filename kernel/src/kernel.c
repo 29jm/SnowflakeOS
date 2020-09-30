@@ -60,7 +60,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 		char* name = (char*) mod.string;
 
 		uint8_t* code = (uint8_t*) kmalloc(size);
-		memcpy((void*) code, (void*) 0xC0000000 + mod.mod_start, size);
+		memcpy((void*) code, (void*) PHYS_TO_VIRT(mod.mod_start), size);
 
 		if (!strcmp(name, "disk")) {
 			init_ext2(code, size);

@@ -1,36 +1,19 @@
 {
 	"folders": [
 		{
-			"path": "/home/johan/Documents/Projects/SnowflakeOS"
+			"path": ".."
 		}
 	],
 	"settings": {
 		"files.exclude": {
 			"*.ini": true,
+			"*.iso": true,
+			"**/*.mod": true,
 			"**/*.a": true,
 			"**/*.o": true,
 			"isodir": true,
-			"sysroot": true
-		},
-		"C_Cpp.default.includePath": [
-			"${workspaceRoot}/kernel/include",
-			"${workspaceRoot}/libc/include",
-			"${workspaceRoot}/snow/include",
-			"${workspaceRoot}/modules/include",
-			"${workspaceRoot}/ui/include",
-		],
-		"C_Cpp.default.browse.path": [
-			"${workspaceRoot}/kernel/include",
-			"${workspaceRoot}/libc/include",
-			"${workspaceRoot}/snow/include",
-			"${workspaceRoot}/modules/include",
-			"${workspaceRoot}/ui/include",
-		],
-		"C_Cpp.default.compilerPath": "${workspaceRoot}/compiler/bin/i686-elf-gcc",
-		"C_Cpp.default.compilerArgs": [
-			"-include stdint",
-			"-include stddef"
-		],
-		"C_Cpp.default.intelliSenseMode": "gcc-x86",
+			"sysroot": true,
+			"toolchain": true
+		}
 	}
 }

@@ -192,7 +192,6 @@ void* aligned_alloc(uint32_t align, uint32_t size) {
 		uintptr_t addr = KERNEL_HEAP_BEGIN;
 		uintptr_t heap_phys = pmm_alloc_pages(KERNEL_HEAP_SIZE/0x1000);
 		paging_map_pages(addr, heap_phys, KERNEL_HEAP_SIZE/0x1000, PAGE_RW);
-
 #else
 		uintptr_t addr = (uintptr_t) sbrk(header_size);
 #endif

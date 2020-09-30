@@ -24,7 +24,9 @@
 
 typedef struct {
 	uint32_t kernel_heap_usage;
-	double uptime;
+	uint32_t ram_usage;
+	uint32_t ram_total;
+	float uptime;
 	char* kernel_log; // Must be at least 2048 bytes long
 } sys_info_t;
 

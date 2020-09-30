@@ -1,13 +1,11 @@
 #include <kernel/pmm.h>
 #include <kernel/paging.h> // PHYS_TO_VIRT
 #include <kernel/multiboot.h>
+#include <kernel/sys.h>
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
-#define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)
 
 static uint32_t mem_size;
 static uint32_t used_blocks;
@@ -47,6 +45,12 @@ void init_pmm(multiboot_t* boot) {
 	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
 	used_blocks = max_blocks;
 
+	if (PHYS_TO_VIRT(kernel_end) + max_blocks/8 > KERNEL_END_MAP) {
+		printf("[PMM] block bitmap spills into kernel, ends at %p\n",
+			(uint8_t*) bitmap + max_blocks/8);
+		abort();
+	}
+
 	memset(bitmap, 0xFF, max_blocks/8); // Every block is initially taken
 
 	// Parse the memory map to mark valid areas as available
@@ -71,6 +75,8 @@ void init_pmm(multiboot_t* boot) {
 		mmap = (mmap_t*) ((uintptr_t) mmap + mmap->size + sizeof(uintptr_t));
 	}
 
+	mem_size = available;
+
 	// Protect low memory, our glorious kernel and the PMM itself
 	pmm_deinit_region(0, kernel_end + max_blocks/8);
 
@@ -81,8 +87,16 @@ void init_pmm(multiboot_t* boot) {
 	printf("[PMM] Modules margin: %d bytes\n", 0x400000 - pmm_get_kernel_end());
 }
 
-uint32_t pmm_get_map_size() {
-	return max_blocks/8;
+/* Returns the number of bytes allocated by the PMM.
+ */
+uint32_t pmm_used_memory() {
+	return used_blocks * PMM_BLOCK_SIZE;
+}
+
+/* Returns the number of free bytes the PMM started with.
+ */
+uint32_t pmm_total_memory() {
+	return mem_size;
 }
 
 /* Mark an area of physical memory as available.
@@ -92,7 +106,7 @@ void pmm_init_region(uintptr_t addr, uint32_t size) {
 	uint32_t base_block = addr/PMM_BLOCK_SIZE;
 
 	// number of blocks this region represents
-	uint32_t num = size/PMM_BLOCK_SIZE;
+	uint32_t num = divide_up(size, PMM_BLOCK_SIZE);
 
 	while (num-- > 0) {
 		mmap_unset(base_block++);
@@ -106,7 +120,7 @@ void pmm_init_region(uintptr_t addr, uint32_t size) {
  */
 void pmm_deinit_region(uintptr_t addr, uint32_t size) {
 	uint32_t base_block = addr/PMM_BLOCK_SIZE;
-	uint32_t num = size/PMM_BLOCK_SIZE;
+	uint32_t num = divide_up(size, PMM_BLOCK_SIZE);
 
 	while (num-- > 0) {
 		mmap_set(base_block++);

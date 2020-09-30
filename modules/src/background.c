@@ -49,8 +49,8 @@ int main() {
 		int x = win->fb.width / 2 - strlen(time_text)*8/2;
 		int y = 3;
 
-		wm_rect_t redraw = {
-			.left = x, .top = y, .bottom = y+16, .right = x+strlen(time_text)*8
+		wm_rect_t redraw = { // Redraw one character too much
+			.left = x, .top = y, .bottom = y+16, .right = x+strlen(time_text)*8+8
 		};
 
 		snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);

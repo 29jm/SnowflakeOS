@@ -12,11 +12,13 @@ uint32_t strlen(const char* string) {
 }
 
 char* strcpy(char* dest, const char* src) {
-	for (uint32_t i = 0; i < strlen(src); i++) {
+	uint32_t i;
+
+	for (i = 0; i < strlen(src); i++) {
 		dest[i] = src[i];
 	}
 
-	dest[strlen(src)] = 0; // Null terminator
+	dest[i] = '\0'; // Null terminator
 
 	return dest;
 }
@@ -30,6 +32,10 @@ char* strncpy(char* dest, const char* src, size_t n) {
 	}
 
 	return dest;
+}
+
+char* strcat(char* dest, const char* src) {
+	return strcpy(&dest[strlen(dest)], src);
 }
 
 char* strdup(const char* s) {
@@ -51,7 +57,7 @@ char* strchrnul(const char* s, int c) {
 		}
 	}
 
-	return (char*) &s[n];
+	return (char*) &s[n]; // discard const qualifier
 }
 
 int strcmp(const char* s1, const char* s2) {
@@ -60,5 +66,17 @@ int strcmp(const char* s1, const char* s2) {
 		s2++;
 	}
 
-	return *(uint8_t*) s1 - *(uint8_t*) s2;
+	return *s1 - *s2;
+}
+
+int strncmp(const char* s1, const char* s2, size_t n) {
+	uint32_t i = 0;
+
+	while (i < n && *s1 && *s1 == *s2) {
+		s1++;
+		s2++;
+		i++;
+	}
+
+	return *s1 - *s2;
 }

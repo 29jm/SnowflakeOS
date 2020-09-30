@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <stdio.h>
 
-#define MAX_WIN 3
+#define MAX_WIN 0
 #define BUF_SIZE 512
 
 window_t* make_win(char* title) {
@@ -72,7 +72,7 @@ int main() {
 			buf[i++] = c;
 		}
 
-		buf[i] = 0;
+		buf[i-1] = '\0';
 
 		printf("[test] content: %s\n", buf);
 	}
@@ -87,8 +87,6 @@ int main() {
 			make_win("doom.exe (not responding)");
 		}
 	}
-
-	while (1) { }
 
 	return 0;
 }

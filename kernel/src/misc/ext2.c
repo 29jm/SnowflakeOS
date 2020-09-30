@@ -133,6 +133,17 @@ static uint32_t block_size;
 static superblock_t* superblock;
 static group_descriptor_t* group_descriptors;
 
+/* Reads the content of the given block.
+ */
+void ext2_read_block(uint32_t block, uint8_t* buf) {
+	// TODO: check for max block ?
+	memcpy(buf, device + block*block_size, block_size);
+}
+
+void ext2_write_block(uint32_t block, uint8_t* buf) {
+	memcpy(device + block*block_size, buf, block_size);
+}
+
 /* Parses an ext2 superblock from the ext2 partition buffer stored at `data`.
  * Updates `num_block_groups`, and `block_size`.
  * Returns a kmalloc'ed superblock_t struct.
@@ -141,27 +152,13 @@ superblock_t* parse_superblock(uint8_t* data) {
 	superblock_t* sb = kmalloc(1024);
 	memcpy((void*) sb, (void*) data, 1024);
 
-	if (sb->magic != 0xEF53) {
-		printf("[EXT2] Invalid signature: %x, %x, %x, %x\n", data[56], data[57]);
+	if (sb->magic != EXT2_MAGIC) {
+		printf("[EXT2] Invalid signature: %x\n", sb->magic);
 		return NULL;
 	}
 
 	num_block_groups = divide_up(sb->blocks_count, sb->blocks_per_group);
 	block_size = 1024 << sb->block_size;
-
-	if (num_block_groups != divide_up(sb->inodes_count, sb->inodes_per_group)) {
-		printf("[EXT2] incoherent block groups count found\n");
-		return NULL;
-	}
-
-	// printf("[EXT2] Block count: %d\n", sb->blocks_count);
-	// printf("[EXT2] Blocks per group: %d\n", sb->blocks_per_group);
-	// printf("[EXT2] inode count: %d\n", sb->inodes_count);
-	// printf("[EXT2] inodes per group: %d\n", sb->inodes_per_group);
-	// printf("[EXT2] Block groups: %d\n", num_block_groups);
-	// printf("[EXT2] version: %d-%d\n", sb->version_major, sb->version_minor);
-	// printf("[EXT2] inode size: %d\n", sb->inode_size);
-	// printf("[EXT2] block size: %d\n", block_size);
 
 	return sb;
 }
@@ -169,7 +166,7 @@ superblock_t* parse_superblock(uint8_t* data) {
 /* Returns a kmalloc'ed array of `num_block_groups` block group descriptors.
  */
 group_descriptor_t* parse_group_descriptors(uint8_t* data) {
-	uint32_t size = num_block_groups*sizeof(group_descriptor_t);
+	uint32_t size = num_block_groups * sizeof(group_descriptor_t);
 	group_descriptor_t* bgd = kmalloc(size);
 	memcpy((void*) bgd, (void*) data, size);
 
@@ -177,6 +174,7 @@ group_descriptor_t* parse_group_descriptors(uint8_t* data) {
 }
 
 /* Returns an inode struct from an inode number.
+ * This inode can be freed using `kfree`.
  * Expects `parse_superblock` to have been called.
  */
 inode_t* ext2_get_inode(uint32_t inode) {
@@ -191,21 +189,14 @@ inode_t* ext2_get_inode(uint32_t inode) {
 	uint32_t table_block = group_descriptors[group].inode_table;
 	uint32_t block_offset = ((inode - 1) * superblock->inode_size) / block_size;
 	uint32_t index_in_block = (inode - 1) - block_offset * (block_size / superblock->inode_size);
-	uintptr_t offset = (table_block + block_offset)*block_size + index_in_block*superblock->inode_size;
 
-	return (inode_t*) (device + offset);
-}
+	uint8_t* tmp = kmalloc(block_size);
+	ext2_read_block(table_block + block_offset, tmp);
+	inode_t* in = kmalloc(superblock->inode_size);
+	memcpy(in, tmp + index_in_block*superblock->inode_size, superblock->inode_size);
+	kfree(tmp);
 
-/* Returns true if the first n characters of a and b are equal, false otherwise.
- */
-bool equal_n(const char* a, const char* b, uint32_t n) {
-	for (uint32_t i = 0; i < n; i++) {
-		if (a[i] != b[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return in;
 }
 
 /* Returns the inode corresponding to the file at `path`.
@@ -226,34 +217,39 @@ uint32_t ext2_open(const char* path) {
 	p++;
 
 	inode_t* in = ext2_get_inode(EXT2_ROOT_INODE);
-	ext2_directory_entry_t* entry = (ext2_directory_entry_t*) (device + block_size*in->dbp[0]);
+	uint8_t* block = kmalloc(block_size);
+	ext2_read_block(in->dbp[0], block);
+
+	ext2_directory_entry_t* entry = (ext2_directory_entry_t*) block;
 
 	while (p < path + n && entry->type != 0) { // TODO define
 		char* c = strchrnul(p, '/');
 		uint32_t len = c ? (uint32_t) (c - p) : strlen(p);
 
-		if (equal_n(p, entry->name, len)) {
+		if (!memcmp(p, entry->name, len)) {
 			p += len + 1;
 
 			if (p >= path + n) {
+				kfree(block);
+				kfree(in);
+
 				return entry->inode;
 			} else {
+				kfree(in);
 				in = ext2_get_inode(entry->inode);
-				entry = (ext2_directory_entry_t*) (device + block_size*in->dbp[0]);
+
+				ext2_read_block(in->dbp[0], block);
+				entry = (ext2_directory_entry_t*) block;
 			}
 		}
 
 		entry = (ext2_directory_entry_t*) ((uintptr_t) entry + entry->entry_size);
 	}
 
-	return 0;
-}
+	kfree(in);
+	kfree(block);
 
-/* Reads the content of the given block.
- */
-void ext2_read_block(uint32_t block, uint8_t* buf) {
-	// TODO: check for max block ?
-	memcpy(buf, device + block*block_size, block_size);
+	return 0;
 }
 
 /* Reads the content of n-th block of the given inode.
@@ -320,6 +316,7 @@ uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size)
 	uint32_t end;
 
 	if (!size || !fsize || offset >= fsize) {
+		kfree(in);
 		return 0;
 	}
 
@@ -357,9 +354,46 @@ uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size)
 		}
 	}
 
+	kfree(in);
 	kfree(tmp);
 
 	return bytes_read;
+}
+
+uint32_t ext2_allocate_block() {
+	uint8_t* tmp = kmalloc(block_size);
+	uint32_t j = superblock->first_available_block;
+	uint32_t bitmap;
+
+	while (j < superblock->blocks_per_group*num_block_groups) {
+		if (j % superblock->blocks_per_group == 0 || j == superblock->first_available_block) {
+			bitmap = group_descriptors[j / superblock->blocks_per_group].block_bitmap;
+		}
+
+		if (j % (8*block_size) == 0 || j == superblock->first_available_block) {
+			if (j != superblock->first_available_block) {
+				printf("[ext2] block bitmap for group %d larger than a block\n", j / superblock->blocks_per_group);
+			}
+
+			ext2_read_block(bitmap, tmp);
+			bitmap++;
+		}
+
+		if (!(tmp[j / 8] & (1 << (j % 8)))) {
+			printf("[ext2] alloc %d, tmp was %b, at bitmap %d\n", j, tmp[j/8], bitmap-1);
+			tmp[j / 8] |= 1 << (j % 8);
+			ext2_write_block(bitmap - 1, tmp);
+			kfree(tmp);
+
+			return j;
+		}
+
+		j++;
+	}
+
+	kfree(tmp);
+
+	return 0;
 }
 
 /* `inode` is that of a directory, and `offset` must be at a valid directory
@@ -403,5 +437,12 @@ void init_ext2(uint8_t* data, uint32_t len) {
 
 	group_descriptors = parse_group_descriptors(&data[2048]);
 
-	printf("[EXT2] Initialized volume of size %d KiB\n", len >> 10);
+	printf("[EXT2] Initialized volume of size %d KiB, block size %d\n", len >> 10, block_size);
+	printf("[ext2] blocks bitmap in block: %d\n", group_descriptors[0].block_bitmap);
+	ext2_allocate_block();
+	ext2_allocate_block();
+	ext2_allocate_block();
+	ext2_allocate_block();
+	ext2_allocate_block();
+	ext2_allocate_block();
 }

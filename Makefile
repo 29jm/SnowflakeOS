@@ -44,7 +44,7 @@ $(PROJECTS): $(PROJECT_HEADERS)
 kernel: libc
 snow: libc
 ui: libc snow
-modules: libc snow ui modules/src/bg.h # TODO: cleanup
+modules: libc snow ui
 
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -display sdl -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
@@ -68,11 +68,6 @@ SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	mkdir -p $(ISODIR)/boot/grub
 	cp misc/grub.cfg $(ISODIR)/boot/grub
 	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
-
-modules/src/bg.h: assets/wallpaper.png
-	convert assets/wallpaper.png misc/wallpaper.rgb
-	xxd -i misc/wallpaper.rgb > modules/src/bg.h
-	rm misc/wallpaper.rgb
 
 misc/pisos_16.rgb: assets/pisos_16.png
 	convert assets/pisos_16.png misc/pisos_16.rgb

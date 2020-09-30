@@ -33,11 +33,24 @@ Install the following packages:
 
 ### Cross-compiler
 
+#### Building your own
+
 Run
 
     make toolchain
 
 to build the cross-compiler needed to compile SnowflakeOS. This command will download and run build scripts for `gcc` and `binutils` from GNU FTP servers, and install the cross-compiler in `toolchain/compiler`.
+
+#### Using a preinstalled compiler
+
+If your distro provides you with a cross compiler, you may want to save time and use it. To do so, you must edit the following variables in the main `Makefile` so that they match the executables of your cross compiler:
+
+    AR=$(HOST)-ar
+    AS=$(HOST)-as
+    LD=$(HOST)-ld
+    CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
+
+You may edit `HOST`, or hardcode the executables names directly.
 
 ## Running SnowflakeOS
 
