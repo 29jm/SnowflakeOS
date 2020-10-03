@@ -98,6 +98,19 @@ void hbox_on_resize(hbox_t* hbox) {
 	}
 }
 
+void hbox_on_mouse_move(hbox_t* hbox, point_t pos) {
+	for (uint32_t i = 0; i < hbox->children->count; i++) {
+		widget_t* child = list_get_at(hbox->children, i);
+		point_t local = ui_to_child_local(child, pos);
+
+		if (point_in_rect(pos, child->bounds)) {
+			if (child->on_mouse_move) {
+				child->on_mouse_move(child, local);
+			}
+		}
+	}
+}
+
 hbox_t* hbox_new() {
 	hbox_t* hbox = calloc(sizeof(hbox_t));
 
@@ -106,6 +119,7 @@ hbox_t* hbox_new() {
 	hbox->widget.on_click = (widget_clicked_t) hbox_on_click;
 	hbox->widget.on_draw = (widget_draw_t) hbox_on_draw;
 	hbox->widget.on_resize = (widget_resize_t) hbox_on_resize;
+	hbox->widget.on_mouse_move = (widget_mouse_moved_t) hbox_on_mouse_move;
 
 	return hbox;
 }

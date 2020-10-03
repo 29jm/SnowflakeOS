@@ -10,57 +10,78 @@ void copy_fb(fb_t src, fb_t dest, uint32_t x, uint32_t y);
 
 typedef struct {
 	widget_t widget;
+	bool is_drawing;
 	bool needs_drawing;
 	bool needs_clearing;
 	point_t last_pos;
+	point_t new_pos;
+	uint32_t color;
 } canvas_t;
 
+void canvas_on_click(canvas_t* canvas, point_t p) {
+	rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
+	canvas->is_drawing = !canvas->is_drawing;
+
+	if (canvas->is_drawing) {
+		canvas->last_pos = (point_t) { bounds.x + p.x, bounds.y + p.y };
+		canvas->new_pos = canvas->last_pos;
+	}
+}
+
 void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
-	(void) canvas;
-	(void) p;
-	// TODO
+	rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
+
+	canvas->needs_drawing = true;
+	canvas->last_pos = canvas->new_pos;
+	canvas->new_pos = (point_t) { p.x+bounds.x, p.y+bounds.y };
 }
 
 void canvas_on_draw(canvas_t* canvas, fb_t fb) {
-	(void) canvas;
-	(void) fb;
+	if (canvas->needs_clearing) {
+		canvas->needs_clearing = false;
+		rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
+		snow_draw_rect(fb, bounds.x, bounds.y, bounds.w, bounds.h, 0xFFFFFF);
+	}
+
+	if (canvas->is_drawing && canvas->needs_drawing) {
+		canvas->needs_drawing = false;
+
+		snow_draw_line(fb, canvas->last_pos.x, canvas->last_pos.y,
+			canvas->new_pos.x, canvas->new_pos.y, canvas->color);
+	}
 }
 
 canvas_t* canvas_new() {
 	canvas_t* canvas = calloc(sizeof(canvas_t));
 
 	canvas->widget.flags |= UI_EXPAND;
+	canvas->widget.on_click = (widget_clicked_t) canvas_on_click;
 	canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
+	canvas->widget.on_mouse_move = (widget_mouse_moved_t) canvas_on_mouse_move;
+	canvas->needs_clearing = true;
 
 	return canvas;
 }
 
+// callbacks
+void on_clear_clicked(button_t* button, point_t p);
+
 const uint32_t width = 550;
 const uint32_t height = 320;
-const uint32_t title_height = 20;
-const uint32_t fb_width = width - 2;
-const uint32_t fb_height = height - title_height - 1;
-const uint32_t fb_x = 1;
-const uint32_t fb_y = title_height;
+
+const uint32_t colors[] = {
+	0x363537, 0x0CCE6B, 0xDCED31, 0xEF2D56, 0xED7D3A, 0x4C1A57,
+	0xFF3CC7, 0xF0F600, 0x00E5E8, 0x007C77
+};
 
 window_t* win;
-fb_t draw_fb;
-rect_t pos;
+canvas_t* canvas;
 uint32_t color = 0x000000;
 bool running = true;
-bool drawing = false;
 uint8_t* icon = NULL;
 
 int main() {
 	win = snow_open_window("Pisos", width, height, WM_NORMAL);
-	draw_fb = (fb_t) {
-		.address = (uintptr_t) malloc(fb_width*fb_height*win->fb.bpp/8),
-		.pitch = fb_width*win->fb.bpp/8,
-		.width = fb_width,
-		.height = fb_height,
-		.bpp = win->fb.bpp
-	};
-
 	icon = calloc(3*16*16);
 	FILE* fd = fopen("/pisos_16.rgb", "r");
 
@@ -69,10 +90,27 @@ int main() {
 		fclose(fd);
 	}
 
-	// Snow white default
-	memset((void*) draw_fb.address, 0xFFFFFF, draw_fb.height*draw_fb.pitch);
+	ui_app_t paint = ui_app_new(win);
 
-	redraw();
+	vbox_t* vbox = vbox_new();
+	ui_set_root(paint, (widget_t*) vbox);
+
+	hbox_t* menu = hbox_new();
+	menu->widget.flags &= ~UI_EXPAND_VERTICAL;
+	menu->widget.bounds.h = 20;
+	vbox_add(vbox, (widget_t*) menu);
+
+	canvas = canvas_new();
+	vbox_add(vbox, (widget_t*) canvas);
+
+	for (uint32_t i = 0; i < sizeof(colors)/sizeof(colors[0]); i++) {
+		color_button_t* cbutton = color_button_new(colors[i], &canvas->color);
+		hbox_add(menu, (widget_t*) cbutton);
+	}
+
+	button_t* button = button_new("Clear");
+	button->on_click = on_clear_clicked;
+	hbox_add(menu, (widget_t*) button);
 
 	while (running) {
 		wm_event_t event = snow_get_event(win);
@@ -81,72 +119,20 @@ int main() {
 			running = false;
 		}
 
-		if (event.type & WM_EVENT_CLICK) {
-			drawing = !drawing;
-			pos = (rect_t) {
-				.x = event.mouse.position.left, .y = event.mouse.position.top
-			};
-
-			pos.x -= fb_x;
-			pos.y -= fb_y;
-		}
-
-		if (!(event.type & WM_EVENT_MOUSE_MOVE)) {
-			continue;
-		}
-
-		rect_t npos = (rect_t) {
-			.x = event.mouse.position.left, .y = event.mouse.position.top
-		};
-
-		int32_t x = npos.x - fb_x;
-		int32_t y = npos.y - fb_y;
-
-		if (x < 0 || y < 0 || x >= (int32_t) fb_width || y >= (int32_t) fb_height) {
-			continue;
-		}
-
-		if (drawing) {
-			snow_draw_line(draw_fb, pos.x, pos.y, x, y, color);
-		}
-
-		pos.x = x;
-		pos.y = y;
-
-		redraw();
+		ui_handle_input(paint, event);
+		ui_draw(paint);
+		snow_render_window(win);
 	}
 
-	free((void*) draw_fb.address);
 	free(icon);
 	snow_close_window(win);
 
 	return 0;
 }
 
-void redraw() {
-	// title bar
-	snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
-	snow_draw_rgb(win->fb, icon, 3, 3, 16, 16, 0xFFFFFF);
-	snow_draw_string(win->fb, win->title, 16+2+4, 3, 0x00FFFFFF);
-	snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-	// border of the whole window
-	snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
+void on_clear_clicked(button_t* button, point_t p) {
+	(void) button;
+	(void) p;
 
-	copy_fb(draw_fb, win->fb, fb_x, fb_y);
-
-	snow_render_window(win);
-}
-
-/* Copy a whole framebuffer to another, at some specified offset.
- * It must fit, no protections offered at this time.
- */
-void copy_fb(fb_t src, fb_t dest, uint32_t x, uint32_t y) {
-	uintptr_t d_off = dest.address + y*dest.pitch + x*dest.bpp/8;
-	uintptr_t s_off = src.address;
-
-	for (uint32_t i = 0; i < src.height; i++) {
-		memcpy((void*) d_off, (void*) s_off, src.pitch);
-		d_off += dest.pitch;
-		s_off += src.pitch;
-	}
+	canvas->needs_clearing = true;
 }

@@ -42,7 +42,18 @@ void ui_draw(ui_app_t app) {
 void ui_handle_input(ui_app_t app, wm_event_t event) {
 	if (event.type & WM_EVENT_CLICK) {
 		point_t pos = { event.mouse.position.left, event.mouse.position.top };
-		app.root->on_click(app.root, pos);
+
+		if (app.root->on_click) {
+			app.root->on_click(app.root, pos);
+		}
+	}
+
+	if (event.type & WM_EVENT_MOUSE_MOVE) {
+		point_t pos = { event.mouse.position.left, event.mouse.position.top };
+
+		if (app.root->on_mouse_move) {
+			app.root->on_mouse_move(app.root, pos);
+		}
 	}
 }
 

@@ -98,6 +98,19 @@ void vbox_on_resize(vbox_t* vbox) {
 	}
 }
 
+void vbox_on_mouse_move(vbox_t* vbox, point_t p) {
+	for (uint32_t i = 0; i < vbox->children->count; i++) {
+		widget_t* child = list_get_at(vbox->children, i);
+		point_t local = ui_to_child_local(child, p);
+
+		if (point_in_rect(p, child->bounds)) {
+			if (child->on_mouse_move) {
+				child->on_mouse_move(child, local);
+			}
+		}
+	}
+}
+
 vbox_t* vbox_new() {
 	vbox_t* vbox = calloc(sizeof(vbox_t));
 
@@ -106,6 +119,7 @@ vbox_t* vbox_new() {
 	vbox->widget.on_click = (widget_clicked_t) vbox_on_click;
 	vbox->widget.on_draw = (widget_draw_t) vbox_on_draw;
 	vbox->widget.on_resize = (widget_resize_t) vbox_on_resize;
+	vbox->widget.on_mouse_move = (widget_mouse_moved_t) vbox_on_mouse_move;
 
 	return vbox;
 }

@@ -29,14 +29,14 @@ typedef struct _widget_t {
 	rect_t bounds;
 	uint32_t flags;
 	void (*on_click)(struct _widget_t*, point_t);
-	void (*on_mouse_move)(struct _widget_t*);
+	void (*on_mouse_move)(struct _widget_t*, point_t);
 	void (*on_draw)(struct _widget_t*, fb_t);
 	void (*on_free)(struct _widget_t*);
 	void (*on_resize)(struct _widget_t*);
 } widget_t;
 
 typedef void (*widget_clicked_t)(widget_t*, point_t);
-typedef void (*widget_mouse_moved_t)(widget_t*);
+typedef void (*widget_mouse_moved_t)(widget_t*, point_t);
 typedef void (*widget_draw_t)(widget_t*, fb_t);
 typedef void (*widget_resize_t)(widget_t*);
 
