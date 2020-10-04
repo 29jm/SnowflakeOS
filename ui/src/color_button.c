@@ -13,7 +13,6 @@ void color_button_on_draw(color_button_t* button, fb_t fb) {
 	rect_t r = ui_get_absolute_bounds((widget_t*) button);
 
 	snow_draw_rect(fb, r.x, r.y, r.w, r.h, button->color);
-	// snow_draw_border(fb, r.left, r.top, r.right, r.bottom, 0xB0B0B0);
 }
 
 void color_button_on_resize(color_button_t* button) {

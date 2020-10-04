@@ -29,7 +29,7 @@ void num_clicked(button_t* btn) {
 
 int main() {
 	window_t* win = snow_open_window("calc", w, h, WM_NORMAL);
-	ui_app_t app = ui_app_new(win);
+	ui_app_t app = ui_app_new(win, NULL);
 
 	/* Main vbox */
 

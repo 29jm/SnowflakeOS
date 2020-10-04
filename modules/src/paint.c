@@ -54,7 +54,7 @@ void canvas_on_draw(canvas_t* canvas, fb_t fb) {
 canvas_t* canvas_new() {
 	canvas_t* canvas = calloc(sizeof(canvas_t));
 
-	canvas->widget.flags |= UI_EXPAND;
+	canvas->widget.flags = UI_EXPAND;
 	canvas->widget.on_click = (widget_clicked_t) canvas_on_click;
 	canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
 	canvas->widget.on_mouse_move = (widget_mouse_moved_t) canvas_on_mouse_move;
@@ -90,14 +90,14 @@ int main() {
 		fclose(fd);
 	}
 
-	ui_app_t paint = ui_app_new(win);
+	ui_app_t paint = ui_app_new(win, fd ? icon : NULL);
 
 	vbox_t* vbox = vbox_new();
 	ui_set_root(paint, (widget_t*) vbox);
 
 	hbox_t* menu = hbox_new();
 	menu->widget.flags &= ~UI_EXPAND_VERTICAL;
-	menu->widget.bounds.h = 20;
+	menu->widget.bounds.h = 26;
 	vbox_add(vbox, (widget_t*) menu);
 
 	canvas = canvas_new();

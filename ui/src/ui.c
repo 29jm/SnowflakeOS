@@ -17,7 +17,7 @@ void ui_set_root(ui_app_t app, widget_t* widget) {
 
 /* Returns a pointer to the box below the window's titlebar.
  */
-ui_app_t ui_app_new(window_t* win) {
+ui_app_t ui_app_new(window_t* win, const uint8_t* icon) {
 	ui_app_t app;
 
 	vbox_t* vbox = vbox_new();
@@ -25,7 +25,7 @@ ui_app_t ui_app_new(window_t* win) {
 		0, 0, win->width, win->height
 	};
 
-	titlebar_t* tb = titlebar_new(win->title);
+	titlebar_t* tb = titlebar_new(win->title, icon);
 
 	vbox_add(vbox, (widget_t*) tb);
 
