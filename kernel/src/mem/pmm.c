@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define NTHBIT(n) ((uint32_t) 1 << n)
+
 static uint32_t mem_size;
 static uint32_t used_blocks;
 static uint32_t max_blocks;
@@ -40,12 +42,12 @@ void init_pmm(multiboot_t* boot) {
 	}
 
 	// Setup our bitmap right after the kernel
-	bitmap = (uint32_t*) PHYS_TO_VIRT(kernel_end);
+	bitmap = (uint32_t*) align_to(PHYS_TO_VIRT(kernel_end), 4);
 	mem_size = boot->mem_lower + boot->mem_upper;
 	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
 	used_blocks = max_blocks;
 
-	if (PHYS_TO_VIRT(kernel_end) + max_blocks/8 > KERNEL_END_MAP) {
+	if ((uintptr_t) bitmap + max_blocks/8 > KERNEL_END_MAP) {
 		printf("[PMM] block bitmap spills into kernel, ends at %p\n",
 			(uint8_t*) bitmap + max_blocks/8);
 		abort();
@@ -205,17 +207,17 @@ void pmm_free_pages(uintptr_t addr, uint32_t num) {
 }
 
 void mmap_set(uint32_t bit) {
-	bitmap[bit/32] |= (1 << (bit % 32));
+	bitmap[bit / 32] |= NTHBIT(bit % 32);
 	used_blocks++;
 }
 
 void mmap_unset(uint32_t bit) {
-	bitmap[bit/32] &= ~(1 << (bit % 32));
+	bitmap[bit / 32] &= ~NTHBIT(bit % 32);
 	used_blocks--;
 }
 
 uint32_t mmap_test(uint32_t bit) {
-	return bitmap[bit / 32] & (1 << (bit % 32));
+	return bitmap[bit / 32] & NTHBIT(bit % 32);
 }
 
 /* Returns the index of the first free bit in the bitmap
@@ -224,8 +226,8 @@ uint32_t mmap_find_free() {
 	for (uint32_t i = 0; i < max_blocks/32; i++) {
 		if (bitmap[i] != 0xFFFFFFFF) {
 			for (uint32_t j = 0; j < 32; j++) {
-				if (!(bitmap[i] & (1 << j))) {
-					return i*32+j;
+				if (!(bitmap[i] & NTHBIT(j))) {
+					return i * 32 + j;
 				}
 			}
 		}
@@ -243,7 +245,7 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 	for (uint32_t i = 0; i < max_blocks/32; i++) {
 		if (bitmap[i] != 0xFFFFFFFF) {
 			for (uint32_t j = 0; j < 32; j++) {
-				if (!(bitmap[i] & (1 << j))) {
+				if (!(bitmap[i] & NTHBIT(j))) {
 					if (!first) {
 						first = i*32+j;
 					}
@@ -270,5 +272,5 @@ uint32_t mmap_find_free_frame(uint32_t frame_size) {
 /* Returns the first address after the kernel in physical memory.
  */
 uintptr_t pmm_get_kernel_end() {
-	return (uintptr_t) kernel_end + max_blocks/8;
+	return (uintptr_t) kernel_end + max_blocks / 8;
 }

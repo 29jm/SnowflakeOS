@@ -1,6 +1,6 @@
 CFLAGS:=$(CFLAGS) -D_KERNEL_
 LDFLAGS:=$(LDFLAGS) -T linker.ld
-LIBS=-lk -lgcc
+LIBS=-lk
 
 OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*/*.c))
 OBJS+=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
@@ -13,7 +13,7 @@ OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 .PHONY: all clean build install-headers install-kernel
 
 SnowflakeOS.kernel: $(OBJS) linker.ld
-	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 %.o: %.c
 	$(CC) -c $< -o $@ $(CFLAGS)

@@ -158,13 +158,13 @@ mem_block_t* mem_find_block(uint32_t size, uint32_t align) {
 /* Returns a pointer to a memory area of at least `size` bytes.
  * Note: in the kernel, this function is renamed to `kmalloc`.
  */
-void* malloc(uint32_t size) {
+void* malloc(size_t size) {
 	// Accessing basic datatypes at unaligned addresses is apparently undefined
 	// behavior. Four-bytes alignement should be enough for most things.
 	return aligned_alloc(MIN_ALIGN, size);
 }
 
-void* calloc(uint32_t size) {
+void* calloc(size_t size) {
 	void* ptr = malloc(size);
 
 	return memset(ptr, 0, size);
@@ -181,7 +181,7 @@ void free(void* pointer) {
 
 /* Returns `size` bytes of memory at an address multiple of `align`.
  */
-void* aligned_alloc(uint32_t align, uint32_t size) {
+void* aligned_alloc(size_t align, size_t size) {
 	const uint32_t header_size = offsetof(mem_block_t, data);
 	size = align_to(size, 8);
 

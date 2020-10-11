@@ -24,13 +24,13 @@ libk.a: $(LIBK_OBJS)
 	$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 %.libk.o: %.c
-	$(CC) -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS)
+	$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 %.libk.o: %.S
 	$(CC) -c $< -o $@ $(LIBK_CFLAGS)

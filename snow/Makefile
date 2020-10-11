@@ -9,7 +9,10 @@ libsnow.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -include stddef.h $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
+
+%.o: %.S
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
 	rm -f *.a $(OBJS)

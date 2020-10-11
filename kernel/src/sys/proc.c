@@ -52,7 +52,7 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 	uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
 
 	process_t* process = kmalloc(sizeof(process_t));
-	uintptr_t kernel_stack = (uintptr_t) kmalloc(0x1000) + 0x1000 - 1;
+	uintptr_t kernel_stack = (uintptr_t) aligned_alloc(4, 0x1000) + 0x1000 - 4;
 	uintptr_t pd_phys = pmm_alloc_page();
 
 	// Copy the kernel page directory with a temporary mapping
@@ -75,9 +75,9 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 	// for static variables
 	// TODO: don't require contiguous pages
 	uintptr_t code_phys = pmm_alloc_pages(num_code_pages);
-	paging_map_pages(0x00000000, code_phys, num_code_pages, PAGE_USER | PAGE_RW);
-	memcpy((void*) 0x00000000, (void*) code, size);
-	memset((void*) 0x00000000 + size, 0, num_code_pages * 0x1000 - size);
+	paging_map_pages(0x00001000, code_phys, num_code_pages, PAGE_USER | PAGE_RW);
+	memcpy((void*) 0x00001000, (void*) code, size);
+	memset((uint8_t*) 0x1000 + size, 0, num_code_pages * 0x1000 - size);
 
 	// Map the stack
 	uintptr_t stack_phys = pmm_alloc_pages(num_stack_pages);
@@ -126,7 +126,7 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 		"push $0xBFFFFFFB\n"   // %esp
 		"push $512\n"          // %eflags with `IF` bit set, equivalent to calling `sti`
 		"push $0x1B\n"         // user cs selector
-		"push $0x00000000\n"   // %eip
+		"push $0x00001000\n"   // %eip
 		// Push error code, interrupt number
 		"sub $8, %%esp\n"
 		// `pusha` equivalent
@@ -281,7 +281,7 @@ void proc_enter_usermode() {
 		"push $0xBFFFFFFB\n" // %esp
 		"push $512\n"        // %eflags
 		"push $0x1B\n"       // %cs
-		"push $0x00000000\n" // %eip
+		"push $0x00001000\n" // %eip
 		"iret\n"
 	);
 }
@@ -300,7 +300,7 @@ void proc_sleep(uint32_t ms) {
  * details.
  */
 void* proc_sbrk(intptr_t size) {
-	uintptr_t end = 0x1000*current_process->code_len + current_process->mem_len;
+	uintptr_t end = 0x1000 + 0x1000*current_process->code_len + current_process->mem_len;
 
 	// Bytes available in the last allocated page
 	int32_t remaining_bytes = (end % 0x1000) ? (0x1000 - (end % 0x1000)) : 0;

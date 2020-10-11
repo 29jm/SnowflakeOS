@@ -1,6 +1,7 @@
 #include <kernel/term.h>
 #include <kernel/ansi_interpreter.h>
 #include <kernel/paging.h>
+#include <kernel/sys.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -103,7 +104,9 @@ void term_putchar_at(char c, uint32_t x, uint32_t y) {
 		return;
 	}
 
-	ENTRY(x, y) = term_make_entry(c, term_color);
+	if (term_buffer) {
+		ENTRY(x, y) = term_make_entry(c, term_color);
+	}
 }
 
 void term_putchar(char c) {

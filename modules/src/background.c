@@ -17,12 +17,7 @@ int main() {
 		uint32_t n_pixels = win->fb.width*win->fb.height;
 		uint8_t* bg = malloc(n_pixels * 3);
 		fread(bg, 3, n_pixels, wp);
-
-		for (uint32_t i = 0, j = 0; i < n_pixels; i++, j += 3) {
-			uint32_t px = bg[j] << 16 | bg[j+1] << 8 | bg[j+2];
-			((uint32_t*) win->fb.address)[i] = px;
-		}
-
+		snow_draw_rgb(win->fb, bg, 0, 0, win->fb.width, win->fb.height, 0x000000);
 		free(bg);
 		fclose(wp);
 	} else {

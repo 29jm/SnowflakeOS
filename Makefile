@@ -1,5 +1,7 @@
 export # Makes variables from this file available in sub-makefiles
 
+LC_ALL=C
+
 HOST=i686-elf
 PREFIX=usr
 BOOTDIR=boot
@@ -12,13 +14,23 @@ SYSROOT=$(PWD)/$(SYSROOTDIR)
 
 PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
 
+LD=$(HOST)-ld
 AR=$(HOST)-ar
 AS=$(HOST)-as
-LD=$(HOST)-ld
-CC=$(HOST)-gcc --sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
+CC=$(HOST)-gcc
 
-CFLAGS=-g -std=gnu11 -ffreestanding -Wall -Wextra -Wno-format
-LDFLAGS=-nostdlib
+CFLAGS=-g -std=gnu11 -ffreestanding -Wall -Wextra
+LDFLAGS=-nostdlib -L$(SYSROOT)/usr/lib
+
+ifeq ($(UBSAN),1)
+	CFLAGS+=-fsanitize=undefined
+endif
+
+# CC=clang
+# CFLAGS+=-target i386-pc-none-eabi -m32
+# CFLAGS+=-mno-mmx -mno-sse -mno-sse2
+
+CC+=--sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
 
 # Make will be called on these folders
 PROJECTS=libc snow kernel modules ui

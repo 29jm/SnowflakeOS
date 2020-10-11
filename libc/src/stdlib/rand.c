@@ -4,7 +4,7 @@
  * https://stackoverflow.com/a/4768194
  */
 
-static int n;
+static uint32_t n;
 
 void srand(unsigned int seed) {
     n = seed;

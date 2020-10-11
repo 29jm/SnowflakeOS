@@ -8,7 +8,7 @@
 int putchar(int c) {
 #ifdef _KERNEL_
 	term_putchar(c);
-	serial_write((char) c);
+	serial_write(c);
 #else
 	asm volatile (
 		"mov $3, %%eax\n"

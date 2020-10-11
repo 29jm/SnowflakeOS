@@ -138,6 +138,10 @@ void kbd_handler(registers_t* regs) {
  * Note: expects `event` not to be modified between calls.
  */
 bool kbd_process_byte(kbd_context_t* ctx, uint8_t sc, kbd_event_t* event) {
+	if (sc == PS2_DEV_ACK) {
+		return false;
+	}
+
 	ctx->scancode[ctx->current++] = sc;
 
 	switch (ctx->state) {

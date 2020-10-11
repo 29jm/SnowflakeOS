@@ -171,8 +171,8 @@ void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col) {
 }
 
 void snow_draw_rgb(fb_t fb, uint8_t* rgb, int x, int y, int w, int h, uint32_t mask) {
-	for (int i = 0, c = 0; i < w; i++) {
-		for (int j = 0; j < h; j++, c += 3) {
+	for (int i = 0, c = 0; i < h; i++) {
+		for (int j = 0; j < w; j++, c += 3) {
 			uint32_t col = rgb[c] << 16 | rgb[c+1] << 8 | rgb[c+2];
 
 			if (col != mask) {
