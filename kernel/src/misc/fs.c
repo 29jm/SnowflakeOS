@@ -16,12 +16,21 @@ void init_fs() {
 }
 
 uint32_t fs_open(const char* path, uint32_t mode) {
-	if (mode != FS_READ) {
-		printf("[FS] write mode unsupported\n");
-		return FS_INVALID_FD;
-	}
+	uint32_t inode = 0;
 
-	uint32_t inode = ext2_open(path);
+	if (mode & O_CREAT) {
+		char basename[256] = "";
+		char parent[256] = "";
+		char* last_sep = strrchr(path, '/');
+		uint32_t path_len = last_sep - path + 1;
+		strcpy(basename, last_sep + 1);
+		strncpy(parent, path, path_len);
+		parent[path_len+1] = '\0';
+		uint32_t parent_inode = ext2_open(parent);
+		inode = ext2_create(basename, parent_inode);
+	} else if (mode & O_RDONLY) {
+		inode = ext2_open(path);
+	}
 
 	if (!inode) {
 		return FS_INVALID_FD;
@@ -67,7 +76,7 @@ uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size) {
 	for (uint32_t i = 0; i < file_table->count; i++) {
 		ft_entry_t* entry = list_get_at(file_table, i);
 
-		if (entry->fd == fd && entry->mode & FS_READ) {
+		if (entry->fd == fd && (entry->mode & O_RDONLY || entry->mode & O_RDWR)) {
 			uint32_t read = ext2_read(entry->inode, entry->offset, buf, size);
 			entry->offset += read;
 
@@ -82,11 +91,26 @@ uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size) {
 	return 0;
 }
 
+uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size) {
+	for (uint32_t i = 0; i < file_table->count; i++) {
+		ft_entry_t* entry = list_get_at(file_table, i);
+
+		if (entry->fd == fd && entry->mode & O_APPEND) {
+			uint32_t written = ext2_append(entry->inode, buf, size);
+			entry->offset += written;
+
+			return written;
+		}
+	}
+
+	return 0;
+}
+
 uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size) {
 	for (uint32_t i = 0; i < file_table->count; i++) {
 		ft_entry_t* entry = list_get_at(file_table, i);
 
-		if (entry->fd == fd && entry->mode & FS_READ) {
+		if (entry->fd == fd && entry->mode & O_RDONLY) {
 			ext2_directory_entry_t* ent = ext2_readdir(entry->inode, entry->offset);
 
 			// TODO: check if empty entries aren't actually valid

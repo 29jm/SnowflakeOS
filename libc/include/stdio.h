@@ -19,4 +19,6 @@ FILE* fopen(const char* path, const char* mode);
 int fclose(FILE* stream);
 int fread(void* ptr, size_t size, size_t nmemb, FILE* stream);
 int fgetc(FILE* stream);
+int fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream);
+int fputc(int c, FILE* stream);
 #endif

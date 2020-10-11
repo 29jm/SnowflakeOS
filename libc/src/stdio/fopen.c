@@ -16,10 +16,10 @@ extern int32_t syscall1(uint32_t eax, uint32_t ebx);
 FILE* fopen(const char* path, const char* mode) {
     uint32_t m = 0; // TODO use param
 
-    if (!strcmp(mode, "r")) {
-        m = 1;
-    } else {
-        return NULL;
+    if (!strchr(mode, 'r')) {
+        m = O_RDONLY;
+    } else if (strchr(mode, 'w')) {
+        m = O_WRONLY | O_CREAT | O_APPEND;
     }
 
     uint32_t fd = syscall2(SYS_OPEN, (uintptr_t) path, m);
@@ -75,4 +75,20 @@ int fgetc(FILE* stream) {
     }
 
     return EOF;
+}
+
+int fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream) {
+    uint32_t written = 0;
+
+    written = syscall3(SYS_WRITE, stream->fd, (uintptr_t) ptr, size*nmemb);
+
+    return written / size;
+}
+
+int fputc(int c, FILE* stream) {
+    char cc = (char) c;
+
+    fwrite(&cc, sizeof(char), 1, stream);
+
+    return c;
 }

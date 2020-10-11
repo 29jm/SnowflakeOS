@@ -16,7 +16,8 @@
 #define SYS_CLOSE 10
 #define SYS_READ 11
 #define SYS_READDIR 12
-#define SYS_MAX 13 // First invalid syscall number
+#define SYS_WRITE 13
+#define SYS_MAX 14 // First invalid syscall number
 
 #define SYS_INFO_UPTIME 1
 #define SYS_INFO_MEMORY 2

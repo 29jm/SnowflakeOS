@@ -27,6 +27,7 @@ static void syscall_exec(registers_t* regs);
 static void syscall_open(registers_t* regs);
 static void syscall_close(registers_t* regs);
 static void syscall_read(registers_t* regs);
+static void syscall_write(registers_t* regs);
 static void syscall_readdir(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
@@ -45,6 +46,7 @@ void init_syscall() {
 	syscall_handlers[SYS_OPEN] = syscall_open;
 	syscall_handlers[SYS_CLOSE] = syscall_close;
 	syscall_handlers[SYS_READ] = syscall_read;
+	syscall_handlers[SYS_WRITE] = syscall_write;
 	syscall_handlers[SYS_READDIR] = syscall_readdir;
 }
 
@@ -189,4 +191,17 @@ static void syscall_readdir(registers_t* regs) {
 
 	uint32_t read = fs_readdir(fd, d_ent, d_ent->entry_size);
 	regs->eax = read;
+}
+
+static void syscall_write(registers_t* regs) {
+	uint32_t fd = regs->ebx;
+	uint8_t* buf = (uint8_t*) regs->ecx;
+	uint32_t size = regs->edx;
+
+	if (!proc_has_fd(fd)) {
+		regs->eax = 0;
+		return;
+	}
+
+	regs->eax = fs_write(fd, buf, size);
 }

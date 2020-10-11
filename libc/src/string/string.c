@@ -48,6 +48,18 @@ char* strdup(const char* s) {
 	return strcpy(buff, s);
 }
 
+char* strchr(const char* s, int c) {
+	int n = strlen(s);
+
+	for (int i = 0; i < n; i++) {
+		if (s[i] == c) {
+			return (char*) &s[i];
+		}
+	}
+
+	return NULL;
+}
+
 char* strchrnul(const char* s, int c) {
 	int n = strlen(s);
 
@@ -58,6 +70,22 @@ char* strchrnul(const char* s, int c) {
 	}
 
 	return (char*) &s[n]; // discard const qualifier
+}
+
+char* strrchr(const char* s, int c) {
+	uint32_t n = strlen(s);
+
+	if (!n) {
+		return NULL;
+	}
+
+	for (int i = n - 1; i >= 0; i--) {
+		if (s[i] == c) {
+			return (char*) &s[i];
+		}
+	}
+
+	return NULL;
 }
 
 int strcmp(const char* s1, const char* s2) {

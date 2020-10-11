@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #define MAX_WIN 0
-#define BUF_SIZE 512
+#define BUF_SIZE 4096
 
 window_t* make_win(char* title) {
 	window_t* win = snow_open_window(title, 250, 120, WM_NORMAL);
@@ -54,7 +54,7 @@ void tree(char* path, int level) {
 }
 
 int main() {
-	char buf[BUF_SIZE];
+	char buf[BUF_SIZE] = "";
 
 	printf("Treeing /:\n");
 	tree("/", 0);
@@ -64,6 +64,28 @@ int main() {
 
 	fclose(hello);
 	closedir(root);
+
+	FILE* w = fopen("/created", "w");
+	char str[] = "Hello writing world";
+
+	fwrite(str, strlen(str), 1, w);
+	// for (uint32_t i = 0; i < strlen(str); i++) {
+	// 	fputc(str[i], w);
+	// }
+
+	fclose(w);
+
+	FILE* f = fopen("/created", "r");
+	int c, i = 0;
+
+	while ((c = fgetc(f)) != EOF && i < BUF_SIZE-1) {
+		buf[i++] = c;
+	}
+
+	buf[i] = '\0';
+
+	printf("\ncat /created\n%s", buf);
+	fclose(f);
 
 	while (true);
 

@@ -4,7 +4,12 @@
 
 #define FS_INVALID_FD 0
 
-#define O_READ 1
+#define O_APPEND 1
+#define O_CREAT  2
+#define O_RDONLY 4
+#define O_WRONLY 4
+#define O_TRUNC  8
+#define O_RDWR   16
 
 typedef struct {
 	uint32_t inode;
