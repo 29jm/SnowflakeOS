@@ -16,9 +16,10 @@
 // VBox/HBox
 #define UI_VBOX UI_EXPAND_VERTICAL
 #define UI_HBOX UI_EXPAND_HORIZONTAL
-#define UI_BOX_FIT 4
 
 #define UI_ICON_SIZE (16*16*3)
+
+#define W(w) ((widget_t*) w)
 
 typedef struct {
 	int32_t x, y, w, h;
@@ -35,6 +36,8 @@ typedef struct _widget_t {
 	struct _widget_t* parent;
 	rect_t bounds;
 	uint32_t flags;
+	// For passing around data in callbacks
+	void* data;
 	void (*on_click)(struct _widget_t*, point_t);
 	void (*on_mouse_move)(struct _widget_t*, point_t);
 	void (*on_draw)(struct _widget_t*, fb_t);
@@ -82,6 +85,16 @@ typedef struct {
 	uint32_t* to_set;
 } color_button_t;
 
+typedef struct {
+	widget_t widget;
+	bool is_drawing;
+	bool needs_drawing;
+	bool needs_clearing;
+	point_t last_pos;
+	point_t new_pos;
+	uint32_t color;
+} canvas_t;
+
 bool point_in_rect(point_t p, rect_t r);
 ui_app_t ui_app_new(window_t* win, const uint8_t* icon);
 void ui_set_root(ui_app_t app, widget_t* widget);
@@ -96,6 +109,7 @@ void hbox_add(hbox_t* hbox, widget_t* widget);
 
 vbox_t* vbox_new();
 void vbox_add(vbox_t* vbox, widget_t* widget);
+void vbox_clear(vbox_t* vbox);
 
 button_t* button_new(char* text);
 void button_set_on_click(button_t* button, void (*callback)(button_t*));
@@ -104,3 +118,5 @@ void button_set_text(button_t* button, const char* text);
 titlebar_t* titlebar_new(const char* title, const uint8_t* icon);
 
 color_button_t* color_button_new(uint32_t color, uint32_t* to_set);
+
+canvas_t* canvas_new();

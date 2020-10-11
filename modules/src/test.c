@@ -58,27 +58,14 @@ int main() {
 
 	printf("Treeing /:\n");
 	tree("/", 0);
-	printf("\n");
 
 	DIR* root = opendir("/");
 	FILE* hello = fopen("/motd", "r");
 
-	if (hello) {
-		printf("[test] opened file /motd\n");
-		int c = EOF;
-		int i = 0;
-
-		while ((c = fgetc(hello)) != EOF && i < BUF_SIZE) {
-			buf[i++] = c;
-		}
-
-		buf[i-1] = '\0';
-
-		printf("[test] content: %s\n", buf);
-	}
-
 	fclose(hello);
 	closedir(root);
+
+	while (true);
 
 	for (int i = 0; i < MAX_WIN; i++) {
 		if (i == 0) {

@@ -24,12 +24,16 @@ void button_on_click(button_t* button, point_t p) {
 	}
 }
 
+void button_on_free(button_t* button) {
+	free(button->text);
+}
+
 button_t* button_new(char* text) {
 	button_t* button = calloc(sizeof(button_t));
-	uint32_t margin = 5;
+	uint32_t margin = 2;
 
 	button->text = strdup(text); // TODO: free this
-	button->widget.bounds.w = strlen(text)*8 + 2*margin;
+	button->widget.bounds.w = strlen(text)*8 + 4*margin;
 	button->widget.bounds.h = 16 + 2*margin; // 2px margin
 	button->widget.on_draw = (widget_draw_t) button_on_draw;
 	button->widget.on_click = (widget_clicked_t) button_on_click;
