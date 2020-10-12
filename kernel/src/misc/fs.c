@@ -50,6 +50,29 @@ uint32_t fs_open(const char* path, uint32_t mode) {
 	return entry->fd;
 }
 
+uint32_t fs_mkdir(const char* path, uint32_t mode) {
+	UNUSED(mode);
+
+	uint32_t inode = 0;
+
+	char basename[256] = "";
+	char parent[256] = "";
+	char* last_sep = strrchr(path, '/');
+	uint32_t path_len = last_sep - path + 1;
+	strcpy(basename, last_sep + 1);
+	strncpy(parent, path, path_len);
+	parent[path_len+1] = '\0';
+	uint32_t parent_inode = ext2_open(parent);
+
+	inode = ext2_mkdir(basename, parent_inode);
+
+	if (!inode) {
+		return FS_INVALID_INODE;
+	}
+
+	return inode;
+}
+
 void fs_print_open() {
 	printf("[fs] open file descriptors: ");
 

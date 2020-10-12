@@ -125,6 +125,8 @@ typedef struct {
 #define INODE_PERM(n) (n & 0xFFF)
 
 #define DTYPE_INVALID 0
+#define DTYPE_FILE 1
+#define DTYPE_DIR 2
 
 #define U16_BIGENDIAN(n) ((n & 0xFF >> 8) | (n << 8))
 #define AS_U16(data) (*(uint16_t*) data)
@@ -135,6 +137,8 @@ static uint32_t block_size;
 static uint32_t inode_size;
 static superblock_t* superblock;
 static group_descriptor_t* group_descriptors;
+
+uint32_t ext2_get_inode_block(inode_t* in, uint32_t n);
 
 /* Reads the content of the given block.
  */
@@ -193,6 +197,24 @@ group_descriptor_t* parse_group_descriptors() {
 	kfree(block);
 
 	return bgd;
+}
+
+/* Reads the content of the n-th block of the given inode.
+ * Assumes that the requested block exists.
+ * `n` is relative to the inode, i.e. it's not an absolute block number.
+ * If the block didn't exist, it is created and filled with zeros.
+ */
+void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
+	ext2_read_block(ext2_get_inode_block(inode, n), buf);
+}
+
+/* Writes to the `n`-th block of the given inode.
+ * If the block didn't exist, it is created.
+ */
+void ext2_write_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
+	uint32_t block = ext2_get_inode_block(inode, n);
+
+	ext2_write_block(block, buf);
 }
 
 /* Returns an inode struct from an inode number.
@@ -315,7 +337,6 @@ uint32_t ext2_allocate_block() {
 	return 0;
 }
 
-
 /* Returns the first free inode number available.
  */
 uint32_t ext2_allocate_inode() {
@@ -328,7 +349,7 @@ uint32_t ext2_allocate_inode() {
 
 		for (uint32_t i = 0; i < 8*block_size; i++) {
 			if (!(bitmap[i / 8] & (1 << (i % 8)))) {
-				bitmap[i / 8] |= 1 >> (i % 8);
+				bitmap[i / 8] |= 1 << (i % 8);
 				ext2_write_block(bitmap_block, bitmap);
 				kfree(bitmap);
 
@@ -337,7 +358,8 @@ uint32_t ext2_allocate_inode() {
 				ext2_write_superblock();
 				ext2_write_group_descriptor(group);
 
-				return i;
+				// The first bit is inode no. 1
+				return i + 1;
 			}
 		}
 
@@ -361,11 +383,11 @@ void ext2_update_inode(uint32_t no, inode_t* in) {
 	uint32_t group = (no - 1) / superblock->inodes_per_group;
 	uint32_t table_block = group_descriptors[group].inode_table;
 	uint32_t block_offset = ((no - 1) * inode_size) / block_size;
-	uint32_t index_in_block = (no - 1) - block_offset * (block_size / inode_size);
+	uint32_t offset_in_block = ((no - 1) * inode_size) % block_size;
 
 	uint8_t* tmp = kmalloc(block_size);
 	ext2_read_block(table_block + block_offset, tmp);
-	memcpy(tmp + index_in_block*superblock->inode_size, in, inode_size);
+	memcpy(tmp + offset_in_block, in, inode_size);
 	ext2_write_block(table_block + block_offset, tmp);
 	kfree(tmp);
 }
@@ -479,27 +501,29 @@ uint32_t ext2_get_inode_block(inode_t* in, uint32_t n) {
 	return 0;
 }
 
-/* Create a file named `name` in the directory pointed to by `parent_inode`.
+/* Creates a new entry with name `name` in the directory pointed to by
+ * `parent_inode` with type `type`, one of the DTYPE_* constants.
+ * Returns the inode of the created file.
  */
-uint32_t ext2_create(const char* name, uint32_t parent_inode) {
+uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint32_t type) {
 	inode_t* in = ext2_get_inode(parent_inode);
 
 	if (!in) {
-		printf("[ext2] create: parent does not exist\n");
+		printf("[ext2] add_entry: parent does not exist\n");
 		return 0;
 	}
 
 	if (INODE_TYPE(in->type_perms) != INODE_DIR) {
-		printf("[ext2] create: parent is not a directory\n");
+		printf("[ext2] add_entry: parent is not a directory\n");
 		return 0;
 	}
 
 	uint8_t* block = kmalloc(block_size);
-	ext2_read_block(in->dbp[0], block);
-
+	ext2_read_inode_block(in, 0, block);
 	ext2_directory_entry_t* e;
 	uint32_t offset = 0;
 
+	/* Look for the last entry and resize it */
 	do {
 		e = ext2_readdir(parent_inode, offset);
 
@@ -521,36 +545,57 @@ uint32_t ext2_create(const char* name, uint32_t parent_inode) {
 		kfree(e);
 	} while (offset < block_size);
 
-	/* Create the new inode */
+	/* Create a new null inode */
 	uint32_t new_inode = ext2_allocate_inode();
 
 	inode_t new_in;
 	memset(&new_in, 0, sizeof(inode_t));
 
-	new_in = (inode_t) { // TODO: complete
-		.type_perms = INODE_DIR,
-		.uid = 0,
-		.size_lower = 0,
-		.gid = 0,
-		.hardlinks_count = 1
-	};
+	// We fill the default entries
+	if (type == DTYPE_DIR) {
+		uint8_t* tmp = kmalloc(block_size);
+		ext2_directory_entry_t* dots = kmalloc(sizeof(ext2_directory_entry_t) + 2);
+
+		strncpy(dots->name, ".", 1);
+		*dots = (ext2_directory_entry_t) {
+			.inode = new_inode,
+			.type = DTYPE_DIR,
+			.name_len_low = 1,
+			.entry_size = 12
+		};
+
+		memcpy(tmp, dots, dots->entry_size);
+		strncpy(dots->name, "..", 2);
+		dots->inode = parent_inode;
+		dots->name_len_low = 2;
+		dots->entry_size = block_size - 12;
+
+		memcpy(tmp + 12, dots, dots->entry_size);
+		new_in.dbp[0] = ext2_allocate_block();
+		ext2_write_inode_block(&new_in, 0, tmp);
+		kfree(tmp);
+
+		new_in.size_lower = block_size;
+	}
 
 	ext2_update_inode(new_inode, &new_in);
 
-	/* Create the new directory entry */
+	inode_t* test = ext2_get_inode(new_inode);
+
+	/* Add the entry referencing that inode */
 	uint32_t size = sizeof(ext2_directory_entry_t) + strlen(name);
 	ext2_directory_entry_t* new_entry = kmalloc(size);
 
 	strcpy(new_entry->name, name);
 	*new_entry = (ext2_directory_entry_t) {
 		.inode = new_inode,
-		.type = 1, // TODO: define
+		.type = type,
 		.name_len_low = strlen(name),
 		.entry_size = 1024 - offset
 	};
 
 	memcpy(block + offset, new_entry, size);
-	ext2_write_block(in->dbp[0], block);
+	ext2_write_inode_block(in, 0, block);
 	kfree(new_entry);
 	kfree(block);
 	kfree(in);
@@ -558,22 +603,30 @@ uint32_t ext2_create(const char* name, uint32_t parent_inode) {
 	return new_inode;
 }
 
-/* Reads the content of the n-th block of the given inode.
- * Assumes that the requested block exists.
- * `n` is relative to the inode, i.e. it's not an absolute block number.
- * If the block didn't exist, it is created and filled with zeros.
+/* Create a file named `name` in the directory pointed to by `parent_inode`.
  */
-void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
-	ext2_read_block(ext2_get_inode_block(inode, n), buf);
+uint32_t ext2_create(const char* name, uint32_t parent_inode) {
+	uint32_t inode = ext2_add_directory_entry(name, parent_inode, DTYPE_FILE);
+	inode_t* in = ext2_get_inode(inode);
+
+	in->type_perms = INODE_FILE;
+
+	ext2_update_inode(inode, in);
+	kfree(in);
+
+	return inode;
 }
 
-/* Writes to the `n`-th block of the given inode.
- * If the block didn't exist, it is created.
- */
-void ext2_write_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
-	uint32_t block = ext2_get_inode_block(inode, n);
+uint32_t ext2_mkdir(const char* name, uint32_t parent_inode) {
+	uint32_t inode = ext2_add_directory_entry(name, parent_inode, DTYPE_DIR);
+	inode_t* in = ext2_get_inode(inode);
 
-	ext2_write_block(block, buf);
+	in->type_perms = INODE_DIR;
+
+	ext2_update_inode(inode, in);
+	kfree(in);
+
+	return inode;
 }
 
 /* Appends `size` bytes from `data` to the file pointed to by `inode`.

@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define FS_INVALID_FD 0
+#define FS_INVALID_INODE 0
 
 #define O_APPEND 1
 #define O_CREAT  2

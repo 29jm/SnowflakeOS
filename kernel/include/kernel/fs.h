@@ -18,6 +18,7 @@ typedef struct {
 
 void init_fs();
 uint32_t fs_open(const char* path, uint32_t mode);
+uint32_t fs_mkdir(const char* path, uint32_t mode);
 void fs_close(uint32_t fd);
 uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size);
 uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size);

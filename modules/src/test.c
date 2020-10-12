@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <stdio.h>
 
+#include <sys/stat.h>
+
 #define MAX_WIN 0
 #define BUF_SIZE 4096
 
@@ -37,7 +39,7 @@ void tree(char* path, int level) {
 			printf("  ");
 		}
 
-		printf("- %s%s\n", e->d_name, e->d_type == 2 ? "/" : "");
+		printf("- %s%s (%d)\n", e->d_name, e->d_type == 2 ? "/" : "", e->d_ino);
 
 		if (e->d_type == 2 && e->d_name[0] != '.') {
 			int nl = strlen(e->d_name);
@@ -56,23 +58,13 @@ void tree(char* path, int level) {
 int main() {
 	char buf[BUF_SIZE] = "";
 
-	printf("Treeing /:\n");
-	tree("/", 0);
-
-	DIR* root = opendir("/");
-	FILE* hello = fopen("/motd", "r");
-
-	fclose(hello);
-	closedir(root);
+	mkdir("/biloute", 0);
+	FILE* f2 = fopen("/biloute/baloute", "w");
+	fclose(f2);
 
 	FILE* w = fopen("/created", "w");
-	char str[] = "Hello writing world";
-
+	char str[] = "Hello writing world\n";
 	fwrite(str, strlen(str), 1, w);
-	// for (uint32_t i = 0; i < strlen(str); i++) {
-	// 	fputc(str[i], w);
-	// }
-
 	fclose(w);
 
 	FILE* f = fopen("/created", "r");
@@ -86,6 +78,9 @@ int main() {
 
 	printf("\ncat /created\n%s", buf);
 	fclose(f);
+
+	printf("Treeing /:\n");
+	tree("/", 0);
 
 	while (true);
 

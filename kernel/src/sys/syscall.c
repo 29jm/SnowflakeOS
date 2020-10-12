@@ -29,6 +29,7 @@ static void syscall_close(registers_t* regs);
 static void syscall_read(registers_t* regs);
 static void syscall_write(registers_t* regs);
 static void syscall_readdir(registers_t* regs);
+static void syscall_mkdir(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -48,6 +49,7 @@ void init_syscall() {
 	syscall_handlers[SYS_READ] = syscall_read;
 	syscall_handlers[SYS_WRITE] = syscall_write;
 	syscall_handlers[SYS_READDIR] = syscall_readdir;
+	syscall_handlers[SYS_MKDIR] = syscall_mkdir;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -204,4 +206,11 @@ static void syscall_write(registers_t* regs) {
 	}
 
 	regs->eax = fs_write(fd, buf, size);
+}
+
+static void syscall_mkdir(registers_t* regs) {
+	const char* path = (const char*) regs->ebx;
+	uint32_t mode = regs->ecx;
+
+	fs_mkdir(path, mode);
 }
