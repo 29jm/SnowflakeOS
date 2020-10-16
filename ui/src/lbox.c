@@ -139,7 +139,7 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
 }
 
 lbox_t* lbox_new(uint32_t direction) {
-	lbox_t* lbox = calloc(sizeof(lbox_t));
+	lbox_t* lbox = zalloc(sizeof(lbox_t));
 
 	lbox->children = list_new();
 	lbox->widget.flags = UI_EXPAND;

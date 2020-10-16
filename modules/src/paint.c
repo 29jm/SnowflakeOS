@@ -24,7 +24,7 @@ uint8_t* icon = NULL;
 
 int main() {
 	win = snow_open_window("Pisos", width, height, WM_NORMAL);
-	icon = calloc(3*16*16);
+	icon = zalloc(3*16*16);
 	color = colors[0];
 	FILE* fd = fopen("/pisos_16.rgb", "r");
 

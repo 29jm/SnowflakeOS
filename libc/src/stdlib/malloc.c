@@ -164,10 +164,31 @@ void* malloc(size_t size) {
 	return aligned_alloc(MIN_ALIGN, size);
 }
 
-void* calloc(size_t size) {
-	void* ptr = malloc(size);
+void* calloc(size_t nmemb, size_t size) {
+	void* ptr = malloc(nmemb * size);
 
-	return memset(ptr, 0, size);
+	return memset(ptr, 0, nmemb * size);
+}
+
+void* zalloc(size_t size) {
+	return calloc(1, size);
+}
+
+void* realloc(void* ptr, size_t size) {
+	if (!ptr) {
+		return malloc(size);
+	}
+
+	if (ptr && !size) {
+		free(ptr);
+		return NULL;
+	}
+
+	void* new = malloc(size);
+	memcpy(new, ptr, mem_get_block(ptr)->size & ~1);
+	free(ptr);
+
+	return new;
 }
 
 /* Frees a pointer previously returned by `malloc`.

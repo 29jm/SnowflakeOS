@@ -75,9 +75,9 @@ void folder_view_on_draw(folder_view_t* fv, fb_t fb) {
 }
 
 folder_view_t* folder_view_new(const char* path) {
-	folder_view_t* fv = calloc(sizeof(folder_view_t));
+	folder_view_t* fv = zalloc(sizeof(folder_view_t));
 	fv->dirty = true;
-	fv->path = calloc(256);
+	fv->path = zalloc(256);
 	strcpy(fv->path, path);
 	vbox_t* vb = vbox_new();
 	fv->list = *vb;

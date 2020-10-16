@@ -24,6 +24,14 @@ int max(int a, int b) {
     return a > b ? a : b;
 }
 
+double fabs(double x) {
+    if (x < 0) {
+        return -x;
+    }
+
+    return x;
+}
+
 /* Note: not in the official <math.h>
  */
 float clamp(float val, float min, float max) {

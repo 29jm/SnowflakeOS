@@ -580,8 +580,6 @@ uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint3
 
 	ext2_update_inode(new_inode, &new_in);
 
-	inode_t* test = ext2_get_inode(new_inode);
-
 	/* Add the entry referencing that inode */
 	uint32_t size = sizeof(ext2_directory_entry_t) + strlen(name);
 	ext2_directory_entry_t* new_entry = kmalloc(size);

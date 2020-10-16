@@ -78,6 +78,7 @@ _start_higher_half:
 	pushl %ebx
 
 	cli # disable until we setup handlers
+	mov $0, %ebp # stop stacktraces here
 	call kernel_main
 	add $12, %esp # cleanup the stack. useless here
 

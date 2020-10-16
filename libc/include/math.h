@@ -6,4 +6,5 @@ double fmin(double a, double b);
 float fminf(float a, float b);
 int min(int a, int b);
 int max(int a, int b);
+double fabs(double x);
 float clamp(float val, float min, float max);

@@ -36,7 +36,7 @@ void canvas_on_draw(canvas_t* canvas, fb_t fb) {
 }
 
 canvas_t* canvas_new() {
-	canvas_t* canvas = calloc(sizeof(canvas_t));
+	canvas_t* canvas = zalloc(sizeof(canvas_t));
 
 	canvas->widget.flags = UI_EXPAND;
 	canvas->widget.on_click = (widget_clicked_t) canvas_on_click;

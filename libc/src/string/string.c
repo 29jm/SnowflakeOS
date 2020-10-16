@@ -88,6 +88,27 @@ char* strrchr(const char* s, int c) {
 	return NULL;
 }
 
+char* strstr(const char* haystack, const char* needle) {
+	uint32_t n = strlen(haystack);
+	uint32_t m = strlen(needle);
+
+	if (m > n) {
+		return NULL;
+	} else if (m == n && !strncmp(haystack, needle, n)) {
+		return (char*) &haystack[0];
+	}
+
+	for (uint32_t i = 0; i < n - m; i++) {
+		for (uint32_t j = 0; haystack[i + j] == needle[j]; j++) {
+			if (j == m - 1) {
+				return (char*) &haystack[i];
+			}
+		}
+	}
+
+	return NULL;
+}
+
 int strcmp(const char* s1, const char* s2) {
 	while (*s1 && *s1 == *s2) {
 		s1++;

@@ -22,7 +22,7 @@ void color_button_on_resize(color_button_t* button) {
 }
 
 color_button_t* color_button_new(uint32_t color, uint32_t* to_set) {
-	color_button_t* button = calloc(sizeof(color_button_t));
+	color_button_t* button = zalloc(sizeof(color_button_t));
 
 	button->color = color;
 	button->to_set = to_set;

@@ -28,7 +28,7 @@ void titlebar_on_free(titlebar_t* tb) {
 }
 
 titlebar_t* titlebar_new(const char* title, const uint8_t* icon) {
-	titlebar_t* tb = calloc(sizeof(titlebar_t));
+	titlebar_t* tb = zalloc(sizeof(titlebar_t));
 
 	tb->widget.flags = UI_EXPAND_HORIZONTAL;
 	tb->widget.bounds.h = 20;

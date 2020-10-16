@@ -51,7 +51,7 @@ struct dirent* readdir(DIR* dir) {
 		return NULL;
 	}
 
-	struct dirent* d_ent = calloc(sizeof(struct dirent));
+	struct dirent* d_ent = zalloc(sizeof(struct dirent));
 	d_ent->d_ino = dir_entry->inode;
 	strcpy(d_ent->d_name, dir_entry->name);
 	d_ent->d_type = dir_entry->type;

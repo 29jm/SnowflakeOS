@@ -29,7 +29,7 @@ void button_on_free(button_t* button) {
 }
 
 button_t* button_new(char* text) {
-	button_t* button = calloc(sizeof(button_t));
+	button_t* button = zalloc(sizeof(button_t));
 	uint32_t margin = 2;
 
 	button->text = strdup(text); // TODO: free this

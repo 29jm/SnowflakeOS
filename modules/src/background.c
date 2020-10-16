@@ -21,9 +21,7 @@ int main() {
 		free(bg);
 		fclose(wp);
 	} else {
-		for (uint32_t i = 0; i < win->fb.height*win->fb.width; i++) {
-			((uint32_t*) win->fb.address)[i] = 0x9AC4F8;
-		}
+		snow_draw_rect(win->fb, 0, 0, scr.width, scr.height, 0x9AC4F8);
 	}
 
 	snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
