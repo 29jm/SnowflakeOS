@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define MAX_PATH 256
+
 #define FS_INVALID_FD 0
 #define FS_INVALID_INODE 0
 

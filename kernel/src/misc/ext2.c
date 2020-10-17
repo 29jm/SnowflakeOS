@@ -139,6 +139,7 @@ static superblock_t* superblock;
 static group_descriptor_t* group_descriptors;
 
 uint32_t ext2_get_inode_block(inode_t* in, uint32_t n);
+uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n);
 
 /* Reads the content of the given block.
  */
@@ -202,17 +203,23 @@ group_descriptor_t* parse_group_descriptors() {
 /* Reads the content of the n-th block of the given inode.
  * Assumes that the requested block exists.
  * `n` is relative to the inode, i.e. it's not an absolute block number.
- * If the block didn't exist, it is created and filled with zeros.
+ * For convenience, reading a non-existent block reads zeros.
  */
 void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
-	ext2_read_block(ext2_get_inode_block(inode, n), buf);
+	uint32_t block = ext2_get_inode_block(inode, n);
+
+	if (block) {
+		ext2_read_block(block, buf);
+	} else {
+		memset(buf, 0, block_size);
+	}
 }
 
 /* Writes to the `n`-th block of the given inode.
  * If the block didn't exist, it is created.
  */
 void ext2_write_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
-	uint32_t block = ext2_get_inode_block(inode, n);
+	uint32_t block = ext2_get_or_create_inode_block(inode, n);
 
 	ext2_write_block(block, buf);
 }
@@ -397,9 +404,15 @@ void ext2_update_inode(uint32_t no, inode_t* in) {
  * job.
  * 10$ to anyone who manages to refactor this code to something tolerable.
  */
-uint32_t ext2_get_inode_block(inode_t* in, uint32_t n) {
+uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n) {
 	// Number of block pointers in an indirect block
 	uint32_t p = block_size / sizeof(uint32_t);
+	// Type matters for pointer arithmetic purposes
+	static uint32_t* tmp = NULL;
+
+	if (!tmp) {
+		tmp = zalloc(block_size);
+	}
 
 	if (n < 12) {
 		if (!in->dbp[n]) {
@@ -408,26 +421,22 @@ uint32_t ext2_get_inode_block(inode_t* in, uint32_t n) {
 
 		return in->dbp[n];
 	} else if (n < 12 + p) {
-		uint8_t* tmp = kmalloc(block_size);
 		uint32_t relblock = n - 12;
 
 		if (!in->sibp) {
 			in->sibp = ext2_allocate_block();
-			memset(tmp, 0, block_size);
-			ext2_write_block(in->sibp, tmp);
+			ext2_write_block(in->sibp, (uint8_t*) tmp);
 		}
 
-		ext2_read_block(in->sibp, tmp);
+		ext2_read_block(in->sibp, (uint8_t*) tmp);
 
 		if (!tmp[relblock]) {
 			tmp[relblock] = ext2_allocate_block();
-			ext2_write_block(in->sibp, tmp);
+			ext2_write_block(in->sibp, (uint8_t*) tmp);
 		}
 
-		kfree(tmp);
 		return tmp[relblock];
 	} else if (n < 12 + p + p*p) {
-		uint8_t* tmp = kmalloc(block_size);
 		uint32_t relblock = n - 12 - p;
 		uint32_t offset_a = relblock / p;
 		uint32_t offset_b = relblock % p;
@@ -437,26 +446,24 @@ uint32_t ext2_get_inode_block(inode_t* in, uint32_t n) {
 			ext2_clear_block(in->dibp);
 		}
 
-		ext2_read_block(in->dibp, tmp);
+		ext2_read_block(in->dibp, (uint8_t*) tmp);
 
 		if (!tmp[offset_a]) {
 			tmp[offset_a] = ext2_allocate_block();
 			ext2_clear_block(tmp[offset_a]);
-			ext2_write_block(in->dibp, tmp);
+			ext2_write_block(in->dibp, (uint8_t*) tmp);
 		}
 
 		uint32_t block_a = tmp[offset_a];
-		ext2_read_block(tmp[offset_a], tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
 
 		if (!tmp[offset_b]) {
 			tmp[offset_b] = ext2_allocate_block();
-			ext2_write_block(block_a, tmp);
+			ext2_write_block(block_a, (uint8_t*) tmp);
 		}
 
-		kfree(tmp);
 		return tmp[offset_b];
 	} else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
-		uint8_t* tmp = kmalloc(block_size);
 		uint32_t relblock = n - 12 - p - p*p;
 		uint32_t offset_a = relblock / (p*p);
 		uint32_t offset_b = relblock % (p*p);
@@ -467,36 +474,79 @@ uint32_t ext2_get_inode_block(inode_t* in, uint32_t n) {
 			ext2_clear_block(in->tibp);
 		}
 
-		ext2_read_block(in->tibp, tmp);
+		ext2_read_block(in->tibp, (uint8_t*) tmp);
 
 		if (!tmp[offset_a]) {
 			tmp[offset_a] = ext2_allocate_block();
 			ext2_clear_block(tmp[offset_a]);
-			ext2_write_block(in->tibp, tmp);
+			ext2_write_block(in->tibp, (uint8_t*) tmp);
 		}
 
 		uint32_t block_a = tmp[offset_a];
-		ext2_read_block(tmp[offset_a], tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
 
 		if (!tmp[offset_b]) {
 			tmp[offset_b] = ext2_allocate_block();
 			ext2_clear_block(tmp[offset_b]);
-			ext2_write_block(block_a, tmp);
+			ext2_write_block(block_a, (uint8_t*) tmp);
 		}
 
 		uint32_t block_b = tmp[offset_b];
-		ext2_read_block(tmp[offset_b], tmp);
+		ext2_read_block(tmp[offset_b], (uint8_t*) tmp);
 
 		if (!tmp[offset_c]) {
 			tmp[offset_c] = ext2_allocate_block();
-			ext2_write_block(block_b, tmp);
+			ext2_write_block(block_b, (uint8_t*) tmp);
 		}
 
-		kfree(tmp);
 		return tmp[offset_c];
 	} else {
 		printf("[EXT2] Invalid inode block\n");
 	}
+
+	return 0;
+}
+
+uint32_t ext2_get_inode_block(inode_t* inode, uint32_t n) {
+	// Number of block pointers in an indirect block
+	uint32_t p = block_size / sizeof(uint32_t);
+	static uint32_t* tmp = NULL;
+
+	if (!tmp) {
+		tmp = kmalloc(block_size);
+	}
+
+	if (n < 12) {
+		return inode->dbp[n];
+	} else if (n < 12 + p) {
+		uint32_t relblock = n - 12;
+
+		ext2_read_block(inode->sibp, (uint8_t*) tmp);
+
+		return tmp[relblock];
+	} else if (n < 12 + p + p*p) {
+		uint32_t relblock = n - 12 - p;
+		uint32_t offset_a = relblock / p;
+		uint32_t offset_b = relblock % p;
+
+		ext2_read_block(inode->dibp, (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
+
+		return tmp[offset_b];
+	} else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
+		uint32_t relblock = n - 12 - p - p*p;
+		uint32_t offset_a = relblock / (p*p);
+		uint32_t offset_b = relblock % (p*p);
+		uint32_t offset_c = relblock % p;
+
+		ext2_read_block(inode->tibp, (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_a], (uint8_t*) tmp);
+		ext2_read_block(tmp[offset_b], (uint8_t*) tmp);
+
+		return tmp[offset_c];
+	}
+
+	printf("[EXT2] Invalid inode block\n");
 
 	return 0;
 }
@@ -632,7 +682,7 @@ uint32_t ext2_mkdir(const char* name, uint32_t parent_inode) {
  */
 uint32_t ext2_append(uint32_t inode, uint8_t* data, uint32_t size) {
 	inode_t* in = ext2_get_inode(inode);
-	uint8_t* tmp = kmalloc(block_size);
+	uint8_t* tmp = zalloc(block_size);
 
 	uint32_t start_block = in->size_lower / block_size;
 	uint32_t end_block = (in->size_lower + size) / block_size;
@@ -709,9 +759,8 @@ uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size)
 				ext2_read_inode_block(in, start_block, tmp);
 				memcpy(buf, tmp + start_offset, block_size - start_offset);
 			} else {
-				// TODO: avoid a memcpy here
-				ext2_read_inode_block(in, block_no, tmp);
-				memcpy(buf + start_offset + (block_no - start_block)*block_size - start_offset, tmp, block_size);
+				ext2_read_inode_block(in, block_no,
+					buf + (block_no - start_block)*block_size);
 			}
 		}
 

@@ -22,6 +22,7 @@ typedef struct _proc_t {
 	uint32_t sleep_ticks;
 	uint8_t fpu_registers[512];
 	list_t* fds;
+	char* cwd;
 } process_t;
 
 void init_proc();
@@ -32,6 +33,7 @@ void proc_exit_current_process();
 void proc_enter_usermode();
 void proc_switch_process();
 uint32_t proc_get_current_pid();
+char* proc_get_cwd();
 void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
 void proc_register_program(char* name, uint8_t* code, uint32_t size);

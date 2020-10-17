@@ -290,6 +290,13 @@ uint32_t proc_get_current_pid() {
 	return current_process->pid;
 }
 
+/* Returns a dynamically allocated copy of the current process's current working
+ * directory.
+ */
+char* proc_get_cwd() {
+	return strdup(current_process->cwd);
+}
+
 void proc_sleep(uint32_t ms) {
 	current_process->sleep_ticks = (uint32_t) ((ms*TIMER_FREQ)/1000.0);
 	proc_timer_callback(NULL);

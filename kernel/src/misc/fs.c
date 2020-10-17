@@ -1,5 +1,6 @@
 #include <kernel/fs.h>
 #include <kernel/ext2.h>
+#include <kernel/proc.h>
 #include <kernel/list.h>
 #include <kernel/sys.h>
 
@@ -15,22 +16,103 @@ void init_fs() {
 	file_table = list_new();
 }
 
+/* Returns the absolute version of `p`, free of oddities.
+ */
+char* normalize_path(const char* p) {
+	char* np = kmalloc(MAX_PATH);
+	strcpy(np, p);
+
+	if (!strcmp(np, "/")) {
+		return np;
+	}
+
+	// Make the path absolute
+	if (p[0] != '/') {
+		char* cwd = proc_get_cwd();
+		strcpy(np, cwd);
+		strcat(np, "/");
+		strcat(np, p);
+		kfree(cwd);
+	}
+
+	// Trim trailing slashes
+	while (np[strlen(np) - 1] == '/') {
+		np[strlen(np) - 1] = '\0';
+	}
+
+	// Trim '//' sequences
+	char* s = NULL;
+	while ((s = strstr(np, "//"))) {
+		uint32_t n = 0;
+
+		// Make sure to keep exaclty one /
+		if (strstr(np, "///") != s) {
+			n = 1;
+		} else {
+			n = 2;
+		}
+
+		char* npp = kmalloc(MAX_PATH);
+		strncpy(npp, np, s - np);
+		npp[s - np] = '\0';
+		strcat(npp, s + n);
+		kfree(np);
+		np = npp;
+	}
+
+	return np;
+}
+
+/* Returns the path to the parent directory of the thing pointed to by `p`,
+ * dynamically allocated.
+ * Expects `p` to be a normalized path.
+ */
+char* dirname(const char* p) {
+	char* last_sep = strrchr(p, '/');
+	char* dp = kmalloc(MAX_PATH);
+
+	strcpy(dp, p);
+
+	if (!strcmp(dp, "/")) {
+		return dp;
+	}
+
+	if (last_sep == p) {
+		dp[1] = '\0';
+	} else {
+		dp[last_sep - p] = '\0';
+	}
+
+	return dp;
+}
+
+/* Returns the name of the file pointed to by `p`.
+ */
+char* basename(const char* p) {
+	char* last_sep = strrchr(p, '/');
+
+	if (!strcmp(p, "/")) {
+		return (char*) p;
+	}
+
+	return last_sep + 1;
+}
+
 uint32_t fs_open(const char* path, uint32_t mode) {
+	char* npath = normalize_path(path);
 	uint32_t inode = 0;
 
 	if (mode & O_CREAT) {
-		char basename[256] = "";
-		char parent[256] = "";
-		char* last_sep = strrchr(path, '/');
-		uint32_t path_len = last_sep - path + 1;
-		strcpy(basename, last_sep + 1);
-		strncpy(parent, path, path_len);
-		parent[path_len+1] = '\0';
-		uint32_t parent_inode = ext2_open(parent);
-		inode = ext2_create(basename, parent_inode);
+		char* parent_path = dirname(path);
+		char* filename = basename(path);
+		uint32_t parent_inode = ext2_open(parent_path);
+		inode = ext2_create(filename, parent_inode);
+		kfree(parent_path);
 	} else if (mode & O_RDONLY) {
 		inode = ext2_open(path);
 	}
+
+	kfree(npath);
 
 	if (!inode) {
 		return FS_INVALID_FD;
@@ -54,17 +136,16 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
 	UNUSED(mode);
 
 	uint32_t inode = 0;
+	char* np = normalize_path(path);
 
-	char basename[256] = "";
-	char parent[256] = "";
-	char* last_sep = strrchr(path, '/');
-	uint32_t path_len = last_sep - path + 1;
-	strcpy(basename, last_sep + 1);
-	strncpy(parent, path, path_len);
-	parent[path_len+1] = '\0';
-	uint32_t parent_inode = ext2_open(parent);
+	char* parent_path = dirname(np);
+	char* filename = basename(np);
+	uint32_t parent_inode = ext2_open(parent_path);
 
-	inode = ext2_mkdir(basename, parent_inode);
+	inode = ext2_mkdir(filename, parent_inode);
+
+	kfree(parent_path);
+	kfree(np);
 
 	if (!inode) {
 		return FS_INVALID_INODE;

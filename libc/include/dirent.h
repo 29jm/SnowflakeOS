@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define MAX_PATH 256
-
 typedef uint32_t ino_t;
 
 typedef struct {
