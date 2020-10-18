@@ -14,8 +14,9 @@ A hobby OS to help me learn about kernel stuff, to eventually get into linux ker
 + PIC timer
 + loading GRUB modules as usermode processes
 + preemptive multitasking
-+ VESA graphics
++ VBE graphics
 + window management
++ basic ext2 support
 
 I aim to make the code readable and well-organized. A blog follows the development of this project, here https://29jm.github.io/.
 
@@ -30,6 +31,7 @@ Install the following packages:
 + `mtools`
 + `qemu` (recommended)
 + `bochs` (optional)
++ `clang` + development packages, e.g. `base-devel` on Archlinux (optional)
 
 ### Cross-compiler
 
@@ -41,7 +43,16 @@ Run
 
 to build the cross-compiler needed to compile SnowflakeOS. This command will download and run build scripts for `gcc` and `binutils` from GNU FTP servers, and install the cross-compiler in `toolchain/compiler`.
 
-#### Using a preinstalled compiler
+#### Using clang directly
+
+Instead of building your own toolchain, you can compile SnowflakeOS with your system's `clang`: simply uncomment the following lines in the main `Makefile`:
+```shell
+# CC=clang
+# CFLAGS+=-target i386-pc-none-eabi -m32
+# CFLAGS+=-mno-mmx -mno-sse -mno-sse2
+```
+
+#### Using a preinstalled cross-compiler
 
 If your distro provides you with a cross compiler, you may want to save time and use it. To do so, you must edit the following variables in the main `Makefile` so that they match the executables of your cross compiler:
 
