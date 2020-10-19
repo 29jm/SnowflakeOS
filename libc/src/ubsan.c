@@ -9,23 +9,23 @@ void ub_panic_at(ubsan_source_location_t* location, const char* err) {
         printf("[ubsan] %s:%d:%d -> %s\n", location->file, location->line, location->column, err);
     }
 
-	abort();
+    abort();
 }
 
 void ub_panic(const char* err) {
     printf("[ubsan] %s\n", err);
-	abort();
+    abort();
 }
 
 void __ubsan_handle_type_mismatch_v1(ubsan_mismatch_data_t* data, uintptr_t ptr) {
-	if (!ptr) {
-		ub_panic_at(&data->location, "NULL pointer dereference");
-	} else if (data->align != 0 && (ptr & ((1 << data->align) - 1)) != 0) {
-		printf("[ubsan] pointer %p not aligned to %d\n", ptr, 1 << data->align);
+    if (!ptr) {
+        ub_panic_at(&data->location, "NULL pointer dereference");
+    } else if (data->align != 0 && (ptr & ((1 << data->align) - 1)) != 0) {
+        printf("[ubsan] pointer %p not aligned to %d\n", ptr, 1 << data->align);
         ub_panic_at(&data->location, "alignment failed");
-	} else {
-		printf("[ubsan] pointer %p is not large enough for %s\n", ptr, data->type->name);
-	}
+    } else {
+        printf("[ubsan] pointer %p is not large enough for %s\n", ptr, data->type->name);
+    }
 }
 
 void __ubsan_handle_add_overflow() {
@@ -51,9 +51,9 @@ void __ubsan_handle_negate_overflow() {
 }
 
 void __ubsan_handle_pointer_overflow(void* data_raw, void* lhs_raw, void* rhs_raw) {
-	ubsan_overflow_data_t* data = (ubsan_overflow_data_t*) data_raw;
+    ubsan_overflow_data_t* data = (ubsan_overflow_data_t*) data_raw;
     printf("[ubsan] pointer overflow with operands %p, %p\n", lhs_raw, rhs_raw);
-	ub_panic_at(&data->location, "pointer overflow");
+    ub_panic_at(&data->location, "pointer overflow");
 }
 
 void __ubsan_handle_out_of_bounds(void* data, void* index) {

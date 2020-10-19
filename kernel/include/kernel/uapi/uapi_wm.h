@@ -19,28 +19,28 @@
 #define WM_EVENT_MOUSE_MOVE   16
 
 typedef struct {
-	int32_t top, left, bottom, right;
+    int32_t top, left, bottom, right;
 } wm_rect_t;
 
 typedef struct {
     uintptr_t address;
-	uint32_t pitch;
-	uint32_t width;
-	uint32_t height;
-	uint32_t bpp;
+    uint32_t pitch;
+    uint32_t width;
+    uint32_t height;
+    uint32_t bpp;
 } fb_t;
 
 typedef struct {
-	wm_rect_t position;
-	bool left_button;
-	bool right_button;
+    wm_rect_t position;
+    bool left_button;
+    bool right_button;
 } wm_click_event_t;
 
 typedef struct {
-	uint32_t keycode;
-	bool pressed;
-	char repr;
-	// TODO include modifiers
+    uint32_t keycode;
+    bool pressed;
+    char repr;
+    // TODO include modifiers
 } wm_kbd_event_t;
 
 /* This structure is how a window can get its user input.
@@ -49,9 +49,9 @@ typedef struct {
  * and `kbd` members contain new and valid input.
  */
 typedef struct {
-	uint32_t type;
-	wm_click_event_t mouse;
-	wm_kbd_event_t kbd;
+    uint32_t type;
+    wm_click_event_t mouse;
+    wm_kbd_event_t kbd;
 } wm_event_t;
 
 typedef struct {
@@ -60,11 +60,11 @@ typedef struct {
 } wm_param_open_t;
 
 typedef struct {
-	uint32_t win_id;
-	wm_rect_t* clip;
+    uint32_t win_id;
+    wm_rect_t* clip;
 } wm_param_render_t;
 
 typedef struct {
-	uint32_t win_id;
-	wm_event_t* event;
+    uint32_t win_id;
+    wm_event_t* event;
 } wm_param_event_t;

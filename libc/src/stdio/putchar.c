@@ -7,16 +7,16 @@
 
 int putchar(int c) {
 #ifdef _KERNEL_
-	term_putchar(c);
-	serial_write(c);
+    term_putchar(c);
+    serial_write(c);
 #else
-	asm volatile (
-		"mov $3, %%eax\n"
-		"mov %[c], %%ebx\n"
-		"int $0x30\n"
-		:: [c] "r" (c)
-		: "%eax", "%ebx"
-	);
+    asm volatile (
+        "mov $3, %%eax\n"
+        "mov %[c], %%ebx\n"
+        "int $0x30\n"
+        :: [c] "r" (c)
+        : "%eax", "%ebx"
+    );
 #endif
-	return c;
+    return c;
 }

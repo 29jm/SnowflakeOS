@@ -10,19 +10,19 @@
 
 // Add new members to the end to avoid messing with the offsets
 typedef struct _proc_t {
-	struct _proc_t* next;
-	uint32_t pid;
-	// Sizes of the exectuable and of the stack in number of pages
-	uint32_t stack_len;
-	uint32_t code_len;
-	uintptr_t directory;
-	uintptr_t kernel_stack;
-	uintptr_t esp;
-	uint32_t mem_len; // Size of program heap in bytes
-	uint32_t sleep_ticks;
-	uint8_t fpu_registers[512];
-	list_t* fds;
-	char* cwd;
+    struct _proc_t* next;
+    uint32_t pid;
+    // Sizes of the exectuable and of the stack in number of pages
+    uint32_t stack_len;
+    uint32_t code_len;
+    uintptr_t directory;
+    uintptr_t kernel_stack;
+    uintptr_t esp;
+    uint32_t mem_len; // Size of program heap in bytes
+    uint32_t sleep_ticks;
+    uint8_t fpu_registers[512];
+    list_t* fds;
+    char* cwd;
 } process_t;
 
 void init_proc();

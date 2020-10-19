@@ -7,18 +7,18 @@
 # Note: interrupts are disabled on call, see the flags in `idt.h`
 # Note: when called, the calling `eflags`, `cs` and `eip` are already on the stack
 .macro ISR_NOERR num
-	.global isr\num
-	isr\num:
-		push $0
-		push $\num
-		jmp isr_common_handler
+    .global isr\num
+    isr\num:
+        push $0
+        push $\num
+        jmp isr_common_handler
 .endm
 
 .macro ISR_ERR num
-	.global isr\num
-	isr\num:
-		push $\num
-		jmp isr_common_handler
+    .global isr\num
+    isr\num:
+        push $\num
+        jmp isr_common_handler
 .endm
 
 ISR_NOERR 0
@@ -59,35 +59,35 @@ ISR_NOERR 48 # Syscall
 .type isr_handler, @function
 
 isr_common_handler:
-	# Save and push registers and data segments
-	pusha
-	push %ds
-	push %es
-	push %fs
-	push %gs
+    # Save and push registers and data segments
+    pusha
+    push %ds
+    push %es
+    push %fs
+    push %gs
 
-	# Load kernel data segments (cs is already loaded by the interrupt)
-	# in case we were running in usermode
-	mov $0x10, %ax
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
+    # Load kernel data segments (cs is already loaded by the interrupt)
+    # in case we were running in usermode
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
 
-	push %esp # `registers_t` pointer
-	call isr_handler
-	add $4, %esp
+    push %esp # `registers_t` pointer
+    call isr_handler
+    add $4, %esp
 
-	# Restore registers and data segments
-	pop %gs
-	pop %fs
-	pop %es
-	pop %ds
-	popa
+    # Restore registers and data segments
+    pop %gs
+    pop %fs
+    pop %es
+    pop %ds
+    popa
 
-	# Pop our error code and interrupt number
-	add $8, %esp
+    # Pop our error code and interrupt number
+    add $8, %esp
 
-	# Return to whatever was interrupted
-	# This will load the previous code segment, `eip` and `eflags`
-	iret
+    # Return to whatever was interrupted
+    # This will load the previous code segment, `eip` and `eflags`
+    iret

@@ -27,13 +27,13 @@ typedef struct {
 } ubsan_overflow_data_t;
 
 typedef struct {
-	ubsan_source_location_t location;
-	ubsan_type_t* lhs_type;
-	ubsan_type_t* rhs_type;
+    ubsan_source_location_t location;
+    ubsan_type_t* lhs_type;
+    ubsan_type_t* rhs_type;
 } ubsan_shift_out_of_bounds_data_t;
 
 typedef struct {
-	ubsan_source_location_t location;
-	ubsan_type_t* array_type;
-	ubsan_type_t* index_type;
+    ubsan_source_location_t location;
+    ubsan_type_t* array_type;
+    ubsan_type_t* index_type;
 } ubsan_out_of_bounds_data_t;

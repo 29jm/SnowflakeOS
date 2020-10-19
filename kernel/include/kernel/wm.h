@@ -16,13 +16,13 @@
  *  window when we're not in the window's address space.
  */
 typedef struct _wm_window_t {
-	fb_t ufb;
-	fb_t kfb;
-	int32_t x;
-	int32_t y;
-	uint32_t id;
-	uint32_t flags;
-	wm_event_t event;
+    fb_t ufb;
+    fb_t kfb;
+    int32_t x;
+    int32_t y;
+    uint32_t id;
+    uint32_t flags;
+    wm_event_t event;
 } wm_window_t;
 
 // We exposed `wm_rect_t` to userspace, rename it here for convenience

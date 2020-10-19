@@ -27,51 +27,51 @@ extern uint32_t KERNEL_END_PHYS;
 extern uint32_t KERNEL_SIZE;
 
 void kernel_main(multiboot_t* boot, uint32_t magic) {
-	init_serial();
-	init_pmm(boot);
-	init_paging();
+    init_serial();
+    init_pmm(boot);
+    init_paging();
 
-	if (magic != MULTIBOOT_EAX_MAGIC) {
-		printf("The multiboot magic header is wrong: proceeding anyway\n");
-	}
+    if (magic != MULTIBOOT_EAX_MAGIC) {
+        printf("The multiboot magic header is wrong: proceeding anyway\n");
+    }
 
-	printf("SnowflakeOS 0.5 - Challenge Edition\n");
-	printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
+    printf("SnowflakeOS 0.5 - Challenge Edition\n");
+    printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
 
-	init_fb(boot->framebuffer);
-	init_gdt();
-	init_idt();
-	init_isr();
-	init_irq();
-	init_syscall();
+    init_fb(boot->framebuffer);
+    init_gdt();
+    init_idt();
+    init_isr();
+    init_irq();
+    init_syscall();
 
-	init_ps2();
-	init_timer();
-	init_wm();
-	init_fs();
+    init_ps2();
+    init_timer();
+    init_wm();
+    init_fs();
 
-	// Load GRUB modules as programs
-	mod_t* modules = (mod_t*) boot->mods_addr;
+    // Load GRUB modules as programs
+    mod_t* modules = (mod_t*) boot->mods_addr;
 
-	for (uint32_t i = 0; i < boot->mods_count; i++) {
-		mod_t mod = modules[i];
-		uint32_t size = mod.mod_end - mod.mod_start;
-		char* name = (char*) mod.string;
+    for (uint32_t i = 0; i < boot->mods_count; i++) {
+        mod_t mod = modules[i];
+        uint32_t size = mod.mod_end - mod.mod_start;
+        char* name = (char*) mod.string;
 
-		uint8_t* code = (uint8_t*) kmalloc(size);
-		memcpy(code, (void*) mod.mod_start, size);
+        uint8_t* code = (uint8_t*) kmalloc(size);
+        memcpy(code, (void*) mod.mod_start, size);
 
-		if (!strcmp(name, "disk")) {
-			init_ext2(code, size);
-			continue;
-		} else if (!strcmp(name, "terminal")) {
-			proc_run_code(code, size);
-		}
+        if (!strcmp(name, "disk")) {
+            init_ext2(code, size);
+            continue;
+        } else if (!strcmp(name, "terminal")) {
+            proc_run_code(code, size);
+        }
 
-		proc_register_program(name, code, size);
-	}
+        proc_register_program(name, code, size);
+    }
 
-	proc_print_processes();
+    proc_print_processes();
 
-	init_proc();
+    init_proc();
 }

@@ -46,23 +46,23 @@
 #define PS2_TIMEOUT 500
 
 typedef enum {
-	PS2_MOUSE = 0x00,
-	PS2_MOUSE_SCROLL_WHEEL = 0x03,
-	PS2_MOUSE_FIVE_BUTTONS = 0x04,
-	PS2_KEYBOARD,
-	PS2_KEYBOARD_TRANSLATED,
-	PS2_DEVICE_UNKNOWN
+    PS2_MOUSE = 0x00,
+    PS2_MOUSE_SCROLL_WHEEL = 0x03,
+    PS2_MOUSE_FIVE_BUTTONS = 0x04,
+    PS2_KEYBOARD,
+    PS2_KEYBOARD_TRANSLATED,
+    PS2_DEVICE_UNKNOWN
 };
 
 typedef struct {
-	// True if this device exist
-	bool present;
-	// The controller in which this device is plugged in
-	uint32_t num;
-	uint32_t type;
-	// Raw identifiers
-	uint8_t first_id_byte;
-	uint8_t second_id_byte; // Validity depends on device
+    // True if this device exist
+    bool present;
+    // The controller in which this device is plugged in
+    uint32_t num;
+    uint32_t type;
+    // Raw identifiers
+    uint8_t first_id_byte;
+    uint8_t second_id_byte; // Validity depends on device
 } ps2_device_t;
 
 void init_ps2();

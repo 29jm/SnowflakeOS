@@ -16,30 +16,30 @@
 
 // Possible keyboard transmission states
 enum {
-	// Next byte could be a one byte scancode, a release indicator preceding
-	// a one-byte scancode, or a multibyte scancode indicator
-	KBD_NORMAL,
-	// Next byte is the one-byte scancode released
-	KBD_RELEASE_SHORT,
-	// Next bytes should be part of a multibyte scancode
-	KBD_CONTINUE
+    // Next byte could be a one byte scancode, a release indicator preceding
+    // a one-byte scancode, or a multibyte scancode indicator
+    KBD_NORMAL,
+    // Next byte is the one-byte scancode released
+    KBD_RELEASE_SHORT,
+    // Next bytes should be part of a multibyte scancode
+    KBD_CONTINUE
 };
 
 typedef struct {
-	uint32_t keycode;
-	bool pressed;
-	char repr;
+    uint32_t keycode;
+    bool pressed;
+    char repr;
 } kbd_event_t;
 
 typedef struct {
-	uint32_t state;
-	uint8_t scancode[8];
-	uint32_t current;
-	bool alt;
-	bool alt_gr;
-	bool shift;
-	bool super;
-	bool control;
+    uint32_t state;
+    uint8_t scancode[8];
+    uint32_t current;
+    bool alt;
+    bool alt_gr;
+    bool shift;
+    bool super;
+    bool control;
 } kbd_context_t;
 
 typedef void (*kbd_callback_t)(kbd_event_t);

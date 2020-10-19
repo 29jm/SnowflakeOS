@@ -16,74 +16,74 @@
 
 # Multiboot header
 .section .multiboot
-	.long MAGIC
-	.long FLAGS
-	.long CHECKSUM
-	.long 0x00000000 /* header_addr stub*/
-	.long 0x00000000 /* load_addr stub*/
-	.long 0x00000000 /* load_end_addr stub*/
-	.long 0x00000000 /* bss_end_addr stub*/
-	.long 0x00000000 /* entry_addr stub*/
-	.long 0    # 0 for linear, 1 for text mode
-	.long 1024 # width
-	.long 768  # height
-	.long 32   # bpp
+    .long MAGIC
+    .long FLAGS
+    .long CHECKSUM
+    .long 0x00000000 /* header_addr stub*/
+    .long 0x00000000 /* load_addr stub*/
+    .long 0x00000000 /* load_end_addr stub*/
+    .long 0x00000000 /* bss_end_addr stub*/
+    .long 0x00000000 /* entry_addr stub*/
+    .long 0    # 0 for linear, 1 for text mode
+    .long 1024 # width
+    .long 768  # height
+    .long 32   # bpp
 
 # Reserve a stack for the initial thread.
 .section .bootstrap_stack, "aw", @nobits
 stack_bottom:
-	.skip 16384 # 16 KiB
+    .skip 16384 # 16 KiB
 stack_top:
 
 .section .data
 .global kernel_directory
 .align 0x1000
 kernel_directory:
-	.long 0x00000083 # 4 MiB pages
-	.fill (KERNEL_PAGE_NUMBER - 1), 4, 0
-	.long 0x00000083
-	.fill (1024 - KERNEL_PAGE_NUMBER - 1), 4, 0
+    .long 0x00000083 # 4 MiB pages
+    .fill (KERNEL_PAGE_NUMBER - 1), 4, 0
+    .long 0x00000083
+    .fill (1024 - KERNEL_PAGE_NUMBER - 1), 4, 0
 
 # The kernel entry point.
 .section .text
 .global _start
 .type _start, @function
 _start:
-	mov $(kernel_directory - KERNEL_VIRTUAL_BASE), %ecx
-	mov %ecx, %cr3
+    mov $(kernel_directory - KERNEL_VIRTUAL_BASE), %ecx
+    mov %ecx, %cr3
 
-	# Enable PSE for 4 MiB pages
-	mov %cr4, %ecx
-	or $0x00000010, %ecx
-	mov %ecx, %cr4
+    # Enable PSE for 4 MiB pages
+    mov %cr4, %ecx
+    or $0x00000010, %ecx
+    mov %ecx, %cr4
 
-	mov %cr0, %ecx
-	or $0x80000000, %ecx
-	mov %ecx, %cr0
+    mov %cr0, %ecx
+    or $0x80000000, %ecx
+    mov %ecx, %cr0
 
-	lea _start_higher_half, %ecx
-	jmp *%ecx
+    lea _start_higher_half, %ecx
+    jmp *%ecx
 
 _start_higher_half:
-	# movl $0, boot_page_directory
-	# invlpg 0
+    # movl $0, boot_page_directory
+    # invlpg 0
 
-	movl $stack_top, %esp
+    movl $stack_top, %esp
 
-	# Transfer control to the main kernel.
-	# Pass the multiboot header adress and magic number (already pushed)
-	# See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
-	pushl %eax
-	add $0xC0000000, %ebx
-	pushl %ebx
+    # Transfer control to the main kernel.
+    # Pass the multiboot header adress and magic number (already pushed)
+    # See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
+    pushl %eax
+    add $0xC0000000, %ebx
+    pushl %ebx
 
-	cli # disable until we setup handlers
-	mov $0, %ebp # stop stacktraces here
-	call kernel_main
-	add $12, %esp # cleanup the stack. useless here
+    cli # disable until we setup handlers
+    mov $0, %ebp # stop stacktraces here
+    call kernel_main
+    add $12, %esp # cleanup the stack. useless here
 
-	# Hang if kernel_main unexpectedly returns.
-	cli
+    # Hang if kernel_main unexpectedly returns.
+    cli
 .hang:
-	hlt
-	jmp .hang
+    hlt
+    jmp .hang

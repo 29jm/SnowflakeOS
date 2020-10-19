@@ -18,12 +18,12 @@ int32_t syscall3(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx);
                 } while (false)
 
 typedef struct {
-	char* title;
-	uint32_t width;
-	uint32_t height;
-	fb_t fb;
-	uint32_t id;
-	uint32_t flags;
+    char* title;
+    uint32_t width;
+    uint32_t height;
+    fb_t fb;
+    uint32_t id;
+    uint32_t flags;
 } window_t;
 
 void snow_get_fb_info(fb_t* fb);

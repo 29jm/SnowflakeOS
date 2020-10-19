@@ -15,16 +15,16 @@
 // |base 16:31|flags 0:7|0 0:7|selector 0:15|base 0:15|
 // where `flags` is |P|DPL 0:2|S|Type 0:3|
 typedef struct {
-	uint16_t base_low;
-	uint16_t selector; // Code segment selector
-	uint8_t zero;
-	uint8_t flags;
-	uint16_t base_high;
+    uint16_t base_low;
+    uint16_t selector; // Code segment selector
+    uint8_t zero;
+    uint8_t flags;
+    uint16_t base_high;
 } __attribute__ ((packed)) idt_entry_t;
 
 typedef struct {
-	uint16_t size;
-	uint32_t offset;
+    uint16_t size;
+    uint32_t offset;
 } __attribute__ ((packed)) idt_pointer_t;
 
 void init_idt();

@@ -38,7 +38,7 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
  * Note: the kernel is mapped by a 4MiB page, so we make our heap begin after
  * that.
  */
-#define KERNEL_HEAP_BEGIN (KERNEL_BASE_VIRT + 0x1000*1024)
+#define KERNEL_HEAP_BEGIN KERNEL_END_MAP
 #define KERNEL_HEAP_SIZE 0x1E00000
 
 #define PAGE_PRESENT 1

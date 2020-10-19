@@ -3,14 +3,14 @@
 #include <stdint.h>
 
 typedef struct _list_node_t {
-	void* data;
-	struct _list_node_t* next;
-	struct _list_node_t* prev;
+    void* data;
+    struct _list_node_t* next;
+    struct _list_node_t* prev;
 } list_node_t;
 
 typedef struct _list_t {
-	uint32_t count;
-	list_node_t* root;
+    uint32_t count;
+    list_node_t* root;
 } list_t;
 
 list_t* list_new();

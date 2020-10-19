@@ -27,10 +27,10 @@
 #define MOUSE_UNUSED_B (1 << 6)
 
 typedef struct {
-	float x, y;
-	bool left_pressed;
-	bool right_pressed;
-	bool middle_pressed;
+    float x, y;
+    bool left_pressed;
+    bool right_pressed;
+    bool middle_pressed;
 } mouse_t;
 
 typedef void (*mouse_callback_t)(mouse_t);

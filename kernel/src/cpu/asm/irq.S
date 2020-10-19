@@ -2,11 +2,11 @@
 .align 4
 
 .macro IRQ num remap
-	.global irq\num
-	irq\num:
-		push $0
-		push $\remap
-		jmp irq_common_handler
+    .global irq\num
+    irq\num:
+        push $0
+        push $\remap
+        jmp irq_common_handler
 .endm
 
 IRQ 0,  32
@@ -30,33 +30,33 @@ IRQ 15, 47
 .type irq_handler, @function
 
 irq_common_handler:
-	pusha
-	push %ds
-	push %es
-	push %fs
-	push %gs
+    pusha
+    push %ds
+    push %es
+    push %fs
+    push %gs
 
-	mov $0x10, %ax
+    mov $0x10, %ax
 
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
 
-	push %esp
-	call irq_handler
-	add $4, %esp
+    push %esp
+    call irq_handler
+    add $4, %esp
 
 # jumped to on first context switch
 .global irq_handler_end
 irq_handler_end:
 
-	pop %gs
-	pop %fs
-	pop %es
-	pop %ds
-	popa
+    pop %gs
+    pop %fs
+    pop %es
+    pop %ds
+    popa
 
-	add $8, %esp
+    add $8, %esp
 
-	iret
+    iret

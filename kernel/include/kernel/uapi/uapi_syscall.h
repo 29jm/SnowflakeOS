@@ -25,14 +25,14 @@
 #define SYS_INFO_LOG    4
 
 typedef struct {
-	uint32_t kernel_heap_usage;
-	uint32_t ram_usage;
-	uint32_t ram_total;
-	float uptime;
-	char* kernel_log; // Must be at least 2048 bytes long
+    uint32_t kernel_heap_usage;
+    uint32_t ram_usage;
+    uint32_t ram_total;
+    float uptime;
+    char* kernel_log; // Must be at least 2048 bytes long
 } sys_info_t;
 
 typedef struct {
-	uint8_t* buf;
-	uint32_t size;
+    uint8_t* buf;
+    uint32_t size;
 } sys_buf_t;
