@@ -9,12 +9,11 @@
 
 #define NTHBIT(n) ((uint32_t) 1 << n)
 
+static uint32_t bitmap[1024 * 1024 / 32];
 static uint32_t mem_size;
 static uint32_t used_blocks;
 static uint32_t max_blocks;
 static uintptr_t kernel_end;
-
-uint32_t* bitmap;
 
 // Linker-provided symbols. Beware, those don't take into account GRUB's things
 extern uint32_t KERNEL_END;
@@ -41,19 +40,16 @@ void init_pmm(multiboot_t* boot) {
 		kernel_end = (uintptr_t) &KERNEL_END_PHYS;
 	}
 
-	// Setup our bitmap right after the kernel
-	bitmap = (uint32_t*) align_to(PHYS_TO_VIRT(kernel_end), 4);
-	mem_size = boot->mem_lower + boot->mem_upper;
-	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
-	used_blocks = max_blocks;
-
-	if ((uintptr_t) bitmap + max_blocks/8 > KERNEL_END_MAP) {
-		printf("[PMM] block bitmap spills into kernel, ends at %p\n",
-			(uint8_t*) bitmap + max_blocks/8);
+	if ((uint32_t) &KERNEL_END > KERNEL_END_MAP) {
+		printf("[pmm] the kernel is too large for its initial mapping\n");
 		abort();
 	}
 
-	memset(bitmap, 0xFF, max_blocks/8); // Every block is initially taken
+	// Prepare our block allocation bitmap
+	mem_size = boot->mem_lower + boot->mem_upper;
+	max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
+	used_blocks = max_blocks;
+	memset(bitmap, 0xFF, max_blocks/8); // Blocks are taken by default
 
 	// Parse the memory map to mark valid areas as available
 	uint64_t available = 0;
@@ -86,7 +82,6 @@ void init_pmm(multiboot_t* boot) {
 	printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
 	printf("[PMM] Taken by modules: \x1B[32m%dKiB\x1B[37m\n",
 		((uintptr_t) bitmap - (uintptr_t) &KERNEL_END) >> 10);
-	printf("[PMM] Modules margin: %d bytes\n", 0x400000 - pmm_get_kernel_end());
 }
 
 /* Returns the number of bytes allocated by the PMM.

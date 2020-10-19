@@ -23,10 +23,10 @@ void init_paging() {
 	kernel_directory[1023] = dir_phys | PAGE_PRESENT | PAGE_RW;
 	paging_invalidate_page(0xFFC00000);
 
-	// Identity map the first MiB
-	uint32_t n = 1024*1024/0x1000;
+	// Replace the initial identity mapping, extending it to cover grub modules
+	uint32_t to_map = divide_up(pmm_get_kernel_end(), 0x1000);
 	kernel_directory[0] = 0;
-	paging_map_pages(0x00000000, 0x00000000, n, PAGE_RW);
+	paging_map_pages(0x00000000, 0x00000000, to_map, PAGE_RW);
 	paging_invalidate_page(0x00000000);
 	current_page_directory = kernel_directory;
 }
