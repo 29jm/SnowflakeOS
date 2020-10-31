@@ -7,6 +7,8 @@
 *.out
 *.mod
 *.a
+*.map
+*.img
 misc/grub.cfg
 Session.vim
 isodir

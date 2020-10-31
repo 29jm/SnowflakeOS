@@ -16,7 +16,8 @@ void init_fs() {
     file_table = list_new();
 }
 
-/* Returns the absolute version of `p`, free of oddities.
+/* Returns the absolute version of `p`, free of oddities,
+ * dynamically allocated.
  */
 char* normalize_path(const char* p) {
     char* np = kmalloc(MAX_PATH);

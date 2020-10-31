@@ -1,1 +1,2 @@
+ldsym global 'kernel/symbols.map'
 c

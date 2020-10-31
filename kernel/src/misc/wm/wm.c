@@ -402,7 +402,7 @@ void wm_draw_mouse(rect_t old, rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
     for (int32_t y = 0; y < new.bottom - new.top; y++) {
-        memset((void*) addr, 0, (new.right - new.left)*fb.bpp/8);
+        memset((void*) addr, 127, (new.right - new.left)*fb.bpp/8);
         addr += fb.pitch;
     }
 }

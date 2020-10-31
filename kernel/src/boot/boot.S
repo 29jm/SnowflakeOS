@@ -30,7 +30,7 @@
     .long 32   # bpp
 
 # Reserve a stack for the initial thread.
-.section .bootstrap_stack, "aw", @nobits
+.section .bootstrap_stack
 stack_bottom:
     .skip 16384 # 16 KiB
 stack_top:
@@ -69,16 +69,16 @@ _start_higher_half:
     # invlpg 0
 
     movl $stack_top, %esp
+    mov $0, %ebp # stop stacktraces here
 
     # Transfer control to the main kernel.
-    # Pass the multiboot header adress and magic number (already pushed)
+    # Pass the multiboot header adress and magic number,
     # See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
     pushl %eax
     add $0xC0000000, %ebx
     pushl %ebx
 
     cli # disable until we setup handlers
-    mov $0, %ebp # stop stacktraces here
     call kernel_main
     add $12, %esp # cleanup the stack. useless here
 

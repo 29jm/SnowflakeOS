@@ -3,7 +3,9 @@
 # Expects to be run from the main Makefile
 grub_config=misc/grub.cfg
 
-echo "menuentry \"SnowflakeOS - Challenge Edition\" {" > $grub_config
+echo "insmod efi_gop" > $grub_config
+
+echo "menuentry \"SnowflakeOS - Challenge Edition\" {" >> $grub_config
 echo "    multiboot /boot/SnowflakeOS.kernel" >> $grub_config
 
 for f in "$ISODIR"/modules/*; do

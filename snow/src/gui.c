@@ -22,7 +22,7 @@ window_t* snow_open_window(char* title, int width, int height, uint32_t flags) {
     win->width = width;
     win->height = height;
     win->fb = (fb_t) {
-        .address = (uintptr_t) aligned_alloc(0x10, width*height*bpp/8),
+        .address = (uintptr_t) zalloc(width*height*bpp/8),
         .pitch = width*bpp/8,
         .width = width,
         .height = height,

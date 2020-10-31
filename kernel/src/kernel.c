@@ -16,6 +16,7 @@
 #include <kernel/fs.h>
 #include <kernel/ext2.h>
 #include <kernel/fpu.h>
+#include <kernel/stacktrace.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -68,12 +69,13 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
             continue;
         } else if (!strcmp(name, "terminal")) {
             proc_run_code(code, size);
+        } else if (!strcmp(name, "symbols")) {
+            init_stacktrace(code, size);
+            continue;
         }
 
         proc_register_program(name, code, size);
     }
-
-    proc_print_processes();
 
     init_proc();
 }

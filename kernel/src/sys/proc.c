@@ -123,7 +123,7 @@ void proc_run_code(uint8_t* code, uint32_t size) {
 
         // Stuff popped by `iret`
         "push $0x23\n"         // user ds selector
-        "push $0xBFFFFFFB\n"   // %esp
+        "push $0xBFFFFFFC\n"   // %esp
         "push $512\n"          // %eflags with `IF` bit set, equivalent to calling `sti`
         "push $0x1B\n"         // user cs selector
         "push $0x00001000\n"   // %eip
@@ -278,7 +278,7 @@ void proc_enter_usermode() {
         "mov %eax, %fs\n"
         "mov %eax, %gs\n"
         "push %eax\n"        // %ss
-        "push $0xBFFFFFFB\n" // %esp
+        "push $0xBFFFFFFC\n" // %esp
         "push $512\n"        // %eflags
         "push $0x1B\n"       // %cs
         "push $0x00001000\n" // %eip
