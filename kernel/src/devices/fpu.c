@@ -8,6 +8,7 @@ static uint8_t aligned_buff[512] __attribute__ ((aligned (16)));
 
 void init_fpu() {
     asm volatile ("fninit");
+    asm volatile ("fxrstor (%0)" :: "r" (aligned_buff));
 }
 
 /* Saves FPU context for `prev` and restores `next`'s.

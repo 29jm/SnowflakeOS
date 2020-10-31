@@ -15,6 +15,7 @@
 #include <kernel/sys.h>
 #include <kernel/fs.h>
 #include <kernel/ext2.h>
+#include <kernel/fpu.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -38,6 +39,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     printf("SnowflakeOS 0.5 - Challenge Edition\n");
     printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
 
+    init_fpu();
     init_fb(boot->framebuffer);
     init_gdt();
     init_idt();

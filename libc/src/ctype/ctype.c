@@ -1,7 +1,7 @@
 #include <ctype.h>
 
 int isalnum(int c) {
-    return isalpha(c) && isdigit(c);
+    return isalpha(c) || isdigit(c);
 }
 
 int isalpha(int c) {
@@ -56,14 +56,17 @@ int isxdigit(int c) {
 }
 
 int tolower(int c) {
-    if (!isalpha(c))
+    if (!isalpha(c) || islower(c)) {
         return c;
+    }
+
     return c + 32;
 }
 
 int toupper(int c) {
-    if (!isalpha(c))
+    if (!isalpha(c) || isupper(c)) {
         return c;
+    }
 
     return c - 32;
 }

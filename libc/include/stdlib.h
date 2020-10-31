@@ -39,6 +39,7 @@ void exit(int status);
 
 char* itoa(int value, char* str, int base);
 int atoi(const char* s);
+long int strtol(const char* nptr, char** endptr, int base);
 
 int abs(int n);
 
