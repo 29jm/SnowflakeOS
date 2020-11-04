@@ -27,16 +27,29 @@ typedef struct _proc_t {
     char* cwd;
 } process_t;
 
+/* This structure defines the interface of schedulers in SnowflakeOS.
+ */
 typedef struct _sched_t {
+    /* Returns the currently elected process */
     process_t* (*sched_get_current)(struct _sched_t*);
+    /* Adds a new process, already initialized, to the process pool */
     void (*sched_add)(struct _sched_t*, process_t*);
+    /* Returns the next process that should be run, depending to the specific
+       scheduler implemented. Note that it can choose not to change process by
+       returning the currently executing process */
     process_t* (*sched_next)(struct _sched_t*);
+    /* Removes a process from the process pool. Basically the inverse of
+     * `sched_add`. If the removed process was the one currently executing, the
+     * scheduler must ensure that `sched_next` keeps working: it'll be called
+     * right after.
+     */
     void (*sched_exit)(struct _sched_t*, process_t*);
 } sched_t;
 
 void init_proc();
 process_t* proc_run_code(uint8_t* code, uint32_t size);
 void proc_print_processes();
+void proc_schedule();
 void proc_timer_callback();
 void proc_exit_current_process();
 void proc_enter_usermode();
