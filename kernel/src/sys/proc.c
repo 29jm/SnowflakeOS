@@ -181,14 +181,15 @@ void proc_exit_current_process() {
 
     kfree(current_process->fds);
 
+    // This last line is actually safe, and necessary
     scheduler->sched_exit(scheduler, current_process);
+    proc_schedule();
 }
 
-/* Switches process on clock tick.
+/* Runs the scheduler. The scheduler may then decide to elect a new process, or
+ * not.
  */
-void proc_timer_callback(registers_t* regs) {
-    UNUSED(regs);
-
+void proc_schedule() {
     process_t* next = scheduler->sched_next(scheduler);
 
     if (next == current_process) {
@@ -197,6 +198,14 @@ void proc_timer_callback(registers_t* regs) {
 
     fpu_switch(current_process, next);
     proc_switch_process(next);
+}
+
+/* Called on clock ticks, calls the scheduler.
+ */
+void proc_timer_callback(registers_t* regs) {
+    UNUSED(regs);
+
+    proc_schedule();
 }
 
 /* Make the first jump to usermode.
@@ -225,7 +234,7 @@ void proc_enter_usermode() {
         "mov %eax, %gs\n"
         "push %eax\n"        // %ss
         "push $0xBFFFFFFC\n" // %esp
-        "push $512\n"        // %eflags with IF set
+        "push $0x202\n"      // %eflags with IF set
         "push $0x1B\n"       // %cs
         "push $0x00001000\n" // %eip
         "iret\n"
@@ -245,7 +254,7 @@ char* proc_get_cwd() {
 
 void proc_sleep(uint32_t ms) {
     current_process->sleep_ticks = (uint32_t) ((ms*TIMER_FREQ)/1000.0);
-    proc_timer_callback(NULL);
+    proc_schedule();
 }
 
 /* Extends the program's writeable memory by `size` bytes.
@@ -306,8 +315,6 @@ void proc_register_program(char* name, uint8_t* code, uint32_t size) {
     prog->size = size;
 
     list_add(programs, prog);
-
-    // printf("[proc] Added program %s\n", prog->name);
 }
 
 int32_t proc_exec(const char* name) {

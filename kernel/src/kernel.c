@@ -68,8 +68,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
         if (!strcmp(name, "disk")) {
             init_ext2(code, size);
             continue;
-        } else if (!strcmp(name, "terminal")) {
-            proc_run_code(code, size);
         } else if (!strcmp(name, "symbols")) {
             init_stacktrace(code, size);
             continue;
@@ -77,6 +75,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
         proc_register_program(name, code, size);
     }
+
+    proc_exec("terminal");
 
     proc_enter_usermode();
 }

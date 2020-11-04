@@ -72,7 +72,7 @@ static void syscall_handler(registers_t* regs) {
 static void syscall_yield(registers_t* regs) {
     UNUSED(regs);
 
-    // proc_switch_process();
+    proc_schedule();
 }
 
 static void syscall_exit(registers_t* regs) {

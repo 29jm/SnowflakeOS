@@ -1,13 +1,19 @@
 #include <kernel/sched_robin.h>
+#include <kernel/sys.h>
 
 #include <stdlib.h>
-#include <stdio.h>
 
+/* Wraps a `process_t*` for round robin purposes.
+ */
 typedef struct _proc_node_t {
     process_t* process;
     struct _proc_node_t* next;
 } proc_node_t;
 
+/* The round robin scheduler is simple and requires only a single circular list
+ * containing candidate processes. By having a `sched_t` as the first member of
+ * the struct, we allow casting `sched_robin_t*`s to `sched_t*`.
+ */
 typedef struct {
     sched_t sched;
     proc_node_t* processes;
@@ -39,14 +45,44 @@ void sched_robin_add(sched_t* sched, process_t* new_process) {
 process_t* sched_robin_next(sched_t* sched) {
     sched_robin_t* sc = (sched_robin_t*) sched;
 
-    // TODO: allow sleeping again
+    proc_node_t* p = sc->processes;
+
+	// Avoid switching to a sleeping process if possible
+	do {
+		if (p->next->process->sleep_ticks > 0) {
+			p->next->process->sleep_ticks--;
+		} else {
+			// We don't need to switch process
+			if (p->next == sc->processes) {
+				return sc->processes->process;
+			}
+
+			// We don't need to modify the process queue
+			if (p->next == sc->processes->next) {
+				break;
+			}
+
+			// We insert the next process between the current one and the one
+			// previously scheduled to be switched to.
+			proc_node_t* previous = p;
+			proc_node_t* next_proc = p->next;
+			proc_node_t* moved = sc->processes->next;
+
+			previous->next = next_proc->next;
+			next_proc->next = moved;
+			sc->processes->next = next_proc;
+
+			break;
+		}
+
+		p = p->next;
+	} while (p != sc->processes);
+
     sc->processes = sc->processes->next;
 
     return sc->processes->process;
 }
 
-/* Make sure that when exiting the current process,
- */
 void sched_robin_exit(sched_t* sched, process_t* process) {
     sched_robin_t* sc = (sched_robin_t*) sched;
     proc_node_t* p = sc->processes;
@@ -63,6 +99,8 @@ void sched_robin_exit(sched_t* sched, process_t* process) {
     kfree(to_remove);
 }
 
+/* Allocates a round robin scheduler.
+ */
 sched_t* sched_robin() {
     sched_robin_t* sched = kmalloc(sizeof(sched_robin_t));
 
