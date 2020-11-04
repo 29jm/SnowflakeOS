@@ -7,6 +7,8 @@
 #include <kernel/fs.h>
 #include <kernel/sys.h>
 
+#include <kernel/sched_robin.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,28 +21,30 @@ typedef struct {
 
 extern uint32_t irq_handler_end;
 
-process_t* current_process = 0;
+process_t* current_process = NULL;
+sched_t* scheduler = NULL;
 
 static uint32_t next_pid = 1;
 static list_t* programs;
 
 void init_proc() {
-    if (!current_process) {
-        printf("[proc] No program to start\n");
+    if (!scheduler || !scheduler->sched_get_current(scheduler)) {
+        printf("[proc] no program to start\n");
         abort();
     }
+
+    current_process = scheduler->sched_get_current(scheduler);
 
     CLI();
     timer_register_callback(&proc_timer_callback);
 
-    printf("[proc] Initial process: %d\n", current_process->pid);
     proc_enter_usermode();
 }
 
 /* Creates a process running the code specified at `code` in raw instructions
  * and add it to the process queue, after the currently executing process.
  */
-void proc_run_code(uint8_t* code, uint32_t size) {
+process_t* proc_run_code(uint8_t* code, uint32_t size) {
     static uintptr_t temp_page = 0;
 
     if (!temp_page) {
@@ -100,16 +104,6 @@ void proc_run_code(uint8_t* code, uint32_t size) {
         .fds = list_new()
     };
 
-    // Insert the process in the ring, create it if empty
-    if (current_process && current_process->next) {
-        process_t* p = current_process->next;
-        current_process->next = process;
-        process->next = p;
-    } else if (!current_process) {
-        current_process = process;
-        current_process->next = current_process;
-    }
-
     // We use this label as the return address from `proc_switch_process`
     uint32_t* jmp = &irq_handler_end;
 
@@ -147,7 +141,6 @@ void proc_run_code(uint8_t* code, uint32_t size) {
         "push $2\n"
         "push $3\n"
         "push $4\n"
-        // "sub $16, %%esp\n"
 
         // Save the new process's %esp in %eax
         "mov %%esp, %%eax\n"
@@ -160,13 +153,22 @@ void proc_run_code(uint8_t* code, uint32_t size) {
           [jmp] "r" (jmp)
         : "%eax", "%ebx"
     );
+
+    // TODO: do that in `init_proc`, call it earlier
+    if (!scheduler) {
+        scheduler = sched_robin();
+    }
+
+    scheduler->sched_add(scheduler, process);
+
+    return process;
 }
 
 /* Terminates the currently executing process.
  * Implements the `exit` system call.
  */
 void proc_exit_current_process() {
-    printf("[proc] Terminating process %d\n", current_process->pid);
+    printf("[proc] terminating process %d\n", current_process->pid);
 
     // Free allocated pages: code, heap, stack, page directory
     directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
@@ -194,26 +196,10 @@ void proc_exit_current_process() {
 
     kfree(current_process->fds);
 
-    printf("[proc] TODO: deal with exit wrt. scheduling\n");
-    abort();
+    scheduler->sched_exit(scheduler, current_process);
 
-    // Remove the process from our circular list
-    process_t* next_current = current_process->next;
-
-    if (next_current == current_process) {
-        printf("[proc] Killed last process alive\n");
-        abort();
-    }
-
-    process_t* p = current_process;
-
-    while (p->next != current_process) {
-        p = p->next;
-    }
-
-    p->next = next_current;
-
-    proc_switch_process(current_process->next);
+    // TODO: check if the following line is necessary in some form
+    // proc_switch_process(scheduler->sched_next(scheduler));
 }
 
 /* Switches process on clock tick.
@@ -221,44 +207,14 @@ void proc_exit_current_process() {
 void proc_timer_callback(registers_t* regs) {
     UNUSED(regs);
 
-    // process_t* p = current_process;
+    process_t* next = scheduler->sched_next(scheduler);
 
-    // // Avoid switching to a sleeping process if possible
-    // do {
-    //     if (p->next->sleep_ticks > 0) {
-    //         p->next->sleep_ticks--;
-    //     } else {
-    //         // We don't need to switch process
-    //         if (p->next == current_process) {
-    //             return;
-    //         }
+    if (next == current_process) {
+        return;
+    }
 
-    //         // We don't need to modify the process queue
-    //         if (p->next == current_process->next) {
-    //             break;
-    //         }
-
-    //         // We insert the next process between the current one and the one
-    //         // previously scheduled to be switched to.
-    //         process_t* previous = p;
-    //         process_t* next_proc = p->next;
-    //         process_t* moved = current_process->next;
-
-    //         previous->next = next_proc->next;
-    //         next_proc->next = moved;
-    //         current_process->next = next_proc;
-
-    //         break;
-    //     }
-
-    //     p = p->next;
-    // } while (p != current_process);
-
-    // printf("switch %d -> %d\n", current_process->pid, current_process->next->pid);
-    // printf("next kstack %p\n", current_process->next->kernel_stack);
-
-    fpu_switch(current_process, current_process->next);
-    proc_switch_process(current_process->next);
+    fpu_switch(current_process, next);
+    proc_switch_process(next);
 }
 
 /* Make the first jump to usermode.

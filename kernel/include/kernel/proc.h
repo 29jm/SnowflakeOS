@@ -11,7 +11,6 @@
 
 // Add new members to the end to avoid messing with the offsets
 typedef struct _proc_t {
-    struct _proc_t* next;
     uint32_t pid;
     // Sizes of the exectuable and of the stack in number of pages
     uint32_t stack_len;
@@ -28,8 +27,15 @@ typedef struct _proc_t {
     char* cwd;
 } process_t;
 
+typedef struct _sched_t {
+    process_t* (*sched_get_current)(struct _sched_t*);
+    void (*sched_add)(struct _sched_t*, process_t*);
+    process_t* (*sched_next)(struct _sched_t*);
+    void (*sched_exit)(struct _sched_t*, process_t*);
+} sched_t;
+
 void init_proc();
-void proc_run_code(uint8_t* code, uint32_t size);
+process_t* proc_run_code(uint8_t* code, uint32_t size);
 void proc_print_processes();
 void proc_timer_callback();
 void proc_exit_current_process();
