@@ -52,6 +52,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     init_timer();
     init_wm();
     init_fs();
+    init_proc();
 
     // Load GRUB modules as programs
     mod_t* modules = (mod_t*) boot->mods_addr;
@@ -77,5 +78,5 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
         proc_register_program(name, code, size);
     }
 
-    init_proc();
+    proc_enter_usermode();
 }

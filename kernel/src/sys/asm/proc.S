@@ -16,7 +16,7 @@ proc_switch_process: # void proc_switch_process(process_t* next);
 
     # %eax = next
     # current_process = next
-    mov 24(%esp), %eax
+    mov 20(%esp), %eax
     mov %eax, current_process
 
     # Set esp0 to the next process's kernel stack in the TSS

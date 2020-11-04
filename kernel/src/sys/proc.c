@@ -28,17 +28,7 @@ static uint32_t next_pid = 1;
 static list_t* programs;
 
 void init_proc() {
-    if (!scheduler || !scheduler->sched_get_current(scheduler)) {
-        printf("[proc] no program to start\n");
-        abort();
-    }
-
-    current_process = scheduler->sched_get_current(scheduler);
-
-    CLI();
-    timer_register_callback(&proc_timer_callback);
-
-    proc_enter_usermode();
+    scheduler = sched_robin();
 }
 
 /* Creates a process running the code specified at `code` in raw instructions
@@ -154,11 +144,6 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
         : "%eax", "%ebx"
     );
 
-    // TODO: do that in `init_proc`, call it earlier
-    if (!scheduler) {
-        scheduler = sched_robin();
-    }
-
     scheduler->sched_add(scheduler, process);
 
     return process;
@@ -197,9 +182,6 @@ void proc_exit_current_process() {
     kfree(current_process->fds);
 
     scheduler->sched_exit(scheduler, current_process);
-
-    // TODO: check if the following line is necessary in some form
-    // proc_switch_process(scheduler->sched_next(scheduler));
 }
 
 /* Switches process on clock tick.
@@ -222,6 +204,16 @@ void proc_timer_callback(registers_t* regs) {
  * to any interrupt handler; we have to `iret` ourselves.
  */
 void proc_enter_usermode() {
+    CLI(); // Interrupts will be reenabled by `iret`
+
+    current_process = scheduler->sched_get_current(scheduler);
+
+    if (!current_process) {
+        printf("[proc] no process to run\n");
+        abort();
+    }
+
+    timer_register_callback(&proc_timer_callback);
     gdt_set_kernel_stack(current_process->kernel_stack);
     paging_switch_directory(current_process->directory);
 
