@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define PROC_KERNEL_STACK_PAGES 10 // In pages
+#define PROC_STACK_PAGES 4
+#define PROC_KERNEL_STACK_PAGES 1
 #define PROC_MAX_FD 1024
 
 // Add new members to the end to avoid messing with the offsets
@@ -16,7 +17,9 @@ typedef struct _proc_t {
     uint32_t stack_len;
     uint32_t code_len;
     uintptr_t directory;
+    // Kernel stack used when the process is preempted
     uintptr_t kernel_stack;
+    // Kernel stack to restore when the process is switched to
     uintptr_t esp;
     uint32_t mem_len; // Size of program heap in bytes
     uint32_t sleep_ticks;
@@ -31,7 +34,7 @@ void proc_print_processes();
 void proc_timer_callback();
 void proc_exit_current_process();
 void proc_enter_usermode();
-void proc_switch_process();
+void proc_switch_process(process_t* next);
 uint32_t proc_get_current_pid();
 char* proc_get_cwd();
 void proc_sleep(uint32_t ms);

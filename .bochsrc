@@ -6,3 +6,4 @@ megs: 128
 magic_break: enabled=1
 mouse: type=imps2, enabled=1
 com1: enabled=1, mode=file, dev=serial.log
+display_library: x, options="gui_debug"

@@ -30,6 +30,8 @@ IRQ 15, 47
 .type irq_handler, @function
 
 irq_common_handler:
+    cli
+
     pusha
     push %ds
     push %es
@@ -57,6 +59,6 @@ irq_handler_end:
     pop %ds
     popa
 
-    add $8, %esp
+    add $8, %esp # pushed by `irqN`
 
     iret

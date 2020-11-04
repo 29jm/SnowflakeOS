@@ -25,12 +25,13 @@ static uint32_t next_pid = 1;
 static list_t* programs;
 
 void init_proc() {
-    timer_register_callback(&proc_timer_callback);
-
     if (!current_process) {
         printf("[proc] No program to start\n");
         abort();
     }
+
+    CLI();
+    timer_register_callback(&proc_timer_callback);
 
     printf("[proc] Initial process: %d\n", current_process->pid);
     proc_enter_usermode();
@@ -49,10 +50,10 @@ void proc_run_code(uint8_t* code, uint32_t size) {
     // Allocate one page more than the program size to accomodate static
     // variables. TODO: fix, critical. -> ELF loader?
     uint32_t num_code_pages = divide_up(size, 0x1000) + 1;
-    uint32_t num_stack_pages = PROC_KERNEL_STACK_PAGES;
+    uint32_t num_stack_pages = PROC_STACK_PAGES;
 
     process_t* process = kmalloc(sizeof(process_t));
-    uintptr_t kernel_stack = (uintptr_t) aligned_alloc(4, 0x1000) + 0x1000 - 4;
+    uintptr_t kernel_stack = (uintptr_t) aligned_alloc(4, 0x1000 * PROC_KERNEL_STACK_PAGES);
     uintptr_t pd_phys = pmm_alloc_page();
 
     // Copy the kernel page directory with a temporary mapping
@@ -92,8 +93,8 @@ void proc_run_code(uint8_t* code, uint32_t size) {
         .code_len = num_code_pages,
         .stack_len = num_stack_pages,
         .directory = pd_phys,
-        .kernel_stack = kernel_stack,
-        .esp = kernel_stack,
+        .kernel_stack = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
+        .esp = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
         .mem_len = 0,
         .sleep_ticks = 0,
         .fds = list_new()
@@ -142,7 +143,11 @@ void proc_run_code(uint8_t* code, uint32_t size) {
         "mov %[jmp], %%eax\n"
         "push %%eax\n"
         // Push garbage %ebx, %esi, %edi, %ebp
-        "sub $16, %%esp\n"
+        "push $1\n"
+        "push $2\n"
+        "push $3\n"
+        "push $4\n"
+        // "sub $16, %%esp\n"
 
         // Save the new process's %esp in %eax
         "mov %%esp, %%eax\n"
@@ -151,26 +156,10 @@ void proc_run_code(uint8_t* code, uint32_t size) {
         // Update the new process's %esp
         "mov %%eax, %[esp]\n"
         : [esp] "=r" (process->esp)
-        : [kstack] "r" (kernel_stack),
+        : [kstack] "r" (process->kernel_stack),
           [jmp] "r" (jmp)
         : "%eax", "%ebx"
     );
-}
-
-/* Prints the processes currently in the queue in execution order.
- * The second-printed process is the one currently executing.
- */
-void proc_print_processes() {
-    process_t* p = current_process->next;
-
-    printf("[proc] Process chain: %d -> ", current_process->pid);
-
-    while (p != current_process) {
-        printf("%d -> ", p->pid);
-        p = p->next;
-    }
-
-    printf("(loop)\n");
 }
 
 /* Terminates the currently executing process.
@@ -194,6 +183,9 @@ void proc_exit_current_process() {
     uintptr_t pd_page = pd[1023] & PAGE_FRAME;
     pmm_free_page(pd_page);
 
+    // Free the kernel stack
+    kfree((void*) (current_process->kernel_stack - 0x1000 * PROC_KERNEL_STACK_PAGES + 4));
+
     // Free the file descriptor list
     while (current_process->fds->count) {
         fs_close((uint32_t) list_first(current_process->fds));
@@ -201,6 +193,9 @@ void proc_exit_current_process() {
     }
 
     kfree(current_process->fds);
+
+    printf("[proc] TODO: deal with exit wrt. scheduling\n");
+    abort();
 
     // Remove the process from our circular list
     process_t* next_current = current_process->next;
@@ -218,7 +213,7 @@ void proc_exit_current_process() {
 
     p->next = next_current;
 
-    proc_switch_process();
+    proc_switch_process(current_process->next);
 }
 
 /* Switches process on clock tick.
@@ -226,41 +221,44 @@ void proc_exit_current_process() {
 void proc_timer_callback(registers_t* regs) {
     UNUSED(regs);
 
-    process_t* p = current_process;
+    // process_t* p = current_process;
 
-    // Avoid switching to a sleeping process if possible
-    do {
-        if (p->next->sleep_ticks > 0) {
-            p->next->sleep_ticks--;
-        } else {
-            // We don't need to switch process
-            if (p->next == current_process) {
-                return;
-            }
+    // // Avoid switching to a sleeping process if possible
+    // do {
+    //     if (p->next->sleep_ticks > 0) {
+    //         p->next->sleep_ticks--;
+    //     } else {
+    //         // We don't need to switch process
+    //         if (p->next == current_process) {
+    //             return;
+    //         }
 
-            // We don't need to modify the process queue
-            if (p->next == current_process->next) {
-                break;
-            }
+    //         // We don't need to modify the process queue
+    //         if (p->next == current_process->next) {
+    //             break;
+    //         }
 
-            // We insert the next process between the current one and the one
-            // previously scheduled to be switched to.
-            process_t* previous = p;
-            process_t* next_proc = p->next;
-            process_t* moved = current_process->next;
+    //         // We insert the next process between the current one and the one
+    //         // previously scheduled to be switched to.
+    //         process_t* previous = p;
+    //         process_t* next_proc = p->next;
+    //         process_t* moved = current_process->next;
 
-            previous->next = next_proc->next;
-            next_proc->next = moved;
-            current_process->next = next_proc;
+    //         previous->next = next_proc->next;
+    //         next_proc->next = moved;
+    //         current_process->next = next_proc;
 
-            break;
-        }
+    //         break;
+    //     }
 
-        p = p->next;
-    } while (p != current_process);
+    //     p = p->next;
+    // } while (p != current_process);
+
+    // printf("switch %d -> %d\n", current_process->pid, current_process->next->pid);
+    // printf("next kstack %p\n", current_process->next->kernel_stack);
 
     fpu_switch(current_process, current_process->next);
-    proc_switch_process();
+    proc_switch_process(current_process->next);
 }
 
 /* Make the first jump to usermode.
@@ -279,7 +277,7 @@ void proc_enter_usermode() {
         "mov %eax, %gs\n"
         "push %eax\n"        // %ss
         "push $0xBFFFFFFC\n" // %esp
-        "push $512\n"        // %eflags
+        "push $512\n"        // %eflags with IF set
         "push $0x1B\n"       // %cs
         "push $0x00001000\n" // %eip
         "iret\n"

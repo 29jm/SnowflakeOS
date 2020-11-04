@@ -2,19 +2,21 @@
 .align 4
 
 .global proc_switch_process
-proc_switch_process: # void proc_switch_process();
+proc_switch_process: # void proc_switch_process(next);
     # Save register state
     push %ebx
     push %esi
     push %edi
     push %ebp
 
-    # current_process->esp = %esp
+    # %eax = current_process
     mov current_process, %eax
+    # current_process->esp = %esp
     mov %esp, 24(%eax)
 
-    # %eax = current_process = current_process->next
-    mov (%eax), %eax
+    # %eax = next
+    # current_process = next
+    mov 24(%esp), %eax
     mov %eax, current_process
 
     # Set esp0 to the next process's kernel stack in the TSS
@@ -24,7 +26,7 @@ proc_switch_process: # void proc_switch_process();
     add $4, %esp
     pop %eax
 
-    # Switch to the next process's kernel stack
+    # Switch to the next process's saved kernel stack
     mov 24(%eax), %esp
 
     # Switch page directory
