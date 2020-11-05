@@ -38,8 +38,6 @@ bool focused = true;
 int main() {
     win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
 
-    syscall1(SYS_EXEC, (uintptr_t) "background");
-
     str_t* text_buf = str_new(prompt);
     str_t* input_buf = str_new("");
     cursor = true;

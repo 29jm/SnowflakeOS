@@ -127,6 +127,7 @@ uint32_t fs_open(const char* path, uint32_t mode) {
     entry->inode = inode;
     entry->mode = mode;
     entry->offset = 0;
+    entry->size = ext2_get_file_size(inode);
 
     list_add(file_table, entry);
 
@@ -203,6 +204,7 @@ uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size) {
         if (entry->fd == fd && entry->mode & O_APPEND) {
             uint32_t written = ext2_append(entry->inode, buf, size);
             entry->offset += written;
+            entry->size += written;
 
             return written;
         }
@@ -243,4 +245,42 @@ uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size) {
     }
 
     return 0;
+}
+
+int32_t fs_fseek(uint32_t fd, int32_t offset, uint32_t whence) {
+    for (uint32_t i = 0; i < file_table->count; i++) {
+        ft_entry_t* entry = list_get_at(file_table, i);
+
+        if (entry->fd == fd) {
+            switch (whence) {
+            case SEEK_SET:
+                entry->offset = offset;
+                break;
+            case SEEK_CUR:
+                entry->offset += offset;
+                break;
+            case SEEK_END:
+                entry->offset = entry->size + offset;
+                break;
+            default:
+                return -1;
+            }
+
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+int32_t fs_ftell(uint32_t fd) {
+    for (uint32_t i = 0; i < file_table->count; i++) {
+        ft_entry_t* entry = list_get_at(file_table, i);
+
+        if (entry->fd == fd) {
+            return entry->offset;
+        }
+    }
+
+    return -1;
 }

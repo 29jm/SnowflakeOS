@@ -8,8 +8,8 @@ MODS=$(patsubst %.c,%.mod,$(wildcard src/*.c))
 
 build: $(MODS)
 	$(info [modules] copying modules)
-	@mkdir -p $(ISO)/modules
-	@cp $(MODS) $(ISO)/modules
+	@mkdir -p $(TARGETROOT)/bin
+	@cp $(MODS) $(TARGETROOT)/bin
 
 install-headers:
 

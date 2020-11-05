@@ -20,3 +20,4 @@ uint32_t ext2_open(const char* path);
 uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size);
 uint32_t ext2_append(uint32_t inode, uint8_t* data, uint32_t size);
 ext2_directory_entry_t* ext2_readdir(uint32_t inode, uint32_t offset);
+uint32_t ext2_get_file_size(uint32_t inode);

@@ -13,19 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct {
-    char* name;
-    uint8_t* code;
-    uint32_t size;
-} program_t;
-
 extern uint32_t irq_handler_end;
 
 process_t* current_process = NULL;
 sched_t* scheduler = NULL;
 
 static uint32_t next_pid = 1;
-static list_t* programs;
 
 void init_proc() {
     scheduler = sched_robin();
@@ -92,7 +85,8 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
         .esp = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
         .mem_len = 0,
         .sleep_ticks = 0,
-        .fds = list_new()
+        .fds = list_new(),
+        .cwd = strdup("/")
     };
 
     // We use this label as the return address from `proc_switch_process`
@@ -304,33 +298,23 @@ void* proc_sbrk(intptr_t size) {
     return (void*) end;
 }
 
-void proc_register_program(char* name, uint8_t* code, uint32_t size) {
-    if (!programs) {
-        programs = list_new();
+int32_t proc_exec(const char* path) {
+    uint32_t fd = fs_open(path, O_RDONLY);
+
+    if (fd == FS_INVALID_FD) {
+        return -1;
     }
 
-    program_t* prog = kmalloc(sizeof(program_t));
+    fs_fseek(fd, 0, SEEK_END);
+    uint32_t size = fs_ftell(fd);
+    uint8_t* data = kmalloc(size);
+    fs_fseek(fd, 0, SEEK_SET);
+    fs_read(fd, data, size);
+    fs_close(fd);
 
-    prog->name = strdup(name);
-    prog->code = code;
-    prog->size = size;
+    proc_run_code(data, size);
 
-    list_add(programs, prog);
-}
-
-int32_t proc_exec(const char* name) {
-    for (uint32_t i = 0; i < programs->count; i++) {
-        program_t* prog = list_get_at(programs, i);
-
-        if (!strcmp(prog->name, name)) {
-            printf("[proc] exec program %s\n", name);
-            proc_run_code(prog->code, prog->size);
-
-            return 0;
-        }
-    }
-
-    return -1;
+    return 0;
 }
 
 /* Returns whether the current process posesses the file descriptor.

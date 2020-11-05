@@ -60,23 +60,24 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     for (uint32_t i = 0; i < boot->mods_count; i++) {
         mod_t mod = modules[i];
         uint32_t size = mod.mod_end - mod.mod_start;
-        char* name = (char*) mod.string;
+        char* module_name = (char*) mod.string;
 
-        uint8_t* code = (uint8_t*) kmalloc(size);
-        memcpy(code, (void*) mod.mod_start, size);
+        uint8_t* data = (uint8_t*) kmalloc(size);
+        memcpy(data, (void*) mod.mod_start, size);
 
-        if (!strcmp(name, "disk")) {
-            init_ext2(code, size);
+        if (!strcmp(module_name, "disk")) {
+            init_ext2(data, size);
             continue;
-        } else if (!strcmp(name, "symbols")) {
-            init_stacktrace(code, size);
+        } else if (!strcmp(module_name, "symbols")) {
+            init_stacktrace(data, size);
             continue;
         }
 
-        proc_register_program(name, code, size);
+        printf("[kernel] ignored module: %s\n", module_name);
     }
 
-    proc_exec("terminal");
+    proc_exec("/bin/terminal");
+    proc_exec("/bin/background");
 
     proc_enter_usermode();
 }

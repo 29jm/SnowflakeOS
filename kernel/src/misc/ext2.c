@@ -252,14 +252,11 @@ inode_t* ext2_get_inode(uint32_t inode) {
 
 /* Returns the inode corresponding to the file at `path`.
  * On error, returns 0, the invalid inode.
+ * Note: expects a normalized path.
  */
 uint32_t ext2_open(const char* path) {
     char* p = (char*) path;
     uint32_t n = strlen(p);
-
-    if (p[0] != '/') {
-        return 0;
-    }
 
     if (n == 1 && p[0] == '/') {
         return 2;
@@ -799,6 +796,14 @@ ext2_directory_entry_t* ext2_readdir(uint32_t inode, uint32_t offset) {
     }
 
     return entry;
+}
+
+uint32_t ext2_get_file_size(uint32_t inode) {
+    inode_t* in = ext2_get_inode(inode);
+    uint32_t size = in->size_lower;
+    kfree(in);
+
+    return size;
 }
 
 void init_ext2(uint8_t* data, uint32_t len) {

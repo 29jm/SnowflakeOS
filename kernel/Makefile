@@ -25,7 +25,7 @@ SnowflakeOS.kernel symbols.map: $(OBJS) linker.ld
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 build: SnowflakeOS.kernel
-	$(info [kernel] installing $@)
+	$(info [kernel] installing)
 	@mkdir -p $(ISO)/$(BOOTDIR)
 	@cp SnowflakeOS.kernel $(ISO)/$(BOOTDIR)
 

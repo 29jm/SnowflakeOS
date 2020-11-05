@@ -29,6 +29,12 @@ int main() {
     snow_render_window(win);
 
     while (true) {
+        wm_event_t evt = snow_get_event(win);
+
+        if (evt.type & WM_EVENT_KBD && evt.kbd.keycode == KBD_T) {
+            syscall1(SYS_EXEC, (uintptr_t) "terminal");
+        }
+
         sys_info_t info;
         syscall2(SYS_INFO, SYS_INFO_UPTIME, (uintptr_t) &info);
 
@@ -47,7 +53,7 @@ int main() {
         };
 
         snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
-        snow_draw_string(win->fb, "Snowflake OS 0.4", 3, 3, 0x00FFFFFF);
+        snow_draw_string(win->fb, "Snowflake OS 0.5", 3, 3, 0x00FFFFFF);
         snow_draw_string(win->fb, time_text, x, y, 0xFFFFFF);
         snow_render_window_partial(win, redraw);
 

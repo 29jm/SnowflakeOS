@@ -14,6 +14,7 @@ typedef struct {
     uint32_t inode;
     uint32_t mode;
     uint32_t offset;
+    uint32_t size;
 } ft_entry_t;
 
 void init_fs();
@@ -23,3 +24,5 @@ void fs_close(uint32_t fd);
 uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size);
 uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size);
 uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size);
+int32_t fs_fseek(uint32_t fd, int32_t offset, uint32_t whence);
+int32_t fs_ftell(uint32_t fd);

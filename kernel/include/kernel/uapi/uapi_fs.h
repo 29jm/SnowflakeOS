@@ -14,6 +14,10 @@
 #define O_TRUNC  8
 #define O_RDWR   16
 
+#define SEEK_SET 1
+#define SEEK_CUR 2
+#define SEEK_END 3
+
 typedef struct {
     uint32_t inode;
     uint16_t entry_size;

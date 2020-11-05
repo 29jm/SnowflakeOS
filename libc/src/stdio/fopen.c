@@ -92,3 +92,11 @@ int fputc(int c, FILE* stream) {
 
     return c;
 }
+
+int fseek(FILE* stream, long offset, int whence) {
+    return syscall3(SYS_FSEEK, stream->fd, offset, whence);
+}
+
+long ftell(FILE* stream) {
+    return syscall1(SYS_FTELL, stream->fd);
+}

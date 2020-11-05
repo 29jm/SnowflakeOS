@@ -30,6 +30,8 @@ static void syscall_read(registers_t* regs);
 static void syscall_write(registers_t* regs);
 static void syscall_readdir(registers_t* regs);
 static void syscall_mkdir(registers_t* regs);
+static void syscall_fseek(registers_t* regs);
+static void syscall_ftell(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -50,6 +52,8 @@ void init_syscall() {
     syscall_handlers[SYS_WRITE] = syscall_write;
     syscall_handlers[SYS_READDIR] = syscall_readdir;
     syscall_handlers[SYS_MKDIR] = syscall_mkdir;
+    syscall_handlers[SYS_FSEEK] = syscall_fseek;
+    syscall_handlers[SYS_FTELL] = syscall_ftell;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -213,4 +217,28 @@ static void syscall_mkdir(registers_t* regs) {
     uint32_t mode = regs->ecx;
 
     fs_mkdir(path, mode);
+}
+
+static void syscall_fseek(registers_t* regs) {
+    uint32_t fd = regs->ebx;
+    uint32_t offset = regs->ecx;
+    int32_t whence = regs->edx;
+
+    if (!proc_has_fd(fd)) {
+        regs->eax = (uint32_t) -1;
+        return;
+    }
+
+    regs->eax = fs_fseek(fd, offset, whence);
+}
+
+static void syscall_ftell(registers_t* regs) {
+    uint32_t fd = regs->ebx;
+
+    if (!proc_has_fd(fd)) {
+        regs->eax = (uint32_t) -1;
+        return;
+    }
+
+    regs->eax = fs_ftell(fd);
 }
