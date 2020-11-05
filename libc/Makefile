@@ -18,32 +18,41 @@ all: $(BINARIES)
 .PHONY: all clean build install-headers install-libs
 
 libc.a: $(OBJS)
-	$(AR) rcs $@ $(OBJS)
+	$(info [libc] linking $@)
+	@$(AR) rcs $@ $(OBJS)
 
 libk.a: $(LIBK_OBJS)
-	$(AR) rcs $@ $(LIBK_OBJS)
+	$(info [libc] linking $@)
+	@$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [libc] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [libc] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.libk.o: %.c
-	$(CC) -c $< -o $@ $(LIBK_CFLAGS)
+	$(info [libc] building $@)
+	@$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 %.libk.o: %.S
-	$(CC) -c $< -o $@ $(LIBK_CFLAGS)
+	$(info [libc] building $@)
+	@$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 clean:
-	rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
+	$(info [libc] cleaning up)
+	@rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
 
 build: install-libs
 
 install-headers:
-	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
+	$(info [libc] installing headers)
+	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
+	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 install-libs: $(BINARIES)
-	mkdir -p $(SYSROOT)/$(LIBDIR)
-	cp $(BINARIES) $(SYSROOT)/$(LIBDIR)
+	$(info [libc] installing shared libraries)
+	@mkdir -p $(SYSROOT)/$(LIBDIR)
+	@cp $(BINARIES) $(SYSROOT)/$(LIBDIR)

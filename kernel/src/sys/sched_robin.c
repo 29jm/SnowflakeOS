@@ -44,39 +44,38 @@ void sched_robin_add(sched_t* sched, process_t* new_process) {
 
 process_t* sched_robin_next(sched_t* sched) {
     sched_robin_t* sc = (sched_robin_t*) sched;
-
     proc_node_t* p = sc->processes;
 
-	// Avoid switching to a sleeping process if possible
-	do {
-		if (p->next->process->sleep_ticks > 0) {
-			p->next->process->sleep_ticks--;
-		} else {
-			// We don't need to switch process
-			if (p->next == sc->processes) {
-				return sc->processes->process;
-			}
+    // Avoid switching to a sleeping process if possible
+    do {
+        if (p->next->process->sleep_ticks > 0) {
+            p->next->process->sleep_ticks--;
+        } else {
+            // We don't need to switch process
+            if (p->next == sc->processes) {
+                return sc->processes->process;
+            }
 
-			// We don't need to modify the process queue
-			if (p->next == sc->processes->next) {
-				break;
-			}
+            // We don't need to modify the process queue
+            if (p->next == sc->processes->next) {
+                break;
+            }
 
-			// We insert the next process between the current one and the one
-			// previously scheduled to be switched to.
-			proc_node_t* previous = p;
-			proc_node_t* next_proc = p->next;
-			proc_node_t* moved = sc->processes->next;
+            // We insert the next process between the current one and the one
+            // previously scheduled to be switched to.
+            proc_node_t* previous = p;
+            proc_node_t* next_proc = p->next;
+            proc_node_t* moved = sc->processes->next;
 
-			previous->next = next_proc->next;
-			next_proc->next = moved;
-			sc->processes->next = next_proc;
+            previous->next = next_proc->next;
+            next_proc->next = moved;
+            sc->processes->next = next_proc;
 
-			break;
-		}
+            break;
+        }
 
-		p = p->next;
-	} while (p != sc->processes);
+        p = p->next;
+    } while (p != sc->processes);
 
     sc->processes = sc->processes->next;
 

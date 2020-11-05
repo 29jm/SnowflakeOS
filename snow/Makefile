@@ -6,23 +6,29 @@ all: libsnow.a
 .PHONY: all clean build install-headers install-libs
 
 libsnow.a: $(OBJS)
-	$(AR) rcs $@ $(OBJS)
+	$(info [snow] linking $@)
+	@$(AR) rcs $@ $(OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [snow] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [snow] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f *.a $(OBJS)
+	$(info [snow] cleaning up)
+	@rm -f *.a $(OBJS)
 
 build: install-libs
 
 install-headers:
-	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
+	$(info [snow] installing headers)
+	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
+	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 install-libs: libsnow.a
-	mkdir -p $(SYSROOT)/$(LIBDIR)
-	cp libsnow.a $(SYSROOT)/$(LIBDIR)
+	$(info [snow] installing shared libraries)
+	@mkdir -p $(SYSROOT)/$(LIBDIR)
+	@cp libsnow.a $(SYSROOT)/$(LIBDIR)

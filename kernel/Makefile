@@ -8,25 +8,32 @@ OBJS+=$(patsubst %.S,%.o,$(shell find src -name '*.S'))
 .PHONY: all clean build install-headers install-kernel
 
 SnowflakeOS.kernel symbols.map: $(OBJS) linker.ld
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-	awk '$$1 ~ /0x[0-9a-f]{16}/ {print substr($$1, 3), $$2}' linker.map > symbols.map
-	mkdir -p $(ISO)/modules
-	cp symbols.map $(ISO)/modules/
-	rm linker.map
+	$(info [kernel] linking kernel)
+	@$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(info [kernel] generating symbol table)
+	@awk '$$1 ~ /0x[0-9a-f]{16}/ {print substr($$1, 3), $$2}' linker.map > symbols.map
+	@mkdir -p $(ISO)/modules
+	@cp symbols.map $(ISO)/modules/
+	@rm linker.map
 
 %.o: %.c
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [kernel] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [kernel] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 build: SnowflakeOS.kernel
-	mkdir -p $(ISO)/$(BOOTDIR)
-	cp SnowflakeOS.kernel $(ISO)/$(BOOTDIR)
+	$(info [kernel] installing $@)
+	@mkdir -p $(ISO)/$(BOOTDIR)
+	@cp SnowflakeOS.kernel $(ISO)/$(BOOTDIR)
 
 install-headers:
-	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
+	$(info [kernel] installing headers)
+	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
+	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 clean:
-	rm -f SnowflakeOS.kernel $(OBJS) *.o */*.o */*/*.o *.map
+	$(info [kernel] cleaning)
+	@rm -f SnowflakeOS.kernel $(OBJS) *.o */*.o */*/*.o *.map

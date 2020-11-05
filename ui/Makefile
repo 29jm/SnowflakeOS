@@ -6,20 +6,25 @@ all: libui.a
 .PHONY: all clean build install-headers install-libs
 
 libui.a: $(OBJS)
-	$(AR) rcs $@ $(OBJS)
+	$(info [ui] linking $@)
+	@$(AR) rcs $@ $(OBJS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(info [ui] building $@)
+	@$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f *.a $(OBJS)
+	$(info [ui] building $@)
+	@rm -f *.a $(OBJS)
 
 build: install-libs
 
 install-headers:
-	mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	cp -rT include $(SYSROOT)/$(INCLUDEDIR)
+	$(info [ui] installing headers)
+	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
+	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
 
 install-libs: libui.a
-	mkdir -p $(SYSROOT)/$(LIBDIR)
-	cp libui.a $(SYSROOT)/$(LIBDIR)
+	$(info [ui] installing shared libraries)
+	@mkdir -p $(SYSROOT)/$(LIBDIR)
+	@cp libui.a $(SYSROOT)/$(LIBDIR)

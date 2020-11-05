@@ -14,6 +14,7 @@ SYSROOT=$(PWD)/$(SYSROOTDIR)
 
 PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
 
+MAKE:=$(MAKE) -s
 LD=$(HOST)-ld
 AR=$(HOST)-ar
 AS=$(HOST)-as
@@ -53,7 +54,8 @@ build: $(PROJECTS)
 
 # Copy headers before building anything
 $(PROJECTS): $(PROJECT_HEADERS)
-	$(MAKE) -C $@ build
+	$(info [$@] building)
+	@$(MAKE) -C $@ build
 
 # Specify dependencies
 kernel: libc
@@ -70,48 +72,51 @@ bochs: SnowflakeOS.iso
 	cat serial.log
 
 clean: $(PROJECT_CLEAN)
-	rm -rf $(SYSROOTDIR)
-	rm -rf $(ISODIR)
-	rm -f SnowflakeOS.iso
-	rm -f misc/grub.cfg
-	rm -f misc/disk.img
-	rm -f misc/*.rgb
-	rm -f xbochs.log
-	rm -f irq.log
+	@rm -rf $(SYSROOTDIR)
+	@rm -rf $(ISODIR)
+	@rm -f SnowflakeOS.iso
+	@rm -f misc/grub.cfg
+	@rm -f misc/disk.img
+	@rm -f misc/*.rgb
+	@rm -f xbochs.log
+	@rm -f irq.log
 
 SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
-	mkdir -p $(ISODIR)/boot/grub
-	cp misc/grub.cfg $(ISODIR)/boot/grub
-	grub-mkrescue -o SnowflakeOS.iso $(ISODIR)
+	$(info [all] writing $@)
+	@mkdir -p $(ISODIR)/boot/grub
+	@cp misc/grub.cfg $(ISODIR)/boot/grub
+	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) &> /dev/null
 
 misc/pisos_16.rgb: assets/pisos_16.png
-	convert assets/pisos_16.png misc/pisos_16.rgb
+	@convert assets/pisos_16.png misc/pisos_16.rgb
 
 misc/wallpaper.rgb: assets/wallpaper.png
-	convert assets/wallpaper.png misc/wallpaper.rgb
+	@convert assets/wallpaper.png misc/wallpaper.rgb
 
 # The dependency on disk stuff is temporary
 misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh
-	cp misc/disk.img $(ISODIR)/modules/disk.img
-	bash ./misc/gen-grub-config.sh
+	$(info [all] generating grub config)
+	@cp misc/disk.img $(ISODIR)/modules/disk.img
+	@bash ./misc/gen-grub-config.sh
 
 misc/disk.img: misc/pisos_16.rgb misc/wallpaper.rgb
-	touch misc/disk.img
-	dd if=/dev/zero of=misc/disk.img bs=1024 count=10240
-	mkdir -p misc/root/etc
-	echo "hello ext2 world" > misc/root/motd
-	echo "version: 0.5" > misc/root/etc/config
-	mv misc/pisos_16.rgb misc/root/pisos_16.rgb
-	mv misc/wallpaper.rgb misc/root/wallpaper.rgb
-	mkfs.ext2 misc/disk.img -d misc/root
-	rm -r misc/root
+	$(info [all] writing disk image)
+	@touch misc/disk.img
+	@dd if=/dev/zero of=misc/disk.img bs=1024 count=10240 &> /dev/null
+	@mkdir -p misc/root/etc
+	@echo "hello ext2 world" > misc/root/motd
+	@echo "version: 0.5" > misc/root/etc/config
+	@mv misc/pisos_16.rgb misc/root/pisos_16.rgb
+	@mv misc/wallpaper.rgb misc/root/wallpaper.rgb
+	@mkfs.ext2 misc/disk.img -d misc/root &> /dev/null
+	@rm -r misc/root
 
 toolchain:
-	env -i toolchain/build-toolchain.sh
+	@env -i toolchain/build-toolchain.sh
 
 # Automatic rules for our generated sub-targets
 %.headers: %/
-	$(MAKE) -C $< install-headers
+	@$(MAKE) -C $< install-headers
 
 %.clean: %/
-	$(MAKE) -C $< clean
+	@$(MAKE) -C $< clean
