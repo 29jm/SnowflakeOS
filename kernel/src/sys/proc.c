@@ -42,8 +42,9 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
     }
 
     // Allocate one page more than the program size to accomodate static
-    // variables. TODO: fix, critical. -> ELF loader?
-    uint32_t num_code_pages = divide_up(size, 0x1000) + 1;
+    // variables.
+    // TODO: this assumes .bss sections are marked as progbits
+    uint32_t num_code_pages = divide_up(size, 0x1000);
     uint32_t num_stack_pages = PROC_STACK_PAGES;
 
     process_t* process = kmalloc(sizeof(process_t));

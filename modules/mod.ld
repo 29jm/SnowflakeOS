@@ -14,6 +14,7 @@ SECTIONS
     .data ALIGN(4):
     {
         *(.data)
+        *(.bss*) /* Make .bss 'PROGBITS' */
     }
 
     .rodata ALIGN(4):
