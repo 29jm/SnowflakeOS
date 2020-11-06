@@ -20,10 +20,10 @@ clean:
 	@find . -executable -type f -delete
 
 $(MODS): % : %.mod
+	$(info [modules] building $@)
 	mv $^ $@
 
 %.mod: %.c mod.ld src/start.o FORCE
-	$(info [modules] building $@)
 	@$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 %.o: %.S

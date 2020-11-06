@@ -1,3 +1,7 @@
+*
+!*.*
+!*/
+
 *.iso
 *.o
 *.pyc
@@ -5,12 +9,10 @@
 *.ini
 *.bin
 *.out
-*.mod
 *.a
 *.map
 *.img
 misc/grub.cfg
-Session.vim
 isodir
 sysroot
 toolchain/build

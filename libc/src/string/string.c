@@ -48,6 +48,19 @@ char* strdup(const char* s) {
     return strcpy(buff, s);
 }
 
+char* strndup(const char* s, size_t n) {
+    uint32_t size = 0;
+
+    while (size < n && s[size]) {
+        size++;
+    }
+
+    char* buff = (char*) malloc(size + 1);
+    buff[size] = '\0';
+
+    return (char*) strncpy(buff, s, size);
+}
+
 char* strchr(const char* s, int c) {
     int n = strlen(s);
 

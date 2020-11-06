@@ -1,4 +1,7 @@
+#ifndef _KERNEL_
+
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <kernel/uapi/uapi_syscall.h>
 #include <kernel/uapi/uapi_fs.h>
@@ -19,3 +22,9 @@ int mkdir(const char* pathname, mode_t mode) {
 int chdir(const char* path) {
     return syscall1(SYS_CHDIR, (uintptr_t) path);
 }
+
+char* getcwd(char* buf, size_t size) {
+    return (char*) syscall2(SYS_GETCWD, (uintptr_t) buf, (uintptr_t) size);
+}
+
+#endif

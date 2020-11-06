@@ -33,6 +33,7 @@ static void syscall_mkdir(registers_t* regs);
 static void syscall_fseek(registers_t* regs);
 static void syscall_ftell(registers_t* regs);
 static void syscall_chdir(registers_t* regs);
+static void syscall_getcwd(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -56,6 +57,7 @@ void init_syscall() {
     syscall_handlers[SYS_FSEEK] = syscall_fseek;
     syscall_handlers[SYS_FTELL] = syscall_ftell;
     syscall_handlers[SYS_CHDIR] = syscall_chdir;
+    syscall_handlers[SYS_GETCWD] = syscall_getcwd;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -158,8 +160,9 @@ static void syscall_info(registers_t* regs) {
 
 static void syscall_exec(registers_t* regs) {
     char* name = (char*) regs->ebx;
+    char** args = (char**) regs->ecx;
 
-    regs->eax = proc_exec(name);
+    regs->eax = proc_exec(name, args);
 }
 
 static void syscall_open(registers_t* regs) {
@@ -249,4 +252,19 @@ static void syscall_chdir(registers_t* regs) {
     const char* path = (const char*) regs->ebx;
 
     regs->eax = proch_chdir(path);
+}
+
+static void syscall_getcwd(registers_t* regs) {
+    char* buf = (char*) regs->ebx;
+    uint32_t size = regs->ecx;
+
+    char* cwd = proc_get_cwd();
+
+    if (strlen(cwd) + 1 > size) {
+        regs->eax = (uintptr_t) NULL;
+    } else {
+        regs->eax = (uintptr_t) strcpy(buf, cwd);
+    }
+
+    kfree(cwd);
 }

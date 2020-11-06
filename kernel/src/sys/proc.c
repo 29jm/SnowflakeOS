@@ -26,12 +26,21 @@ void init_proc() {
 
 /* Creates a process running the code specified at `code` in raw instructions
  * and add it to the process queue, after the currently executing process.
+ * `argv` is the array of arguments, NULL terminated.
  */
-process_t* proc_run_code(uint8_t* code, uint32_t size) {
+process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
     static uintptr_t temp_page = 0;
 
     if (!temp_page) {
         temp_page = (uintptr_t) kamalloc(0x1000, 0x1000);
+    }
+
+    // Save arguments before switching directory and losing them
+    list_t* args = list_new();
+
+    while (argv && *argv) {
+        list_add_front(args, strdup(*argv));
+        argv++;
     }
 
     // Allocate one page more than the program size to accomodate static
@@ -73,6 +82,44 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
     paging_map_pages(0xC0000000 - 0x1000 * num_stack_pages, stack_phys,
         num_stack_pages, PAGE_USER | PAGE_RW);
 
+    /* Setup the (argc, argv) part of the userstack, start by copying the given
+     * arguments on that stack. */
+    list_t* arglist = list_new();
+    char* ustack_char = (char*) (0xC0000000 - 1);
+
+    for (uint32_t i = 0; i < args->count; i++) {
+        char* arg = list_get_at(args, i);
+        uint32_t len = strlen(arg);
+
+        // We need (ustack_char - len) to be 4-bytes aligned
+        ustack_char -= ((uintptr_t) ustack_char - len) % 4;
+        char* dest = ustack_char - len;
+
+        strncpy(dest, arg, len);
+        ustack_char -= len + 1; // Keep pointing to a free byte
+
+        list_add(arglist, (void*) dest);
+        kfree(arg);
+    }
+
+    kfree(args);
+
+    /* Write `argv` to the stack with the pointers created previously.
+     * Note that we switch to an int pointer; we're writing addresses here. */
+    uint32_t* ustack_int = (uint32_t*) ((uintptr_t) ustack_char & ~0x3);
+
+    for (uint32_t i = 0; i < arglist->count; i++) {
+        char* arg = list_get_at(arglist, i);
+        *(ustack_int--) = (uintptr_t) arg;
+    }
+
+    // Push program arguments
+    uintptr_t argsptr = (uintptr_t) (ustack_int + 1);
+    *(ustack_int--) = arglist->count ? argsptr : (uintptr_t) NULL;
+    *(ustack_int--) = arglist->count;
+
+    kfree(arglist);
+
     // Switch to the original page directory
     paging_switch_directory(previous_pd);
 
@@ -82,7 +129,8 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
         .stack_len = num_stack_pages,
         .directory = pd_phys,
         .kernel_stack = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
-        .esp = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
+        .saved_kernel_stack = kernel_stack + PROC_KERNEL_STACK_PAGES * 0x1000 - 4,
+        .initial_user_stack = (uintptr_t) ustack_int,
         .mem_len = 0,
         .sleep_ticks = 0,
         .fds = list_new(),
@@ -103,8 +151,9 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
 
         // Stuff popped by `iret`
         "push $0x23\n"         // user ds selector
-        "push $0xBFFFFFFC\n"   // %esp
-        "push $512\n"          // %eflags with `IF` bit set, equivalent to calling `sti`
+        "mov %[ustack], %%eax\n"
+        "push %%eax\n"         // %esp
+        "push $0x202\n"        // %eflags with `IF` bit set
         "push $0x1B\n"         // user cs selector
         "push $0x00001000\n"   // %eip
         // Push error code, interrupt number
@@ -133,8 +182,9 @@ process_t* proc_run_code(uint8_t* code, uint32_t size) {
         "mov %%ebx, %%esp\n"
         // Update the new process's %esp
         "mov %%eax, %[esp]\n"
-        : [esp] "=r" (process->esp)
+        : [esp] "=r" (process->saved_kernel_stack)
         : [kstack] "r" (process->kernel_stack),
+          [ustack] "r" (process->initial_user_stack),
           [jmp] "r" (jmp)
         : "%eax", "%ebx"
     );
@@ -222,18 +272,20 @@ void proc_enter_usermode() {
     paging_switch_directory(current_process->directory);
 
     asm volatile (
-        "mov $0x23, %eax\n"
-        "mov %eax, %ds\n"
-        "mov %eax, %es\n"
-        "mov %eax, %fs\n"
-        "mov %eax, %gs\n"
-        "push %eax\n"        // %ss
-        "push $0xBFFFFFFC\n" // %esp
+        "mov $0x23, %%eax\n"
+        "mov %%eax, %%ds\n"
+        "mov %%eax, %%es\n"
+        "mov %%eax, %%fs\n"
+        "mov %%eax, %%gs\n"
+        "push %%eax\n"        // %ss
+        "mov %[ustack], %%eax\n"
+        "push %%eax\n"       // %esp
         "push $0x202\n"      // %eflags with IF set
         "push $0x1B\n"       // %cs
         "push $0x00001000\n" // %eip
         "iret\n"
-    );
+        :: [ustack] "r" (current_process->initial_user_stack)
+        : "%eax");
 }
 
 uint32_t proc_get_current_pid() {
@@ -298,7 +350,7 @@ void* proc_sbrk(intptr_t size) {
     return (void*) end;
 }
 
-int32_t proc_exec(const char* path) {
+int32_t proc_exec(const char* path, char** argv) {
     uint32_t fd = fs_open(path, O_RDONLY);
 
     // TODO: check it's not a directory
@@ -314,7 +366,7 @@ int32_t proc_exec(const char* path) {
     fs_read(fd, data, size);
     fs_close(fd);
 
-    proc_run_code(data, size);
+    proc_run_code(data, size, argv);
 
     return 0;
 }

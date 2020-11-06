@@ -1,5 +1,7 @@
 #include <kernel/serial.h>
 #include <kernel/com.h>
+#include <kernel/sys.h>
+
 #include <string.h>
 
 #define BUF_SIZE 2048
@@ -43,14 +45,12 @@ void serial_write(char c) {
     outportb(SERIAL_PORT, c);
 
     // In-kernel logging, for dmesg-like support
-    uint32_t prev_index = log_index;
-    log_index = (log_index + 1) % (BUF_SIZE - 1);
-
-    if (prev_index > log_index) {
+    if (log_index == 0) {
         memset(kernel_log, 0, BUF_SIZE);
     }
 
     kernel_log[log_index] = c;
+    log_index = (log_index + 1) % (BUF_SIZE - 1);
 }
 
 char* serial_get_log() {

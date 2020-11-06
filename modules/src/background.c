@@ -32,7 +32,7 @@ int main() {
         wm_event_t evt = snow_get_event(win);
 
         if (evt.type & WM_EVENT_KBD && evt.kbd.keycode == KBD_T) {
-            syscall1(SYS_EXEC, (uintptr_t) "terminal");
+            syscall2(SYS_EXEC, (uintptr_t) "terminal", (uintptr_t) NULL);
         }
 
         sys_info_t info;

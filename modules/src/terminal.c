@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 typedef struct {
     char* buf;
@@ -18,8 +19,8 @@ void interpret_cmd(str_t* text_buf, str_t* cmd);
 uint32_t count_lines(str_t* str);
 char* scroll_view(char* str);
 
-const uint32_t twidth = 400;
-const uint32_t theight = 300;
+const uint32_t twidth = 550;
+const uint32_t theight = 342;
 const uint32_t char_width = 8;
 const uint32_t char_height = 16;
 const uint32_t max_col = twidth / char_width - 1;
@@ -222,30 +223,50 @@ void str_append(str_t* str, const char* text) {
 }
 
 void interpret_cmd(str_t* text_buf, str_t* input_buf) {
-    char* cmd = input_buf->buf;
-
-    if (!strcmp(cmd, "")) {
-        return;
-    } else if (!strcmp(cmd, "uname")) {
-        str_append(text_buf, "SnowflakeOS 0.4\n");
-    } else if (!strcmp(cmd, "ls")) {
-        str_append(text_buf, "I do not know of this \"filesystem\" you speak of. Get off my lawn.\n");
-    } else if (!strcmp(cmd, "dmesg")) {
-        char klog[2048];
-        sys_info_t info;
-        info.kernel_log = klog;
-        syscall2(SYS_INFO, SYS_INFO_LOG, (uintptr_t) &info);
-        str_append(text_buf, klog);
-    } else if (!strcmp(cmd, "exit")) {
+    if (!strcmp(input_buf->buf, "exit")) {
         running = false;
-    } else {
-        int32_t ret = syscall1(SYS_EXEC, (uintptr_t) cmd);
+        return;
+    } else if (!strcmp(input_buf->buf, "log")) {
+        sys_info_t info = { .kernel_log = malloc(2048) };
 
-        if (ret != 0) {
-            str_append(text_buf, "invalid command: ");
-            str_append(text_buf, cmd);
-            str_append(text_buf, "\n");
+        syscall2(SYS_INFO, SYS_INFO_LOG, (uintptr_t) &info);
+        str_append(text_buf, info.kernel_log);
+        free(info.kernel_log);
+        return;
+    }
+
+    char* cmd = input_buf->buf;
+    uint32_t n_args = 0;
+    char** args = NULL;
+    char* next = cmd;
+
+    while (*next) {
+        args = realloc(args, (++n_args + 1) * sizeof(char*));
+
+        while (isspace(*next)) {
+            next++;
         }
+
+        uint32_t n = strchrnul(next, ' ') - next;
+        args[n_args - 1] = strndup(next, n);
+        args[n_args] = NULL;
+
+        next = strchrnul(next, ' ');
+    }
+
+    int32_t ret = syscall2(SYS_EXEC, (uintptr_t) args[0], (uintptr_t) args);
+
+    while (args && *args) {
+        free(*args);
+        args++;
+    }
+
+    free(args);
+
+    if (ret != 0) {
+        str_append(text_buf, "invalid command: ");
+        str_append(text_buf, cmd);
+        str_append(text_buf, "\n");
     }
 }
 

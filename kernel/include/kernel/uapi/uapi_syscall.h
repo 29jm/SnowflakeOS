@@ -21,7 +21,8 @@
 #define SYS_FSEEK 15
 #define SYS_FTELL 16
 #define SYS_CHDIR 17
-#define SYS_MAX 18 // First invalid syscall number
+#define SYS_GETCWD 18
+#define SYS_MAX 19 // First invalid syscall number
 
 #define SYS_INFO_UPTIME 1
 #define SYS_INFO_MEMORY 2

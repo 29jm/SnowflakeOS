@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <kernel/uapi/uapi_fs.h>
+
 typedef uint32_t ino_t;
 
 typedef struct {
