@@ -76,8 +76,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
         printf("[kernel] ignored module: %s\n", module_name);
     }
 
-    proc_exec("/bin/terminal");
-    proc_exec("/bin/background");
+    proc_exec("/background");
+    proc_exec("/terminal");
 
     proc_enter_usermode();
 }

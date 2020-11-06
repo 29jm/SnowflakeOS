@@ -301,6 +301,8 @@ void* proc_sbrk(intptr_t size) {
 int32_t proc_exec(const char* path) {
     uint32_t fd = fs_open(path, O_RDONLY);
 
+    // TODO: check it's not a directory
+
     if (fd == FS_INVALID_FD) {
         return -1;
     }
@@ -342,4 +344,21 @@ void proc_close(uint32_t fd) {
     }
 
     fs_close(fd);
+}
+
+int32_t proch_chdir(const char* path) {
+    // TODO: replace existence check with `stat` or something
+    char* npath = fs_normalize_path(path);
+    uint32_t fd = fs_open(npath, O_RDONLY);
+
+    if (fd == FS_INVALID_FD) {
+        kfree(npath);
+        return -1;
+    }
+
+    fs_close(fd);
+    kfree(current_process->cwd);
+    current_process->cwd = npath;
+
+    return 0;
 }

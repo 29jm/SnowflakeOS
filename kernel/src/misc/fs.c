@@ -19,12 +19,16 @@ void init_fs() {
 /* Returns the absolute version of `p`, free of oddities,
  * dynamically allocated.
  */
-char* normalize_path(const char* p) {
+char* fs_normalize_path(const char* p) {
     char* np = kmalloc(MAX_PATH);
     strcpy(np, p);
 
     if (!strcmp(np, "/")) {
         return np;
+    }
+
+    if (!strcmp(np, ".")) {
+        return proc_get_cwd();
     }
 
     // Make the path absolute
@@ -100,7 +104,7 @@ char* basename(const char* p) {
 }
 
 uint32_t fs_open(const char* path, uint32_t mode) {
-    char* npath = normalize_path(path);
+    char* npath = fs_normalize_path(path);
     uint32_t inode = 0;
 
     if (mode & O_CREAT) {
@@ -110,16 +114,14 @@ uint32_t fs_open(const char* path, uint32_t mode) {
         inode = ext2_create(filename, parent_inode);
         kfree(parent_path);
     } else if (mode & O_RDONLY) {
-        inode = ext2_open(path);
+        inode = ext2_open(npath);
     }
 
     kfree(npath);
 
-    if (!inode) {
+    if (inode == FS_INVALID_INODE) {
         return FS_INVALID_FD;
     }
-
-    // TODO: check that it's not already opened
 
     ft_entry_t* entry = kmalloc(sizeof(ft_entry_t));
 
@@ -138,7 +140,7 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
     UNUSED(mode);
 
     uint32_t inode = 0;
-    char* np = normalize_path(path);
+    char* np = fs_normalize_path(path);
 
     char* parent_path = dirname(np);
     char* filename = basename(np);

@@ -18,6 +18,7 @@ typedef struct {
 } ft_entry_t;
 
 void init_fs();
+char* fs_normalize_path(const char* p);
 uint32_t fs_open(const char* path, uint32_t mode);
 uint32_t fs_mkdir(const char* path, uint32_t mode);
 void fs_close(uint32_t fd);

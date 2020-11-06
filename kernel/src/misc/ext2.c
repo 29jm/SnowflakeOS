@@ -255,47 +255,43 @@ inode_t* ext2_get_inode(uint32_t inode) {
  * Note: expects a normalized path.
  */
 uint32_t ext2_open(const char* path) {
-    char* p = (char*) path;
-    uint32_t n = strlen(p);
-
-    if (n == 1 && p[0] == '/') {
-        return 2;
+    if (!strcmp(path++, "/")) {
+        return EXT2_ROOT_INODE;
     }
 
-    p++;
+    uint32_t inode = EXT2_ROOT_INODE;
 
-    inode_t* in = ext2_get_inode(EXT2_ROOT_INODE);
-    uint8_t* block = kmalloc(block_size);
-    ext2_read_block(in->dbp[0], block);
+    while (true) {
+        uint32_t offset = 0;
+        ext2_directory_entry_t* entry;
+        uint32_t prev_inode = inode;
+        bool last_component = strchr(path, '/') == NULL;
 
-    ext2_directory_entry_t* entry = (ext2_directory_entry_t*) block;
+        while ((entry = ext2_readdir(inode, offset)) && entry->type != DTYPE_INVALID) {
+            offset += entry->entry_size;
+            bool match = !strncmp(path, entry->name, entry->name_len_low);
+            bool isdir = entry->type == DTYPE_DIR;
+            uint32_t potential_inode = entry->inode;
 
-    while (p < path + n && entry->type != DTYPE_INVALID) {
-        char* c = strchrnul(p, '/');
-        uint32_t len = c ? (uint32_t) (c - p) : strlen(p);
+            kfree(entry);
 
-        if (!memcmp(p, entry->name, len)) {
-            p += len + 1;
+            if (!match) {
+                continue;
+            }
 
-            if (p >= path + n) {
-                kfree(block);
-                kfree(in);
-
-                return entry->inode;
-            } else {
-                kfree(in);
-                in = ext2_get_inode(entry->inode);
-
-                ext2_read_block(in->dbp[0], block);
-                entry = (ext2_directory_entry_t*) block;
+            if (last_component) {
+                return potential_inode;
+            } else if (isdir) {
+                inode = potential_inode;
+                path = strrchr(path, '/') + 1;
+                break;
             }
         }
 
-        entry = (ext2_directory_entry_t*) ((uintptr_t) entry + entry->entry_size);
+        if (inode == prev_inode) {
+            break;
+        }
     }
-
-    kfree(in);
-    kfree(block);
 
     return 0;
 }

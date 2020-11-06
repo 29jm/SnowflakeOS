@@ -22,7 +22,11 @@ typedef struct {
 process_t* sched_robin_get_current(sched_t* sched) {
     sched_robin_t* sc = (sched_robin_t*) sched;
 
-    return sc->processes->process;
+    if (sc->processes) {
+        return sc->processes->process;
+    }
+
+    return NULL;
 }
 
 void sched_robin_add(sched_t* sched, process_t* new_process) {

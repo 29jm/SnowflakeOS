@@ -32,6 +32,7 @@ static void syscall_readdir(registers_t* regs);
 static void syscall_mkdir(registers_t* regs);
 static void syscall_fseek(registers_t* regs);
 static void syscall_ftell(registers_t* regs);
+static void syscall_chdir(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -54,6 +55,7 @@ void init_syscall() {
     syscall_handlers[SYS_MKDIR] = syscall_mkdir;
     syscall_handlers[SYS_FSEEK] = syscall_fseek;
     syscall_handlers[SYS_FTELL] = syscall_ftell;
+    syscall_handlers[SYS_CHDIR] = syscall_chdir;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -241,4 +243,10 @@ static void syscall_ftell(registers_t* regs) {
     }
 
     regs->eax = fs_ftell(fd);
+}
+
+static void syscall_chdir(registers_t* regs) {
+    const char* path = (const char*) regs->ebx;
+
+    regs->eax = proch_chdir(path);
 }

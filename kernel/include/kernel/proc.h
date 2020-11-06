@@ -62,3 +62,4 @@ int32_t proc_exec(const char* name);
 bool proc_has_fd(uint32_t fd);
 uint32_t proc_open(const char* path, uint32_t mode);
 void proc_close(uint32_t fd);
+int32_t proch_chdir(const char* path);
