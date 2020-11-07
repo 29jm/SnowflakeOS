@@ -27,7 +27,8 @@ typedef struct _proc_t {
     char* cwd;
 } process_t;
 
-/* This structure defines the interface of schedulers in SnowflakeOS.
+/* This structure defines the inte
+rface of schedulers in SnowflakeOS.
  */
 typedef struct _sched_t {
     /* Returns the currently elected process */

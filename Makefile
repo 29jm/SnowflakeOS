@@ -66,7 +66,7 @@ qemu: SnowflakeOS.iso
 	cat serial.log
 
 bochs: SnowflakeOS.iso
-	bochs -q -rc .bochsrc_cmds
+	bochs -q -rc .bochsrc_cmds 
 	cat serial.log
 
 clean: $(PROJECT_CLEAN)

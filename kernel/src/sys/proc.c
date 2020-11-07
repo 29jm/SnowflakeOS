@@ -7,7 +7,7 @@
 #include <kernel/fs.h>
 #include <kernel/sys.h>
 
-#include <kernel/sched_robin.h>
+#include <kernel/sched_mlfq.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +28,7 @@ static uint32_t next_pid = 1;
 static list_t* programs;
 
 void init_proc() {
-    scheduler = sched_robin();
+    scheduler = sched_mlfq();
 }
 
 /* Creates a process running the code specified at `code` in raw instructions
@@ -202,10 +202,12 @@ void proc_schedule() {
 
 /* Called on clock ticks, calls the scheduler.
  */
-void proc_timer_callback(registers_t* regs) {
-    UNUSED(regs);
 
+void proc_timer_callback(registers_t* regs) {
+    
+    UNUSED(regs);
     proc_schedule();
+ 
 }
 
 /* Make the first jump to usermode.

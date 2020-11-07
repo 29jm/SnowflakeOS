@@ -2,4 +2,4 @@
 
 #include <kernel/proc.h>
 
-sched_t* sched_robin();
+sched_t* sched_mlfq();
