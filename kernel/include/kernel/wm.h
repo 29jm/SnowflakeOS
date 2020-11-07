@@ -1,10 +1,10 @@
 #pragma once
 
 #include <kernel/fb.h>
-#include <kernel/list.h>
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <list.h>
 
 #include <kernel/uapi/uapi_wm.h>
 

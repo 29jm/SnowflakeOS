@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/list.h>
+#include <list.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,7 +25,7 @@ typedef struct _proc_t {
     uint32_t mem_len; // Size of program heap in bytes
     uint32_t sleep_ticks;
     uint8_t fpu_registers[512];
-    list_t* fds;
+    list_t fds;
     char* cwd;
 } process_t;
 
@@ -64,4 +64,4 @@ int32_t proc_exec(const char* path, char** argv);
 bool proc_has_fd(uint32_t fd);
 uint32_t proc_open(const char* path, uint32_t mode);
 void proc_close(uint32_t fd);
-int32_t proch_chdir(const char* path);
+int32_t proc_chdir(const char* path);

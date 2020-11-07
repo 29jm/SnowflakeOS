@@ -90,6 +90,10 @@ void sched_robin_exit(sched_t* sched, process_t* process) {
     sched_robin_t* sc = (sched_robin_t*) sched;
     proc_node_t* p = sc->processes;
 
+    if (sc->processes == sc->processes->next) {
+        abort();
+    }
+
     while (p->next->process != process) {
         p = p->next;
     }

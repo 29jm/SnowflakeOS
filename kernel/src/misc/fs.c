@@ -1,19 +1,19 @@
 #include <kernel/fs.h>
 #include <kernel/ext2.h>
 #include <kernel/proc.h>
-#include <kernel/list.h>
 #include <kernel/sys.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <list.h>
 #include <stdio.h>
 #include <math.h>
 
-static list_t* file_table;
+static list_t file_table;
 static uint32_t current_fd;
 
 void init_fs() {
-    file_table = list_new();
+    file_table = LIST_HEAD_INIT(file_table);
 }
 
 /* Returns the absolute version of `p`, free of oddities,
@@ -131,7 +131,7 @@ uint32_t fs_open(const char* path, uint32_t mode) {
     entry->offset = 0;
     entry->size = ext2_get_file_size(inode);
 
-    list_add(file_table, entry);
+    list_add(&file_table, entry);
 
     return entry->fd;
 }
@@ -161,19 +161,20 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
 void fs_print_open() {
     printf("[fs] open file descriptors: ");
 
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        printf("%d -> ", ((ft_entry_t*) list_get_at(file_table, i))->fd);
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
+        printf("%d -> ", entry->fd);
     }
 
     printf("end\n");
 }
 
 void fs_close(uint32_t fd) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    list_t* iter;
+    ft_entry_t* entry;
+    list_for_each(iter, entry, &file_table) {
         if (entry->fd == fd) {
-            list_remove_at(file_table, i);
+            list_del(iter);
             kfree(entry);
             return;
         }
@@ -181,9 +182,8 @@ void fs_close(uint32_t fd) {
 }
 
 uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
         if (entry->fd == fd && (entry->mode & O_RDONLY || entry->mode & O_RDWR)) {
             uint32_t read = ext2_read(entry->inode, entry->offset, buf, size);
             entry->offset += read;
@@ -200,9 +200,8 @@ uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size) {
 }
 
 uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
         if (entry->fd == fd && entry->mode & O_APPEND) {
             uint32_t written = ext2_append(entry->inode, buf, size);
             entry->offset += written;
@@ -216,9 +215,8 @@ uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size) {
 }
 
 uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
         if (entry->fd == fd && entry->mode & O_RDONLY) {
             ext2_directory_entry_t* ent = ext2_readdir(entry->inode, entry->offset);
 
@@ -250,9 +248,8 @@ uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size) {
 }
 
 int32_t fs_fseek(uint32_t fd, int32_t offset, uint32_t whence) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
         if (entry->fd == fd) {
             switch (whence) {
             case SEEK_SET:
@@ -276,9 +273,8 @@ int32_t fs_fseek(uint32_t fd, int32_t offset, uint32_t whence) {
 }
 
 int32_t fs_ftell(uint32_t fd) {
-    for (uint32_t i = 0; i < file_table->count; i++) {
-        ft_entry_t* entry = list_get_at(file_table, i);
-
+    ft_entry_t* entry;
+    list_for_each_entry(entry, &file_table) {
         if (entry->fd == fd) {
             return entry->offset;
         }

@@ -36,10 +36,10 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
     }
 
     // Save arguments before switching directory and losing them
-    list_t* args = list_new();
+    list_t args = LIST_HEAD_INIT(args);
 
     while (argv && *argv) {
-        list_add_front(args, strdup(*argv));
+        list_add_front(&args, strdup(*argv));
         argv++;
     }
 
@@ -84,11 +84,11 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
 
     /* Setup the (argc, argv) part of the userstack, start by copying the given
      * arguments on that stack. */
-    list_t* arglist = list_new();
+    list_t arglist = LIST_HEAD_INIT(arglist);
     char* ustack_char = (char*) (0xC0000000 - 1);
 
-    for (uint32_t i = 0; i < args->count; i++) {
-        char* arg = list_get_at(args, i);
+    char* arg;
+    list_for_each_entry(arg, &args) {
         uint32_t len = strlen(arg);
 
         // We need (ustack_char - len) to be 4-bytes aligned
@@ -98,27 +98,24 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
         strncpy(dest, arg, len);
         ustack_char -= len + 1; // Keep pointing to a free byte
 
-        list_add(arglist, (void*) dest);
+        list_add(&arglist, (void*) dest);
         kfree(arg);
     }
-
-    kfree(args);
 
     /* Write `argv` to the stack with the pointers created previously.
      * Note that we switch to an int pointer; we're writing addresses here. */
     uint32_t* ustack_int = (uint32_t*) ((uintptr_t) ustack_char & ~0x3);
+    uint32_t arg_count = 0;
 
-    for (uint32_t i = 0; i < arglist->count; i++) {
-        char* arg = list_get_at(arglist, i);
+    list_for_each_entry(arg, &arglist) {
         *(ustack_int--) = (uintptr_t) arg;
+        arg_count++;
     }
 
     // Push program arguments
     uintptr_t argsptr = (uintptr_t) (ustack_int + 1);
-    *(ustack_int--) = arglist->count ? argsptr : (uintptr_t) NULL;
-    *(ustack_int--) = arglist->count;
-
-    kfree(arglist);
+    *(ustack_int--) = arg_count ? argsptr : (uintptr_t) NULL;
+    *(ustack_int--) = arg_count;
 
     // Switch to the original page directory
     paging_switch_directory(previous_pd);
@@ -133,7 +130,7 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
         .initial_user_stack = (uintptr_t) ustack_int,
         .mem_len = 0,
         .sleep_ticks = 0,
-        .fds = list_new(),
+        .fds = LIST_HEAD_INIT(process->fds),
         .cwd = strdup("/")
     };
 
@@ -219,12 +216,10 @@ void proc_exit_current_process() {
     kfree((void*) (current_process->kernel_stack - 0x1000 * PROC_KERNEL_STACK_PAGES + 4));
 
     // Free the file descriptor list
-    while (current_process->fds->count) {
-        fs_close((uint32_t) list_first(current_process->fds));
-        list_remove_at(current_process->fds, 0);
+    while (!list_empty(&current_process->fds)) {
+        fs_close((uint32_t) list_first_entry(&current_process->fds, uint32_t)); // bit ugly
+        list_del(list_first(&current_process->fds));
     }
-
-    kfree(current_process->fds);
 
     // This last line is actually safe, and necessary
     scheduler->sched_exit(scheduler, current_process);
@@ -289,7 +284,11 @@ void proc_enter_usermode() {
 }
 
 uint32_t proc_get_current_pid() {
-    return current_process->pid;
+    if (current_process) {
+        return current_process->pid;
+    } else {
+        return 0;
+    }
 }
 
 /* Returns a dynamically allocated copy of the current process's current working
@@ -363,10 +362,16 @@ int32_t proc_exec(const char* path, char** argv) {
     uint32_t size = fs_ftell(fd);
     uint8_t* data = kmalloc(size);
     fs_fseek(fd, 0, SEEK_SET);
-    fs_read(fd, data, size);
+    uint32_t read = fs_read(fd, data, size);
     fs_close(fd);
 
-    proc_run_code(data, size, argv);
+    if (read == size && size) {
+        proc_run_code(data, size, argv);
+    } else {
+        printf("[proc] exec failed while reading the executable\n");
+        return -1;
+    }
+
 
     return 0;
 }
@@ -375,30 +380,39 @@ int32_t proc_exec(const char* path, char** argv) {
  * TODO: include mode check?
  */
 bool proc_has_fd(uint32_t fd) {
-    return list_get_index_of(current_process->fds, (void*) fd) < current_process->fds->count;
+    uint32_t proc_fd;
+    list_for_each_entry(proc_fd, &current_process->fds) {
+        if (proc_fd == fd) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 uint32_t proc_open(const char* path, uint32_t mode) {
     uint32_t fd = fs_open(path, mode);
 
     if (fd != FS_INVALID_FD) {
-        list_add_front(current_process->fds, (void*) fd);
+        list_add_front(&current_process->fds, (void*) fd);
     }
 
     return fd;
 }
 
 void proc_close(uint32_t fd) {
-    uint32_t idx = list_get_index_of(current_process->fds, (void*) fd);
-
-    if (idx < current_process->fds->count) {
-        list_remove_at(current_process->fds, idx);
+    list_t* iter;
+    uint32_t proc_fd;
+    list_for_each(iter, proc_fd, &current_process->fds) {
+        if (proc_fd == fd) {
+            fs_close(fd);
+            list_del(iter);
+            return;
+        }
     }
-
-    fs_close(fd);
 }
 
-int32_t proch_chdir(const char* path) {
+int32_t proc_chdir(const char* path) {
     // TODO: replace existence check with `stat` or something
     char* npath = fs_normalize_path(path);
     uint32_t fd = fs_open(npath, O_RDONLY);

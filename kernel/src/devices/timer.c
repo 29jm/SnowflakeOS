@@ -1,16 +1,15 @@
-#include <stdio.h>
-
 #include <kernel/timer.h>
-#include <kernel/list.h>
 #include <kernel/com.h>
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <list.h>
 
 static uint32_t current_tick;
-static list_t* callbacks;
+static list_t callbacks;
 
 void init_timer() {
-    callbacks = list_new();
+    callbacks = LIST_HEAD_INIT(callbacks);
 
     irq_register_handler(IRQ0, &timer_callback);
 
@@ -24,9 +23,9 @@ void init_timer() {
 void timer_callback(registers_t* regs) {
     current_tick++;
 
-    for (uint32_t i = 0; i < callbacks->count; i++) {
-        handler_t callback = *(handler_t*) list_get_at(callbacks, i);
-        callback(regs);
+    handler_t* callback;
+    list_for_each_entry(callback, &callbacks) {
+        (*callback)(regs);
     }
 }
 
@@ -46,16 +45,17 @@ void timer_register_callback(handler_t handler) {
     handler_t* callback = (handler_t*) kmalloc(sizeof(handler_t));
     *callback = handler;
 
-    list_add(callbacks, callback);
+    list_add(&callbacks, callback);
 }
 
 void timer_remove_callback(handler_t handler) {
-    for (uint32_t i = 0; i < callbacks->count; i++) {
-        handler_t* callback = list_get_at(callbacks, i);
-
+    list_t* iter;
+    handler_t* callback;
+    list_for_each(iter, callback, &callbacks) {
         if (*callback == handler) {
-            list_remove_at(callbacks, i);
-            break;
+            list_del(iter);
+            kfree(callback);
+            return;
         }
     }
 }

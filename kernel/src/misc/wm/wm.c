@@ -1,11 +1,11 @@
 #include <kernel/wm.h>
 #include <kernel/mouse.h>
 #include <kernel/kbd.h>
-#include <kernel/list.h>
 #include <kernel/sys.h>
 
 #include <stdio.h>
 #include <string.h>
+#include <list.h>
 #include <stdlib.h>
 
 #define MOUSE_SIZE 3
@@ -17,7 +17,7 @@ void wm_refresh_partial(rect_t clip);
 void wm_assign_position(wm_window_t* win);
 void wm_assign_z_orders();
 void wm_raise_window(wm_window_t* win);
-wm_window_t* wm_get_window(uint32_t id);
+list_t* wm_get_window(uint32_t id);
 void wm_print_windows();
 list_t* wm_get_windows_above(wm_window_t* win);
 rect_t wm_mouse_to_rect(mouse_t mouse);
@@ -28,7 +28,7 @@ void wm_kbd_callback(kbd_event_t event);
 /* Windows are ordered by z-index in this list, e.g. the foremost window is in
  * the last position.
  */
-static list_t* windows;
+static list_t windows;
 static wm_window_t* focused;
 static uint32_t id_count = 0;
 static fb_t fb;
@@ -36,7 +36,7 @@ static mouse_t mouse;
 
 void init_wm() {
     fb = fb_get_info();
-    windows = list_new();
+    windows = LIST_HEAD_INIT(windows);
 
     mouse.x = fb.width/2;
     mouse.y = fb.height/2;
@@ -60,44 +60,48 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
 
     win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
 
-    list_add_front(windows, win);
+    list_add_front(&windows, win);
     wm_assign_position(win);
+    wm_assign_z_orders();
     wm_raise_window(win);
 
     return win->id;
 }
 
 void wm_close_window(uint32_t win_id) {
-    wm_window_t* win = wm_get_window(win_id);
-    rect_t rect = rect_from_window(win);
+    list_t* item = wm_get_window(win_id);
 
-    if (win) {
-        uint32_t idx = list_get_index_of(windows, win);
-        list_remove_at(windows, idx);
+    if (item) {
+        wm_window_t* win = list_entry(item, wm_window_t);
+        rect_t rect = rect_from_window(win);
+
+        list_del(item);
         kfree((void*) win->kfb.address);
         kfree((void*) win);
+
+        if (!list_empty(&windows)) {
+            wm_raise_window(list_last_entry(&windows, wm_window_t));
+        }
+
+        wm_refresh_partial(rect);
     } else {
         printf("[wm] Close: failed to find window of id %d\n", win_id);
     }
-
-    if (windows->count) {
-        wm_raise_window(list_last(windows));
-    }
-
-    wm_refresh_partial(rect);
 }
 
 /* System call interface to draw a window. `clip` specifies which part to copy
  * from userspace and redraw. If `clip` is NULL, the whole window is redrawn.
  */
 void wm_render_window(uint32_t win_id, rect_t* clip) {
-    wm_window_t* win = wm_get_window(win_id);
+    list_t* item = wm_get_window(win_id);
     rect_t rect;
 
-    if (!win) {
+    if (!item) {
         printf("[wm] Render called by invalid window, id %d\n", win_id);
         return;
     }
+
+    wm_window_t* win = list_entry(item, wm_window_t);
 
     if (!clip) {
         clip = &rect;
@@ -127,13 +131,14 @@ void wm_render_window(uint32_t win_id, rect_t* clip) {
 }
 
 void wm_get_event(uint32_t win_id, wm_event_t* event) {
-    wm_window_t* win = wm_get_window(win_id);
+    list_t* item = wm_get_window(win_id);
 
-    if (!win) {
-        printf("[wm] Invalid window %d\n", win_id);
+    if (!item) {
+        printf("[wm] get_event: invalid window %d\n", win_id);
         return;
     }
 
+    wm_window_t* win = list_entry(item, wm_window_t);
     *event = win->event;
     memset(&win->event, 0, sizeof(wm_event_t));
 }
@@ -146,7 +151,15 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
  * By design, _only_ this function affects focus.
  */
 void wm_raise_window(wm_window_t* win) {
-    uint32_t idx = list_get_index_of(windows, win);
+    list_t* iter;
+    wm_window_t* w;
+
+    // Find the window's list_t* to maybe remove it
+    list_for_each(iter, w, &windows) {
+        if (w == win) {
+            break;
+        }
+    }
 
     // This is the first window to be opened
     if (!focused) {
@@ -167,7 +180,8 @@ void wm_raise_window(wm_window_t* win) {
     }
 
     // Change focus only then
-    list_add(windows, list_remove_at(windows, idx));
+    list_add(&windows, w);
+    list_del(iter);
     focused->event.type |= WM_EVENT_LOST_FOCUS;
     win->event.type |= WM_EVENT_GAINED_FOCUS;
     focused = win;
@@ -199,13 +213,22 @@ void wm_assign_position(wm_window_t* win) {
 /* Makes sure that z-level related flags are respected.
  */
 void wm_assign_z_orders() {
-    for (uint32_t i = 0; i < windows->count; i++) {
-        wm_window_t* win = list_get_at(windows, i); // O(n²)
+    list_t* iter;
+    wm_window_t* win;
 
-        if (win->flags & WM_BACKGROUND && i != 0) {
-            list_add_front(windows, list_remove_at(windows, i));
-        } else if (win->flags & WM_FOREGROUND) {
-            list_add(windows, list_remove_at(windows, i));
+    list_for_each(iter, win, &windows) {
+        if (win->flags & WM_BACKGROUND) {
+            list_del(iter);
+            list_add_front(&windows, win);
+            break;
+        }
+    }
+
+    list_for_each(iter, win, &windows) {
+        if (win->flags & WM_FOREGROUND) {
+            list_del(iter);
+            list_add(&windows, win);
+            break;
         }
     }
 }
@@ -253,57 +276,55 @@ void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
 void wm_draw_window(wm_window_t* win, rect_t rect) {
     rect_t win_rect = rect_from_window(win);
     list_t* clip_windows = wm_get_windows_above(win);
-    list_t* clip_rects = list_new();
+    list_t clip_rects = LIST_HEAD_INIT(clip_rects);
 
-    rect_add_clip_rect(clip_rects, rect);
+    rect_add_clip_rect(&clip_rects, rect);
 
     // Convert covering windows to clipping rects
-    while (clip_windows->count) {
-        wm_window_t* cw = list_remove_at(clip_windows, 0);
+    while (!list_empty(clip_windows)) {
+        wm_window_t* cw = list_first_entry(clip_windows, wm_window_t);
+        list_del(list_first(clip_windows));
         rect_t clip = rect_from_window(cw);
-        rect_subtract_clip_rect(clip_rects, clip);
+        rect_subtract_clip_rect(&clip_rects, clip);
     }
+
+    kfree(clip_windows);
 
     // Clip the mouse cursor too
     rect_t mouse_rect = wm_mouse_to_rect(mouse);
-    rect_subtract_clip_rect(clip_rects, mouse_rect);
+    rect_subtract_clip_rect(&clip_rects, mouse_rect);
 
     // Draw what's left
-    for (uint32_t i = 0; i < clip_rects->count; i++) {
-        rect_t* clip = list_get_at(clip_rects, i); // O(n²)
-
-        if (!rect_intersect(*clip, win_rect)) {
-            continue;
+    rect_t* clip;
+    list_for_each_entry(clip, &clip_rects) {
+        if (rect_intersect(*clip, win_rect)) {
+            wm_partial_draw_window(win, *clip);
         }
-
-        wm_partial_draw_window(win, *clip);
     }
 
-    rect_clear_clipped(clip_rects);
-    kfree(clip_rects);
-    kfree(clip_windows);
+    rect_clear_clipped(&clip_rects);
 }
 
 /* Refreshes only a part of the screen.
  * TODO: allow refreshing empty space, filled with black.
  */
 void wm_refresh_partial(rect_t clip) {
-    list_t* to_refresh = list_new();
-    list_add(to_refresh, rect_new_copy(clip));
+    list_t to_refresh = LIST_HEAD_INIT(to_refresh);
+    list_add(&to_refresh, rect_new_copy(clip));
 
-    for (uint32_t i = 0; i < windows->count; i++) {
-        wm_window_t* win = list_get_at(windows, i); // O(n²)
+    wm_window_t* win;
+    list_for_each_entry(win, &windows) {
         rect_t rect = rect_from_window(win);
 
-        if (rect_intersect(clip, rect)) {
+        if (rect_intersect(rect, clip)) {
             wm_draw_window(win, clip);
-            rect_subtract_clip_rect(to_refresh, rect);
+            rect_subtract_clip_rect(&to_refresh, rect);
         }
     }
 
     // Draw black areas where a refresh was needed but no window was present
-    for (uint32_t i = 0; i < to_refresh->count; i++) {
-        rect_t* r = list_get_at(to_refresh, i);
+    rect_t* r;
+    list_for_each_entry(r, &to_refresh) {
         uintptr_t off = fb.address + r->top*fb.pitch + r->left*fb.bpp/8;
         uint32_t size = (r->right - r->left + 1)*fb.bpp/8;
 
@@ -313,8 +334,7 @@ void wm_refresh_partial(rect_t clip) {
         }
     }
 
-    rect_clear_clipped(to_refresh);
-    kfree(to_refresh);
+    rect_clear_clipped(&to_refresh);
 }
 
 /* Redraws every visible area of the screen.
@@ -330,8 +350,8 @@ void wm_refresh_screen() {
 /* Other helpers */
 
 void wm_print_windows() {
-    for (uint32_t i = 1; i < windows->count; i++) {
-        wm_window_t* win = list_get_at(windows, i); // O(n²)
+    wm_window_t* win;
+    list_for_each_entry(win, &windows) {
         printf("%d -> ", win->id);
     }
 
@@ -341,17 +361,24 @@ void wm_print_windows() {
 /* Returns a list of all windows above `win` that overlap with it.
  */
 list_t* wm_get_windows_above(wm_window_t* win) {
-    list_t* list = list_new();
-
-    uint32_t idx = list_get_index_of(windows, win);
     rect_t win_rect = rect_from_window(win);
+    list_t* list = kmalloc(sizeof(list_t));
+    list_t* iter;
+    wm_window_t* w;
+    bool after = false;
+    *list = LIST_HEAD_INIT(*list);
 
-    for (uint32_t i = idx + 1; i < windows->count; i++) {
-        wm_window_t* next = list_get_at(windows, i);
-        rect_t rect = rect_from_window(next);
+    list_for_each(iter, w, &windows) {
+        if (after) {
+            rect_t rect = rect_from_window(w);
 
-        if (rect_intersect(win_rect, rect)) {
-            list_add_front(list, next);
+            if (rect_intersect(win_rect, rect)) {
+                list_add_front(list, w);
+            }
+        }
+
+        if (w == win) {
+            after = true;
         }
     }
 
@@ -360,12 +387,13 @@ list_t* wm_get_windows_above(wm_window_t* win) {
 
 /* Return the window object corresponding to the given id, NULL if none match.
  */
-wm_window_t* wm_get_window(uint32_t id) {
-    for (uint32_t i = 0; i < windows->count; i++) {
-        wm_window_t* win = list_get_at(windows, i);
+list_t* wm_get_window(uint32_t id) {
+    list_t* iter;
+    wm_window_t* win;
 
+    list_for_each(iter, win, &windows) {
         if (win->id == id) {
-            return win;
+            return iter;
         }
     }
 
@@ -384,8 +412,10 @@ rect_t wm_mouse_to_rect(mouse_t mouse) {
 /* Returns the foremost window containing the point at (x, y), NULL if none match.
  */
 wm_window_t* wm_window_at(int32_t x, int32_t y) {
-    for (int32_t i = windows->count - 1; i >= 0; i--) {
-        wm_window_t* win = list_get_at(windows, i);
+    list_t* iter;
+    wm_window_t* win;
+
+    list_for_each_entry_rev(iter, win, &windows) {
         rect_t r = rect_from_window(win);
 
         if (y >= r.top && y <= r.bottom && x >= r.left && x <= r.right) {
@@ -504,8 +534,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 }
 
 void wm_kbd_callback(kbd_event_t event) {
-    if (windows->count) {
-        wm_window_t* win = list_last(windows);
+    if (!list_empty(&windows)) {
+        wm_window_t* win = list_last_entry(&windows, wm_window_t);
 
         win->event.type |= WM_EVENT_KBD;
         win->event.kbd.keycode = event.keycode;

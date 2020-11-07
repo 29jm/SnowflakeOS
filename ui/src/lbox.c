@@ -9,8 +9,9 @@
  */
 
 void lbox_on_click(lbox_t* lbox, point_t pos) {
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
+    widget_t* child;
+
+    list_for_each_entry(child, &lbox->children) {
         point_t local = ui_to_child_local(child, pos);
 
         if (point_in_rect(pos, child->bounds)) {
@@ -23,12 +24,11 @@ void lbox_on_click(lbox_t* lbox, point_t pos) {
 
 void lbox_on_draw(lbox_t* lbox, fb_t fb) {
     // rect_t b = ui_get_absolute_bounds((widget_t*) lbox);
-
     // snow_draw_rect(fb, b.x, b.y, b.w, b.h, 0x000000);
 
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
+    widget_t* child;
 
+    list_for_each_entry(child, &lbox->children) {
         if (child->on_draw) {
             child->on_draw(child, fb);
         }
@@ -38,13 +38,12 @@ void lbox_on_draw(lbox_t* lbox, fb_t fb) {
 void lbox_on_resize(lbox_t* lbox) {
     uint32_t other_direction = lbox->direction == UI_HBOX ?
         UI_VBOX : UI_HBOX;
+    uint32_t n_children = 0;
+    widget_t* child;
 
     /* Size elements */
 
-    // In the opposite direction of the container
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
-
+    list_for_each_entry(child, &lbox->children) {
         if (child->flags & other_direction) {
             if (lbox->direction == UI_HBOX) {
                 child->bounds.h = lbox->widget.bounds.h;
@@ -60,16 +59,16 @@ void lbox_on_resize(lbox_t* lbox) {
             printf("[vbox] warning: container too narrow for element\n");
             child->bounds.w = lbox->widget.bounds.w;
         }
+
+        n_children++;
     }
 
     // Compute the size of EXPAND elements in the container's direction
     int32_t expand_space = lbox->direction == UI_HBOX ?
         lbox->widget.bounds.w : lbox->widget.bounds.h;
-    uint32_t n_expand = lbox->children->count;
+    uint32_t n_expand = n_children;
 
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
-
+    list_for_each_entry(child, &lbox->children) {
         // TODO: use a min size instead for every child
         if (!(child->flags & lbox->direction)) {
             expand_space -= lbox->direction == UI_HBOX ?
@@ -85,9 +84,7 @@ void lbox_on_resize(lbox_t* lbox) {
 
     uint32_t size = n_expand ? expand_space / n_expand : 0;
 
-    for (uint32_t i = 0; n_expand && i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
-
+    list_for_each_entry(child, &lbox->children) {
         if (child->flags & lbox->direction) {
             if (lbox->direction == UI_HBOX) {
                 child->bounds.w = size;
@@ -101,9 +98,7 @@ void lbox_on_resize(lbox_t* lbox) {
 
     uint32_t position = 0;
 
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
-
+    list_for_each_entry(child, &lbox->children) {
         if (lbox->direction == UI_HBOX) {
             child->bounds.x = position;
         } else {
@@ -116,9 +111,7 @@ void lbox_on_resize(lbox_t* lbox) {
 
     /* Ask elements to resize their content */
 
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
-
+    list_for_each_entry(child, &lbox->children) {
         if (child->on_resize) {
             child->on_resize(child);
         }
@@ -126,8 +119,9 @@ void lbox_on_resize(lbox_t* lbox) {
 }
 
 void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
-    for (uint32_t i = 0; i < lbox->children->count; i++) {
-        widget_t* child = list_get_at(lbox->children, i);
+    widget_t* child;
+
+    list_for_each_entry(child, &lbox->children) {
         point_t local = ui_to_child_local(child, pos);
 
         if (point_in_rect(pos, child->bounds)) {
@@ -141,7 +135,7 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
 lbox_t* lbox_new(uint32_t direction) {
     lbox_t* lbox = zalloc(sizeof(lbox_t));
 
-    lbox->children = list_new();
+    lbox->children = LIST_HEAD_INIT(lbox->children);
     lbox->widget.flags = UI_EXPAND;
     lbox->widget.on_click = (widget_clicked_t) lbox_on_click;
     lbox->widget.on_draw = (widget_draw_t) lbox_on_draw;
@@ -163,19 +157,20 @@ vbox_t* vbox_new() {
 void lbox_add(lbox_t* lbox, widget_t* widget) {
     widget->parent = (widget_t*) lbox;
 
-    list_add(lbox->children, widget);
+    list_add(&lbox->children, widget);
     lbox_on_resize(lbox);
 }
 
 void lbox_clear(lbox_t* lbox) {
-    while (lbox->children->count) {
-        widget_t* child = list_get_at(lbox->children, 0);
+    while (!list_empty(&lbox->children)) {
+        list_t* elem = list_first(&lbox->children);
+        widget_t* child = list_entry(elem, widget_t);
 
         if (child->on_free) {
             child->on_free(child);
         }
 
-        list_remove_at(lbox->children, 0);
+        list_del(elem);
         free(child);
     }
 }
@@ -194,6 +189,5 @@ void vbox_clear(vbox_t* vbox) {
 
 void lbox_free(lbox_t* lbox) {
     lbox_clear(lbox);
-    free(lbox->children);
     free(lbox);
 }

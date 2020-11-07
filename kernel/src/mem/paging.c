@@ -123,21 +123,29 @@ void paging_invalidate_page(uintptr_t virt) {
 }
 
 void paging_fault_handler(registers_t* regs) {
+    if (!regs) {
+        printf("[vmm] weird page fault\n");
+        abort();
+    }
+
     uint32_t err = regs->err_code;
+    uint32_t pid = proc_get_current_pid();
     uintptr_t cr2 = 0;
     asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
     printf("\x1B[37;44m");
     printf("[vmm] Page Fault caused by instruction at %p from process %d:\n",
-        regs->eip, proc_get_current_pid());
+        regs->eip, pid);
     printf("The page at %p %s present ", cr2, err & 0x01 ? "was" : "wasn't");
     printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
     printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
 
     page_t* page = paging_get_page(cr2 & PAGE_FRAME, false, 0);
 
-    if (err & 0x01) {
-        printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
+    if (page) {
+        if (err & 0x01) {
+            printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
+        }
     }
 
     if (err & 0x08) {
@@ -150,7 +158,11 @@ void paging_fault_handler(registers_t* regs) {
 
     printf("\x1B[37;40m");
 
-    proc_exit_current_process();
+    if (pid) {
+        proc_exit_current_process();
+    } else {
+        abort();
+    }
 }
 
 /* Allocates `num` pages of physical memory, mapped starting at `virt`.

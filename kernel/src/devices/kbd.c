@@ -22,7 +22,7 @@ uint32_t simple_sc_to_kc[] = {
     0, KBD_SPACE, KBD_V, KBD_F,
     KBD_T, KBD_R, KBD_5, 0,
     0, KBD_N, KBD_B, KBD_H,
-    KBD_G, KBD_Y, KBD_7, 0,
+    KBD_G, KBD_Y, KBD_6, 0,
     0, 0, KBD_M, KBD_J,
     KBD_U, KBD_7, KBD_8, 0,
     0, KBD_COMMA, KBD_K, KBD_I,

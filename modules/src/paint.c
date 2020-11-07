@@ -22,7 +22,7 @@ uint32_t color;
 bool running = true;
 uint8_t* icon = NULL;
 
-int main() {
+int main(int argc, char* argv[]) {
     win = snow_open_window("Pisos", width, height, WM_NORMAL);
     icon = zalloc(3*16*16);
     color = colors[0];
@@ -55,8 +55,40 @@ int main() {
     button->on_click = on_clear_clicked;
     hbox_add(menu, (widget_t*) button);
 
+    ui_draw(paint);
+    snow_render_window(win);
+
+    if (argc == 4) {
+        char* fname = argv[1];
+
+        uint32_t w = strtol(argv[2], NULL, 10);
+        uint32_t h = strtol(argv[3], NULL, 10);
+
+        FILE* fd = fopen(fname, "r");
+
+        if (fd) {
+            uint8_t* buf = malloc(w*h*3);
+
+            if ((uint32_t) fread(buf, 3, w*h, fd) < w*h) {
+                printf("paint: file smaller than expected\n");
+            } else {
+                rect_t r = ui_get_absolute_bounds(W(canvas));
+                snow_draw_rgb(win->fb, buf, r.x, r.y, w, h, 0);
+            }
+
+            free(buf);
+            fclose(fd);
+        } else {
+            printf("paint: failed to open '%s'\n", fname);
+        }
+    }
+
     while (running) {
         wm_event_t event = snow_get_event(win);
+
+        if (!event.type) {
+            continue;
+        }
 
         if (event.type & WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
             running = false;

@@ -251,7 +251,7 @@ static void syscall_ftell(registers_t* regs) {
 static void syscall_chdir(registers_t* regs) {
     const char* path = (const char*) regs->ebx;
 
-    regs->eax = proch_chdir(path);
+    regs->eax = proc_chdir(path);
 }
 
 static void syscall_getcwd(registers_t* regs) {

@@ -144,7 +144,7 @@ mem_block_t* mem_find_block(uint32_t size, uint32_t align) {
 
     mem_block_t* block = bottom;
 
-    while (block->size < size || block->size & 1 || !mem_is_aligned(block, align)) {
+    while ((block->size & ~1) < size || block->size & 1 || !mem_is_aligned(block, align)) {
         block = block->next;
 
         if (!block) {
@@ -179,7 +179,7 @@ void* realloc(void* ptr, size_t size) {
         return malloc(size);
     }
 
-    if (ptr && !size) {
+    if (!size) {
         free(ptr);
         return NULL;
     }

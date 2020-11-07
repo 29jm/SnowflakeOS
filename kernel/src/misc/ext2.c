@@ -265,11 +265,18 @@ uint32_t ext2_open(const char* path) {
         uint32_t offset = 0;
         ext2_directory_entry_t* entry;
         uint32_t prev_inode = inode;
-        bool last_component = strchr(path, '/') == NULL;
+        uint32_t component_len = strchrnul(path, '/') - path;
+        bool last_component = path[component_len] == '\0';
 
-        while ((entry = ext2_readdir(inode, offset)) && entry->type != DTYPE_INVALID) {
+        while ((entry = ext2_readdir(inode, offset)) != NULL) {
+            if (entry->type == DTYPE_INVALID) {
+                kfree(entry);
+                break;
+            }
+
             offset += entry->entry_size;
-            bool match = !strncmp(path, entry->name, entry->name_len_low);
+            bool match = component_len == entry->name_len_low &&
+                         !strncmp(path, entry->name, component_len);
             bool isdir = entry->type == DTYPE_DIR;
             uint32_t potential_inode = entry->inode;
 
@@ -283,7 +290,7 @@ uint32_t ext2_open(const char* path) {
                 return potential_inode;
             } else if (isdir) {
                 inode = potential_inode;
-                path = strrchr(path, '/') + 1;
+                path = strchr(path, '/') + 1;
                 break;
             }
         }

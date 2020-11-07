@@ -173,6 +173,8 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
         y += char_height;
     }
 
+    free(line_buf);
+
     // De-concatenate
     text_buf->buf[text_buf->len - input_buf->len] = '\0';
     text_buf->len -= input_buf->len;
@@ -252,6 +254,10 @@ void interpret_cmd(str_t* text_buf, str_t* input_buf) {
         args[n_args] = NULL;
 
         next = strchrnul(next, ' ');
+    }
+
+    if (!args) {
+        return;
     }
 
     int32_t ret = syscall2(SYS_EXEC, (uintptr_t) args[0], (uintptr_t) args);

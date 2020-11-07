@@ -88,10 +88,8 @@ SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	@cp misc/grub.cfg $(ISODIR)/boot/grub
 	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) &> /dev/null
 
-misc/pisos_16.rgb: assets/pisos_16.png
+assets: assets/pisos_16.png assets/wallpaper.png
 	@convert assets/pisos_16.png misc/pisos_16.rgb
-
-misc/wallpaper.rgb: assets/wallpaper.png
 	@convert assets/wallpaper.png misc/wallpaper.rgb
 
 # The dependency on disk stuff is temporary
@@ -100,15 +98,14 @@ misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh
 	@cp misc/disk.img $(ISODIR)/modules/disk.img
 	@bash ./misc/gen-grub-config.sh
 
-misc/disk.img: misc/pisos_16.rgb misc/wallpaper.rgb
+misc/disk.img: assets modules
 	$(info [all] writing disk image)
 	@touch misc/disk.img
 	@dd if=/dev/zero of=misc/disk.img bs=1024 count=10240 &> /dev/null
 	@mkdir -p misc/root/etc
 	@echo "hello ext2 world" > misc/root/motd
 	@echo "version: 0.5" > misc/root/etc/config
-	@mv misc/pisos_16.rgb misc/root/pisos_16.rgb
-	@mv misc/wallpaper.rgb misc/root/wallpaper.rgb
+	@mv misc/*.rgb misc/root/
 	@mkfs.ext2 misc/disk.img -d misc/root &> /dev/null
 	@rm -r misc/root
 

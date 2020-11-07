@@ -1,8 +1,8 @@
 #include <kernel/wm.h>
-#include <kernel/list.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <list.h>
 
 /* Allocates the specified `rect_t` on the stack.
  */
@@ -52,23 +52,22 @@ void print_rect(rect_t* r) {
  * rects by `clip`. Frees every discarded rect.
  */
 void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
-    for (uint32_t i = 0; i < rects->count; i++) {
-        rect_t* current = list_get_at(rects, i); // O(n²)
+    list_t* iter;
+    list_t* n;
+
+    list_for_each_safe(iter, n, rects) {
+        rect_t* current = list_entry(iter, rect_t);
 
         if (rect_intersect(*current, clip)) {
-            list_t* splits = rect_split_by(*(rect_t*) list_remove_at(rects, i), clip);
-            uint32_t n_splits = splits->count;
+            list_t* splits = rect_split_by(*current, clip);
 
-            while (splits->count) {
-                list_add_front(rects, list_remove_at(splits, 0));
-            }
-
+            // Remove the newly-split rect from our clipping rects
+            list_del(iter);
             kfree(current);
-            kfree(splits);
 
-            // Skip the rects we inserted at the front and those already checked
-            // Mind the end of loop increment
-            i = n_splits + i - 1;
+            // Add in what remains of it after splitting
+            list_splice(splits, rects);
+            kfree(splits);
         }
     }
 }
@@ -86,18 +85,22 @@ void rect_add_clip_rect(list_t* rects, rect_t clip) {
 /* Empties the list while freeing its elements.
  */
 void rect_clear_clipped(list_t* rects) {
-    while (rects->count) {
-        kfree(list_remove_at(rects, 0));
+    while (!list_empty(rects)) {
+        kfree(list_first_entry(rects, rect_t));
+        list_del(list_first(rects));
     }
 }
 
 /* Splits the original rectangle in more rectangles that cover the area
  *     `original \ split`
- * in set-theoric terms. Returns a list of those rectangles.
+ * in set-theoric terms. Returns a dynamically allocated list of those
+ * dynamically allocated rectangles.
  */
 list_t* rect_split_by(rect_t rect, rect_t split) {
-    list_t* list = list_new();
+    list_t* list = kmalloc(sizeof(list_t));
     rect_t* tmp;
+
+    *list = LIST_HEAD_INIT(*list);
 
     // Split by the left edge
     if (split.left >= rect.left && split.left <= rect.right) {

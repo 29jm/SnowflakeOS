@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "list.h"
+#include <list.h>
 
 #define UI_EXPAND_VERTICAL 1
 #define UI_EXPAND_HORIZONTAL 2
@@ -60,7 +60,7 @@ typedef struct {
  */
 typedef struct {
     widget_t widget;
-    list_t* children;
+    list_t children;
     uint32_t direction;
 } lbox_t;
 
