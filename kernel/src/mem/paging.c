@@ -3,6 +3,7 @@
 #include <kernel/term.h>
 #include <kernel/proc.h>
 #include <kernel/sys.h>
+#include <kernel/stacktrace.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -133,7 +134,7 @@ void paging_fault_handler(registers_t* regs) {
     uintptr_t cr2 = 0;
     asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
-    printf("\x1B[37;44m");
+    printf("\x1B[1;31m");
     printf("[vmm] Page Fault caused by instruction at %p from process %d:\n",
         regs->eip, pid);
     printf("The page at %p %s present ", cr2, err & 0x01 ? "was" : "wasn't");
@@ -156,7 +157,11 @@ void paging_fault_handler(registers_t* regs) {
         printf("The fault occured during an instruction fetch.\n");
     }
 
-    printf("\x1B[37;40m");
+    if (!(err & 0x04)) {
+        stacktrace_print();
+    }
+
+    printf("\x1B[0m");
 
     if (pid) {
         proc_exit_current_process();

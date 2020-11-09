@@ -89,6 +89,16 @@ void list_splice(list_t* list, list_t* head) {
     }
 }
 
+/**
+ * list_move - delete from one list and add as another's head
+ * @list: the entry to move
+ * @head: the head that will precede our entry
+ */
+void list_move(list_t* list, list_t* head) {
+    list_add_front(head, list->data);
+    list_del(list);
+}
+
 void* list_first(list_t* list) {
     return list->next;
 }

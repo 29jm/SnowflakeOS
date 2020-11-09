@@ -5,6 +5,7 @@
 #define WM_NORMAL     0
 #define WM_BACKGROUND 1
 #define WM_FOREGROUND 2
+#define WM_SKIP_INPUT 4
 
 #define WM_CMD_OPEN   0
 #define WM_CMD_CLOSE  1

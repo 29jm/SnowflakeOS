@@ -16,7 +16,7 @@ void set_str(const char* base, const char* end, uint32_t n, char* s) {
 }
 
 int main() {
-    window_t* win = snow_open_window("System information", 275, 100, WM_NORMAL);
+    window_t* win = snow_open_window("System information", 275, 100, WM_FOREGROUND | WM_SKIP_INPUT);
 
     char heap_usage[BUF_SIZE];
     char mem_usage[BUF_SIZE];

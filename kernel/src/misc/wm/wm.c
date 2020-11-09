@@ -54,7 +54,7 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
     *win = (wm_window_t) {
         .ufb = *buff,
         .kfb = *buff,
-        .id = id_count++,
+        .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN
     };
 
@@ -151,12 +151,12 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
  * By design, _only_ this function affects focus.
  */
 void wm_raise_window(wm_window_t* win) {
-    list_t* iter;
-    wm_window_t* w;
+    list_t* win_iter;
+    wm_window_t* win_bis;
 
-    // Find the window's list_t* to maybe remove it
-    list_for_each(iter, w, &windows) {
-        if (w == win) {
+    // Find the window's list_t* to maybe move it around
+    list_for_each(win_iter, win_bis, &windows) {
+        if (win_bis == win) {
             break;
         }
     }
@@ -169,22 +169,28 @@ void wm_raise_window(wm_window_t* win) {
         return;
     }
 
-    // We can't affect the focus on those
-    if (focused->flags & WM_FOREGROUND || win->flags & WM_BACKGROUND) {
-        return;
-    }
-
     // Nothing to do
-    if (focused == win) {
+    if (win->flags & WM_BACKGROUND || focused == win) {
         return;
     }
 
     // Change focus only then
-    list_add(&windows, w);
-    list_del(iter);
     focused->event.type |= WM_EVENT_LOST_FOCUS;
     win->event.type |= WM_EVENT_GAINED_FOCUS;
     focused = win;
+
+    list_t* topmost;
+    wm_window_t* w;
+
+    /* Find the top most non-foreground window; we'll move the raised window
+     * after it */
+    list_for_each_entry_rev(topmost, w, &windows) {
+        if (!(w->flags & WM_FOREGROUND)) {
+            break;
+        }
+    }
+
+    list_move(win_iter, topmost);
 
     // Redraw if possible. Not sure this is this function's responsibility.
     if (!(win->flags & WM_NOT_DRAWN)) {
@@ -513,12 +519,15 @@ void wm_mouse_callback(mouse_t raw_curr) {
     // Simple moves
     if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
         wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
-        rect_t r = rect_from_window(under_cursor);
 
-        under_cursor->event.type |= WM_EVENT_MOUSE_MOVE;
-        under_cursor->event.mouse.position = wm_mouse_to_rect(mouse);
-        under_cursor->event.mouse.position.top -= r.top;
-        under_cursor->event.mouse.position.left -= r.left;
+        if (under_cursor) {
+            rect_t r = rect_from_window(under_cursor);
+
+            under_cursor->event.type |= WM_EVENT_MOUSE_MOVE;
+            under_cursor->event.mouse.position = wm_mouse_to_rect(mouse);
+            under_cursor->event.mouse.position.top -= r.top;
+            under_cursor->event.mouse.position.left -= r.left;
+        }
     }
 
     // Redraw the mouse if needed
@@ -535,11 +544,18 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
 void wm_kbd_callback(kbd_event_t event) {
     if (!list_empty(&windows)) {
-        wm_window_t* win = list_last_entry(&windows, wm_window_t);
+        list_t* iter;
+        wm_window_t* win;
 
-        win->event.type |= WM_EVENT_KBD;
-        win->event.kbd.keycode = event.keycode;
-        win->event.kbd.pressed = event.pressed;
-        win->event.kbd.repr = event.repr;
+        list_for_each_entry_rev(iter, win, &windows) {
+            win->event.type |= WM_EVENT_KBD;
+            win->event.kbd.keycode = event.keycode;
+            win->event.kbd.pressed = event.pressed;
+            win->event.kbd.repr = event.repr;
+
+            if (!(win->flags & WM_SKIP_INPUT)) {
+                return;
+            }
+        }
     }
 }

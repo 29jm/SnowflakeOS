@@ -48,5 +48,6 @@ void __list_del(list_t* prev, list_t* next);
 void list_del(list_t* entry);
 void list_del(list_t* entry);
 void list_splice(list_t *list, list_t *head);
+void list_move(list_t* list, list_t* head);
 void* list_first(list_t* list);
 void* list_last(list_t* list);
