@@ -70,7 +70,7 @@ void mem_print_blocks() {
         printf("0x%X%s-> ", block->size & ~1, block->size & 1 ? "# " : " ");
 
         if (block->next && block->next < block) {
-            printf("Chaining error: block overlaps with previous one\n");
+            printf("chaining error: block overlaps with previous one\n");
         }
 
         block = block->next;
@@ -237,7 +237,7 @@ void* aligned_alloc(size_t align, size_t size) {
 #ifdef _KERNEL_
         // The kernel can't allocate more
         if (end > KERNEL_HEAP_BEGIN + KERNEL_HEAP_SIZE) {
-            printf("[mem] Kernel ran out of memory!");
+            printke("kernel ran out of memory!");
             abort();
         }
 #else

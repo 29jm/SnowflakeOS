@@ -1,8 +1,8 @@
 #include <kernel/stacktrace.h>
+#include <kernel/sys.h>
 
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
 
@@ -56,7 +56,7 @@ void stacktrace_print() {
 
     asm volatile ("movl %%ebp, %0" : "=r"(stackframe));
 
-    printf("stacktrace:\n");
+    printk("stacktrace:");
 
     while (stackframe) {
         addr = stackframe->eip;
@@ -64,7 +64,7 @@ void stacktrace_print() {
         char* end = strchr(sym, '\n');
 
         *end = '\0';
-        printf(" %p: %s\n", addr, sym);
+        printk(" %p: %s", addr, sym);
         *end = '\n';
 
         stackframe = stackframe->ebp;

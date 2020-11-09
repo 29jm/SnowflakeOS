@@ -84,7 +84,7 @@ void init_kbd(uint32_t dev) {
     uint8_t scancode_set = ps2_read(PS2_DATA);
 
     if (scancode_set != KBD_SSC_2) {
-        printf("[kbd] Wrong scancode set (%d), TODO\n", scancode_set);
+        printke("wrong scancode set (%d), TODO", scancode_set);
     }
 
     // Start receiving IRQ1s
@@ -309,7 +309,7 @@ char kbd_keycode_to_char(uint32_t keycode, bool shift) {
  */
 void kbd_set_callback(kbd_callback_t handler) {
     if (callback) {
-        printf("[kbd] Overwriting callback\n");
+        printke("overwriting callback");
     }
 
     callback = handler;

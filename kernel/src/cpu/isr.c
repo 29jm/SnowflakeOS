@@ -1,9 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-
 #include <kernel/isr.h>
 #include <kernel/idt.h>
+#include <kernel/sys.h>
+
+#include <stdlib.h>
+#include <assert.h>
 
 static char* exception_msgs[] = {
     "Division By Zero",
@@ -100,7 +100,7 @@ void isr_handler(registers_t* regs) {
         handler(regs);
     }
     else {
-        printf("[isr] Unhandled %s %d: %s\n",
+        printke("unhandled %s %d: %s",
             regs->int_no < 32 ? "exception" : "interrupt", regs->int_no,
             regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
         abort();
@@ -113,7 +113,7 @@ void isr_register_handler(uint32_t num, handler_t handler) {
     assert(num < 256);
 
     if (isr_handlers[num]) {
-        printf("[isr] Interrupt handler %d already registered\n", num,
+        printke("interrupt handler %d already registered", num,
             exception_msgs[num]);
     }
     else {

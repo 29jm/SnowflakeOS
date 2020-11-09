@@ -1,8 +1,8 @@
 #include <kernel/irq.h>
 #include <kernel/idt.h>
 #include <kernel/com.h>
+#include <kernel/sys.h>
 
-#include <stdio.h>
 #include <string.h>
 
 static handler_t irq_handlers[16];
@@ -77,7 +77,7 @@ void irq_handler(registers_t* regs) {
         handler(regs);
     }
     else {
-        printf("[irq] Unhandled IRQ%d\n", irq - IRQ0);
+        printke("unhandled IRQ%d", irq - IRQ0);
     }
 
 }
@@ -97,14 +97,14 @@ void irq_send_eoi(uint8_t irq) {
  */
 void irq_register_handler(uint8_t irq, handler_t handler) {
     if (irq < IRQ0 || irq > IRQ15) {
-        printf("[irq] Tried to register a handler for an invalid IRQ\n");
+        printke("tried to register a handler for an invalid IRQ");
         return;
     }
 
     if (!irq_handlers[irq - IRQ0]) {
         irq_handlers[irq - IRQ0] = handler;
     } else {
-        printf("[irq] IRQ %d is already registered\n", irq);
+        printke("IRQ %d is already registered", irq);
     }
 
     irq_unmask(irq);

@@ -174,7 +174,7 @@ superblock_t* parse_superblock() {
     ext2_read_block(1, (uint8_t*) sb);
 
     if (sb->magic != EXT2_MAGIC) {
-        printf("[EXT2] Invalid signature: %x\n", sb->magic);
+        printke("invalid signature: %x", sb->magic);
         return NULL;
     }
 
@@ -373,7 +373,7 @@ uint32_t ext2_allocate_inode() {
     }
 
     kfree(bitmap);
-    printf("[ext2] failed to allocate inode\n");
+    printke("Failed to allocate inode");
 
     return 0;
 }
@@ -501,7 +501,7 @@ uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n) {
 
         return tmp[offset_c];
     } else {
-        printf("[EXT2] Invalid inode block\n");
+        printke("invalid inode block");
     }
 
     return 0;
@@ -546,7 +546,7 @@ uint32_t ext2_get_inode_block(inode_t* inode, uint32_t n) {
         return tmp[offset_c];
     }
 
-    printf("[EXT2] Invalid inode block\n");
+    printke("invalid inode block");
 
     return 0;
 }
@@ -559,12 +559,12 @@ uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint3
     inode_t* in = ext2_get_inode(parent_inode);
 
     if (!in) {
-        printf("[ext2] add_entry: parent does not exist\n");
+        printke("add_entry: parent does not exist");
         return 0;
     }
 
     if (INODE_TYPE(in->type_perms) != INODE_DIR) {
-        printf("[ext2] add_entry: parent is not a directory\n");
+        printke("add_entry: parent is not a directory");
         return 0;
     }
 
@@ -811,7 +811,7 @@ uint32_t ext2_get_file_size(uint32_t inode) {
 
 void init_ext2(uint8_t* data, uint32_t len) {
     if (len < 1024 + sizeof(superblock_t)) {
-        printf("[EXT2] Invalid volume: too small to be true\n");
+        printke("invalid volume: too small to be true");
         return;
     }
 
@@ -819,11 +819,11 @@ void init_ext2(uint8_t* data, uint32_t len) {
     superblock = parse_superblock();
 
     if (!superblock) {
-        printf("[EXT2] aborting\n");
+        printke("bad superblock, aborting");
         return;
     }
 
     group_descriptors = parse_group_descriptors();
 
-    printf("[EXT2] Initialized volume of size %d KiB\n", len >> 10);
+    printk("initialized volume of size %d KiB", len >> 10);
 }

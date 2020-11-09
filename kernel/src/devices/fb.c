@@ -20,7 +20,7 @@ void init_fb(fb_info_t fb_info) {
     };
 
     if (fb.bpp != 32) {
-        printf("[fb] Unsupported bit depth: %d\n", fb.bpp);
+        printke("unsupported bit depth: %d", fb.bpp);
     }
 
     uintptr_t address = (uintptr_t) fb_info.address;

@@ -195,7 +195,7 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
  * Implements the `exit` system call.
  */
 void proc_exit_current_process() {
-    printf("[proc] terminating process %d\n", current_process->pid);
+    printk("terminating process %d", current_process->pid);
 
     // Free allocated pages: code, heap, stack, page directory
     directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
@@ -258,7 +258,7 @@ void proc_enter_usermode() {
     current_process = scheduler->sched_get_current(scheduler);
 
     if (!current_process) {
-        printf("[proc] no process to run\n");
+        printke("no process to run");
         abort();
     }
 
@@ -368,7 +368,7 @@ int32_t proc_exec(const char* path, char** argv) {
     if (read == size && size) {
         proc_run_code(data, size, argv);
     } else {
-        printf("[proc] exec failed while reading the executable\n");
+        printke("exec failed while reading the executable");
         return -1;
     }
 

@@ -41,7 +41,7 @@ void init_pmm(multiboot_t* boot) {
     }
 
     if ((uint32_t) &KERNEL_END > KERNEL_END_MAP) {
-        printf("[pmm] the kernel is too large for its initial mapping\n");
+        printke("The kernel is too large for its initial mapping");
         abort();
     }
 
@@ -78,10 +78,10 @@ void init_pmm(multiboot_t* boot) {
     // Protect low memory, our glorious kernel and the PMM itself
     pmm_deinit_region(0, kernel_end + max_blocks/8);
 
-    printf("[pmm] Memory stats: available: \x1B[32m%dMiB", available >> 20);
-    printf("\x1B[37m unavailable: \x1B[32m%dKiB\x1B[37m\n", unavailable >> 10);
-    printf("[pmm] Taken by modules: \x1B[32m%dKiB\x1B[37m\n",
-        ((uintptr_t) bitmap - (uintptr_t) &KERNEL_END) >> 10);
+    printk("memory stats: available: \x1B[32m%d MiB\x1B[0m", available >> 20);
+    printk("unavailable: \x1B[32m%d KiB\x1B[0m", unavailable >> 10);
+    printk("taken by modules: \x1B[32m%d MiB\x1B[0m",
+        (kernel_end - (uintptr_t) &KERNEL_END_PHYS) >> 20);
 }
 
 /* Returns the number of bytes allocated by the PMM.
@@ -129,7 +129,7 @@ void pmm_deinit_region(uintptr_t addr, uint32_t size) {
  */
 uintptr_t pmm_alloc_page() {
     if (max_blocks - used_blocks <= 0) {
-        printf("[pmm] Kernel is out of physical memory!");
+        printke("kernel is out of physical memory!");
         abort();
     }
 

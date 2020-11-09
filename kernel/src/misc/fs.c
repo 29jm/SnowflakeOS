@@ -159,7 +159,7 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
 }
 
 void fs_print_open() {
-    printf("[fs] open file descriptors: ");
+    printk("open file descriptors:");
 
     ft_entry_t* entry;
     list_for_each_entry(entry, &file_table) {

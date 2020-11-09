@@ -45,7 +45,7 @@ uintptr_t paging_get_kernel_directory() {
  */
 page_t* paging_get_page(uintptr_t virt, bool create, uint32_t flags) {
     if (virt % 0x1000) {
-        printf("[vmm] paging_get_page: unaligned address %p\n",virt);
+        printke("Paging_get_page: unaligned address %p",virt);
         abort();
     }
 
@@ -74,9 +74,9 @@ void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags) {
     page_t* page = paging_get_page(virt, true, flags);
 
     if (*page & PAGE_PRESENT) {
-        printf("[vmm] Tried to map an already mapped virtual address 0x%X to 0x%X\n",
+        printke("tried to map an already mapped virtual address 0x%X to 0x%X",
             virt, phys);
-        printf("[vmm] Previous mapping: 0x%X to 0x%X\n", virt, *page & PAGE_FRAME);
+        printke("previous mapping: 0x%X to 0x%X", virt, *page & PAGE_FRAME);
         abort();
     }
 
@@ -125,7 +125,7 @@ void paging_invalidate_page(uintptr_t virt) {
 
 void paging_fault_handler(registers_t* regs) {
     if (!regs) {
-        printf("[vmm] weird page fault\n");
+        printke("weird page fault");
         abort();
     }
 
@@ -134,34 +134,31 @@ void paging_fault_handler(registers_t* regs) {
     uintptr_t cr2 = 0;
     asm volatile("mov %%cr2, %0\n" : "=r"(cr2));
 
-    printf("\x1B[1;31m");
-    printf("[vmm] Page Fault caused by instruction at %p from process %d:\n",
+    printke("page fault caused by instruction at %p from process %d:",
         regs->eip, pid);
-    printf("The page at %p %s present ", cr2, err & 0x01 ? "was" : "wasn't");
-    printf("when a process tried to %s it.\n", err & 0x02 ? "write to" : "read from");
-    printf("This process was in %s mode.\n", err & 0x04 ? "user" : "kernel");
+    printke("the page at %p %s present ", cr2, err & 0x01 ? "was" : "wasn't");
+    printke("when a process tried to %s it", err & 0x02 ? "write to" : "read from");
+    printke("this process was in %s mode", err & 0x04 ? "user" : "kernel");
 
     page_t* page = paging_get_page(cr2 & PAGE_FRAME, false, 0);
 
     if (page) {
         if (err & 0x01) {
-            printf("The page was in %s mode.\n", (*page) & PAGE_USER ? "user" : "kernel");
+            printke("The page was in %s mode", (*page) & PAGE_USER ? "user" : "kernel");
         }
     }
 
     if (err & 0x08) {
-        printf("The reserved bits were overwritten.\n");
+        printke("The reserved bits were overwritten");
     }
 
     if (err & 0x10) {
-        printf("The fault occured during an instruction fetch.\n");
+        printke("The fault occured during an instruction fetch");
     }
 
     if (!(err & 0x04)) {
         stacktrace_print();
     }
-
-    printf("\x1B[0m");
 
     if (pid) {
         proc_exit_current_process();

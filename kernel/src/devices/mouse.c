@@ -143,9 +143,9 @@ void mouse_enable_scroll_wheel() {
 
     if (type == PS2_MOUSE_SCROLL_WHEEL) {
         bytes_per_packet = 4;
-        printf("[mouse] Enabled scroll wheel\n");
+        printk("enabled scroll wheel");
     } else {
-        printf("[mouse] Unable to enable scroll wheel\n");
+        printke("unable to enable scroll wheel");
     }
 }
 
@@ -163,8 +163,8 @@ void mouse_enable_five_buttons() {
     uint32_t type = ps2_identify_device(device);
 
     if (type != PS2_MOUSE_FIVE_BUTTONS) {
-        printf("[mouse] Mouse has fewer than five buttons\n");
+        printk("mouse has fewer than five buttons");
     } else {
-        printf("[mouse] Five buttons enabled\n");
+        printk("five buttons enabled");
     }
 }

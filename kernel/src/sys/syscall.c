@@ -66,7 +66,7 @@ static void syscall_handler(registers_t* regs) {
         regs->eax = 0;
         handler(regs);
     } else {
-        printf("[sys] Unknown syscall %d\n", regs->eax);
+        printke("unknown syscall %d", regs->eax);
     }
 }
 
@@ -131,7 +131,7 @@ static void syscall_wm(registers_t* regs) {
                 wm_get_event(param->win_id, param->event);
         } break;
         default:
-            printf("[wm] Wrong command: %d\n", cmd);
+            printke("wrong command: %d", cmd);
             regs->eax = -1;
             break;
     }

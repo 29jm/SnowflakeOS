@@ -85,7 +85,7 @@ void wm_close_window(uint32_t win_id) {
 
         wm_refresh_partial(rect);
     } else {
-        printf("[wm] Close: failed to find window of id %d\n", win_id);
+        printke("close: failed to find window of id %d", win_id);
     }
 }
 
@@ -97,7 +97,7 @@ void wm_render_window(uint32_t win_id, rect_t* clip) {
     rect_t rect;
 
     if (!item) {
-        printf("[wm] Render called by invalid window, id %d\n", win_id);
+        printke("render called by invalid window, id %d", win_id);
         return;
     }
 
@@ -134,7 +134,7 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
     list_t* item = wm_get_window(win_id);
 
     if (!item) {
-        printf("[wm] get_event: invalid window %d\n", win_id);
+        printke("Get_event: invalid window %d", win_id);
         return;
     }
 
@@ -356,6 +356,8 @@ void wm_refresh_screen() {
 /* Other helpers */
 
 void wm_print_windows() {
+    printk("printing windows:");
+
     wm_window_t* win;
     list_for_each_entry(win, &windows) {
         printf("%d -> ", win->id);

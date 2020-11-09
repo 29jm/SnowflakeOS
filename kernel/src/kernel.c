@@ -34,11 +34,11 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     init_paging();
 
     if (magic != MULTIBOOT_EAX_MAGIC) {
-        printf("The multiboot magic header is wrong: proceeding anyway\n");
+        printk("The multiboot magic header is wrong: proceeding anyway");
     }
 
-    printf("SnowflakeOS 0.5 - Challenge Edition\n");
-    printf("Kernel is %d KiB large\n", ((uint32_t) &KERNEL_SIZE) >> 10);
+    printk("SnowflakeOS 0.6");
+    printk("kernel is %d KiB large", ((uint32_t) &KERNEL_SIZE) >> 10);
 
     init_fpu();
     init_fb(boot->framebuffer);
@@ -73,7 +73,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
             continue;
         }
 
-        printf("[kernel] ignored module: %s\n", module_name);
+        printk("ignored module: %s", module_name);
     }
 
     proc_exec("/background", NULL);

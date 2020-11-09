@@ -2,6 +2,7 @@
 #include <kernel/com.h>
 #include <kernel/mouse.h>
 #include <kernel/kbd.h>
+#include <kernel/sys.h>
 
 #include <stdio.h>
 
@@ -12,7 +13,7 @@ bool controllers[] = { true, true };
  * A lot of redundancy here because of poorly-indexed identifiers.
  */
 void init_ps2() {
-    printf("[PS2] Initializing PS/2 devices\n");
+    printk("initializing PS/2 devices");
 
     bool dual_channel = true;
 
@@ -34,7 +35,7 @@ void init_ps2() {
     config |= PS2_CFG_SYSTEM_FLAG;
 
     if (config & PS2_CFG_MUST_BE_ZERO) {
-        printf("[PS2] Invalid bit set in configuration byte\n");
+        printke("invalid bit set in configuration byte");
     }
 
     // Disable interrupts and scan code translation
@@ -48,7 +49,7 @@ void init_ps2() {
     ps2_write(PS2_CMD, PS2_SELF_TEST);
 
     if (ps2_read(PS2_DATA) != PS2_SELF_TEST_OK) {
-        printf("[PS2] Controller failed self-test\n");
+        printke("controller failed self-test");
 
         controllers[0] = false;
         controllers[1] = false;
@@ -67,7 +68,7 @@ void init_ps2() {
     config = ps2_read(PS2_DATA);
 
     if (config & PS2_CFG_SECOND_CLOCK) {
-        printf("[PS2] Only one PS/2 controller\n");
+        printk("only one PS/2 controller");
         dual_channel = false;
         controllers[1] = false;
     } else {
@@ -78,7 +79,7 @@ void init_ps2() {
     ps2_write(PS2_CMD, PS2_TEST_FIRST);
 
     if (ps2_read(PS2_DATA) != PS2_TEST_OK) {
-        printf("[PS2] First PS/2 port failed testing\n");
+        printke("first PS/2 port failed testing");
         controllers[0] = false;
     }
 
@@ -86,7 +87,7 @@ void init_ps2() {
         ps2_write(PS2_CMD, PS2_TEST_SECOND);
 
         if (ps2_read(PS2_DATA) != PS2_TEST_OK) {
-            printf("[PS2] Second PS/2 port failed testing\n");
+            printke("second PS/2 port failed testing");
             controllers[1] = false;
         }
     }
@@ -119,7 +120,7 @@ void init_ps2() {
 
         // If it fails, disable the device's port
         if (ret != PS2_DEV_ACK || ps2_read(PS2_DATA) != PS2_DEV_RESET_ACK) {
-            printf("[PS2] Failed to reset device %d\n", i);
+            printke("failed to reset device %d", i);
 
             controllers[i] = false;
             config &= ~(i == 0 ? PS2_CFG_FIRST_PORT : PS2_CFG_SECOND_PORT);
@@ -141,13 +142,13 @@ void init_ps2() {
             switch (type) {
                 case PS2_KEYBOARD:
                 case PS2_KEYBOARD_TRANSLATED:
-                    printf("[PS2] Keyboard\n");
+                    printk("keyboard");
                     init_kbd(i);
                     break;
                 case PS2_MOUSE:
                 case PS2_MOUSE_SCROLL_WHEEL:
                 case PS2_MOUSE_FIVE_BUTTONS:
-                    printf("[PS2] Mouse\n");
+                    printk("mouse");
                     init_mouse(i);
             }
         }
@@ -224,7 +225,7 @@ uint8_t ps2_read(uint32_t port) {
         return inportb(port);
     }
 
-    printf("[PS2] Read failed\n");
+    printke("read failed");
 
     return -1;
 }
@@ -238,7 +239,7 @@ bool ps2_write(uint32_t port, uint8_t b) {
         return true;
     }
 
-    printf("[PS2] Write failed\n");
+    printke("write failed");
 
     return false;
 }
@@ -263,7 +264,7 @@ bool ps2_expect_ack() {
     uint8_t ret = ps2_read(PS2_DATA);
 
     if (ret != PS2_DEV_ACK) {
-        printf("[PS2] Device failed to acknowledge command\n");
+        printke("device failed to acknowledge command");
         return false;
     }
 

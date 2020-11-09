@@ -1,6 +1,6 @@
 #include <kernel/wm.h>
+#include <kernel/sys.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <list.h>
 
@@ -44,7 +44,7 @@ bool rect_intersect(rect_t a, rect_t b) {
 /* Pretty-prints a `rect_t`.
  */
 void print_rect(rect_t* r) {
-    printf("top:%d, left:%d, bottom:%d, right:%d\n",
+    printk("top:%d, left:%d, bottom:%d, right:%d",
         r->top, r->left, r->bottom, r->right);
 }
 

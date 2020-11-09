@@ -1,10 +1,18 @@
 #pragma once
 
+#include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 
 #define UNUSED(param) (void) param
 #define PHYS_TO_VIRT(addr) ((addr) + KERNEL_BASE_VIRT)
 #define VIRT_TO_PHYS(addr) ((addr) - KERNEL_BASE_VIRT)
+
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define printk(format, ...) \
+    printf("[\x1B[32m%s\x1B[0m] " format "\n", __FILENAME__, ##__VA_ARGS__)
+#define printke(format, ...) \
+    printf("[\x1B[31;1m%s\x1B[0m] " format "\n", __FILENAME__, ##__VA_ARGS__)
 
 #define BREAK() do { \
                     asm ("xchgw %bx, %bx\n"); \
