@@ -18,6 +18,10 @@
 #define SEEK_CUR 2
 #define SEEK_END 3
 
+#define DENT_INVALID 0
+#define DENT_FILE 1
+#define DENT_DIRECTORY 2
+
 typedef struct {
     uint32_t inode;
     uint16_t entry_size;

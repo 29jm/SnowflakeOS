@@ -130,7 +130,7 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
         .initial_user_stack = (uintptr_t) ustack_int,
         .mem_len = 0,
         .sleep_ticks = 0,
-        .fds = LIST_HEAD_INIT(process->fds),
+        .filetable = LIST_HEAD_INIT(process->filetable),
         .cwd = strdup("/")
     };
 
@@ -216,9 +216,9 @@ void proc_exit_current_process() {
     kfree((void*) (current_process->kernel_stack - 0x1000 * PROC_KERNEL_STACK_PAGES + 4));
 
     // Free the file descriptor list
-    while (!list_empty(&current_process->fds)) {
-        fs_close((uint32_t) list_first_entry(&current_process->fds, uint32_t)); // bit ugly
-        list_del(list_first(&current_process->fds));
+    while (!list_empty(&current_process->filetable)) {
+        fs_close((uint32_t) list_first_entry(&current_process->filetable, ft_entry_t)->fd); // bit ugly
+        list_del(list_first(&current_process->filetable));
     }
 
     // This last line is actually safe, and necessary
@@ -350,79 +350,165 @@ void* proc_sbrk(intptr_t size) {
 }
 
 int32_t proc_exec(const char* path, char** argv) {
-    uint32_t fd = fs_open(path, O_RDONLY);
+    inode_t* in = fs_open(path, O_RDONLY);
 
-    // TODO: check it's not a directory
-
-    if (fd == FS_INVALID_FD) {
+    if (!in || in->type != DENT_FILE) {
         return -1;
     }
 
-    fs_fseek(fd, 0, SEEK_END);
-    uint32_t size = fs_ftell(fd);
-    uint8_t* data = kmalloc(size);
-    fs_fseek(fd, 0, SEEK_SET);
-    uint32_t read = fs_read(fd, data, size);
-    fs_close(fd);
+    uint8_t* data = kmalloc(in->size);
+    uint32_t read = fs_read(in->inode_no, 0, data, in->size);
 
-    if (read == size && size) {
-        proc_run_code(data, size, argv);
+    if (read == in->size && in->size) {
+        proc_run_code(data, in->size, argv);
     } else {
         printke("exec failed while reading the executable");
         return -1;
     }
 
+    return 0;
+}
+
+/* Returns the filetable entry associated with fd, if any.
+ */
+ft_entry_t* proc_fd_to_entry(uint32_t fd) {
+    ft_entry_t* ent;
+
+    list_for_each_entry(ent, &current_process->filetable) {
+        if (ent->fd == fd) {
+            return ent;
+        }
+    }
+
+    return NULL;
+}
+
+/* Returns a new and unused fd for the current process.
+ * TODO: make it use the lowest fd available.
+ */
+uint32_t proc_next_fd() {
+    static uint32_t avail = 1;
+
+    return avail++;
+}
+
+uint32_t proc_open(const char* path, uint32_t flags) {
+    inode_t* in = fs_open((char*) path, flags); // TODO
+
+    if (in) {
+        ft_entry_t* ent = kmalloc(sizeof(ft_entry_t));
+        *ent = (ft_entry_t) {
+            .fd = proc_next_fd(),
+            .inode = in->inode_no,
+            .mode = 0, // TODO: what's this?
+            .offset = 0,
+            .size = in->size
+        };
+
+        list_add_front(&current_process->filetable, ent);
+
+        return ent->fd;
+    }
 
     return 0;
 }
 
-/* Returns whether the current process posesses the file descriptor.
- * TODO: include mode check?
- */
-bool proc_has_fd(uint32_t fd) {
-    uint32_t proc_fd;
-    list_for_each_entry(proc_fd, &current_process->fds) {
-        if (proc_fd == fd) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-uint32_t proc_open(const char* path, uint32_t mode) {
-    uint32_t fd = fs_open(path, mode);
-
-    if (fd != FS_INVALID_FD) {
-        list_add_front(&current_process->fds, (void*) fd);
-    }
-
-    return fd;
-}
-
 void proc_close(uint32_t fd) {
     list_t* iter;
-    uint32_t proc_fd;
-    list_for_each(iter, proc_fd, &current_process->fds) {
-        if (proc_fd == fd) {
-            fs_close(fd);
+    ft_entry_t* ent;
+    list_for_each(iter, ent, &current_process->filetable) {
+        if (ent->fd == fd) {
+            // TODO: At some point, we'll want to have a fs-layer writelock
+            // fs_close(fd);
             list_del(iter);
             return;
         }
     }
 }
 
-int32_t proc_chdir(const char* path) {
-    // TODO: replace existence check with `stat` or something
-    char* npath = fs_normalize_path(path);
-    uint32_t fd = fs_open(npath, O_RDONLY);
+uint32_t proc_read(uint32_t fd, uint8_t* buf, uint32_t size) {
+    ft_entry_t* ent = proc_fd_to_entry(fd);
 
-    if (fd == FS_INVALID_FD) {
+    if (ent) {
+        uint32_t read = fs_read(ent->inode, ent->offset, buf, size);
+        ent->offset += read;
+        return read;
+    }
+
+    return 0;
+}
+
+int32_t proc_readdir(uint32_t fd, sos_directory_entry_t* dent) {
+    ft_entry_t* ent = proc_fd_to_entry(fd);
+
+    if (ent) {
+        uint32_t read = fs_readdir(ent->inode, ent->offset, dent, dent->entry_size);
+        ent->offset += read;
+
+        if (read) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    return -1;
+}
+
+uint32_t proc_write(uint32_t fd, uint8_t* buf, uint32_t size) {
+    ft_entry_t* ent = proc_fd_to_entry(fd);
+
+    if (ent) {
+        return fs_write(ent->inode, buf, size);
+    }
+
+    return 0;
+}
+
+int32_t proc_fseek(uint32_t fd, int32_t offset, uint32_t whence) {
+    ft_entry_t* ent = proc_fd_to_entry(fd);
+
+    if (!ent) {
+        return -1;
+    }
+
+    switch (whence) {
+    case SEEK_SET:
+        ent->offset = offset;
+        break;
+    case SEEK_CUR:
+        ent->offset += offset;
+        break;
+    case SEEK_END:
+        ent->offset = ent->size + offset;
+        break;
+    default:
+        return -1;
+    }
+
+    return 0;
+}
+
+int32_t proc_ftell(uint32_t fd) {
+    ft_entry_t* ent = proc_fd_to_entry(fd);
+
+    if (!ent) {
+        return -1;
+    }
+
+    return ent->offset;
+}
+
+int32_t proc_chdir(const char* path) {
+    // TODO: replace existence check with `stat` to validate path
+    char* npath = fs_normalize_path(path);
+    inode_t* in = fs_open(npath, O_RDONLY);
+
+    if (in) {
         kfree(npath);
         return -1;
     }
 
-    fs_close(fd);
     kfree(current_process->cwd);
     current_process->cwd = npath;
 

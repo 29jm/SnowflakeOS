@@ -8,7 +8,7 @@
 
 #include <kernel/uapi/uapi_wm.h>
 
-#define WM_NOT_DRAWN  (1 << 31) // Window has _never_ been called wm_render_window
+#define WM_NOT_DRAWN  ((uint32_t) 1 << 31) // Window has _never_ been called wm_render_window
 
 /* ufb: the window's buffer in userspace. Used by the client for drawing
  *  operations. We copy this buffer on request to `kfb`.

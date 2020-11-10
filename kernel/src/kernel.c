@@ -51,7 +51,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     init_ps2();
     init_timer();
     init_wm();
-    init_fs();
     init_proc();
 
     // Load GRUB modules as programs
@@ -75,6 +74,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
         printk("ignored module: %s", module_name);
     }
+
+    init_fs();
 
     proc_exec("/background", NULL);
     proc_exec("/terminal", NULL);

@@ -1,11 +1,11 @@
 #include <kernel/syscall.h>
 #include <kernel/pmm.h>
+#include <kernel/fs.h>
 #include <kernel/proc.h>
 #include <kernel/timer.h>
 #include <kernel/fb.h>
 #include <kernel/wm.h>
 #include <kernel/serial.h>
-#include <kernel/fs.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -167,9 +167,9 @@ static void syscall_exec(registers_t* regs) {
 
 static void syscall_open(registers_t* regs) {
     const char* path = (const char*) regs->ebx;
-    uint32_t mode = regs->ecx;
+    uint32_t flags = regs->ecx;
 
-    regs->eax = proc_open(path, mode);
+    regs->eax = proc_open(path, flags);
 }
 
 static void syscall_close(registers_t* regs) {
@@ -183,25 +183,14 @@ static void syscall_read(registers_t* regs) {
     uint8_t* buf = (uint8_t*) regs->ecx;
     uint32_t size = regs->edx;
 
-    if (!proc_has_fd(fd)) {
-        regs->eax = 0;
-        return;
-    }
-
-    regs->eax = fs_read(fd, buf, size);
+    regs->eax = proc_read(fd, buf, size);
 }
 
 static void syscall_readdir(registers_t* regs) {
     uint32_t fd = regs->ebx;
     sos_directory_entry_t* d_ent = (sos_directory_entry_t*) regs->ecx;
 
-    if (!proc_has_fd(fd)) {
-        regs->eax = -1;
-        return;
-    }
-
-    uint32_t read = fs_readdir(fd, d_ent, d_ent->entry_size);
-    regs->eax = read;
+    regs->eax = proc_readdir(fd, d_ent);
 }
 
 static void syscall_write(registers_t* regs) {
@@ -209,12 +198,7 @@ static void syscall_write(registers_t* regs) {
     uint8_t* buf = (uint8_t*) regs->ecx;
     uint32_t size = regs->edx;
 
-    if (!proc_has_fd(fd)) {
-        regs->eax = 0;
-        return;
-    }
-
-    regs->eax = fs_write(fd, buf, size);
+    regs->eax = proc_write(fd, buf, size);
 }
 
 static void syscall_mkdir(registers_t* regs) {
@@ -229,23 +213,13 @@ static void syscall_fseek(registers_t* regs) {
     uint32_t offset = regs->ecx;
     int32_t whence = regs->edx;
 
-    if (!proc_has_fd(fd)) {
-        regs->eax = (uint32_t) -1;
-        return;
-    }
-
-    regs->eax = fs_fseek(fd, offset, whence);
+    regs->eax = proc_fseek(fd, offset, whence);
 }
 
 static void syscall_ftell(registers_t* regs) {
     uint32_t fd = regs->ebx;
 
-    if (!proc_has_fd(fd)) {
-        regs->eax = (uint32_t) -1;
-        return;
-    }
-
-    regs->eax = fs_ftell(fd);
+    regs->eax = proc_ftell(fd);
 }
 
 static void syscall_chdir(registers_t* regs) {

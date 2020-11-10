@@ -1,4 +1,5 @@
 #include <kernel/ext2.h>
+#include <kernel/fs.h>
 #include <kernel/sys.h>
 
 #include <string.h>
@@ -97,7 +98,15 @@ typedef struct {
     uint32_t size_upper;
     uint32_t fragment_block;
     uint32_t os_specific2[3];
-} inode_t;
+} ext2_inode_t;
+
+typedef struct {
+    uint32_t inode;
+    uint16_t entry_size;
+    uint8_t name_len_low;
+    uint8_t type;
+    char name[];
+} ext2_directory_entry_t;
 
 #define INODE_FIFO 0x1000
 #define INODE_CHAR 0x2000
@@ -138,8 +147,8 @@ static uint32_t inode_size;
 static superblock_t* superblock;
 static group_descriptor_t* group_descriptors;
 
-uint32_t ext2_get_inode_block(inode_t* in, uint32_t n);
-uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n);
+uint32_t ext2_get_inode_block(ext2_inode_t* in, uint32_t n);
+uint32_t ext2_get_or_create_inode_block(ext2_inode_t* in, uint32_t n);
 
 /* Reads the content of the given block.
  */
@@ -205,7 +214,7 @@ group_descriptor_t* parse_group_descriptors() {
  * `n` is relative to the inode, i.e. it's not an absolute block number.
  * For convenience, reading a non-existent block reads zeros.
  */
-void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
+void ext2_read_inode_block(ext2_inode_t* inode, uint32_t n, uint8_t* buf) {
     uint32_t block = ext2_get_inode_block(inode, n);
 
     if (block) {
@@ -218,7 +227,7 @@ void ext2_read_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
 /* Writes to the `n`-th block of the given inode.
  * If the block didn't exist, it is created.
  */
-void ext2_write_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
+void ext2_write_inode_block(ext2_inode_t* inode, uint32_t n, uint8_t* buf) {
     uint32_t block = ext2_get_or_create_inode_block(inode, n);
 
     ext2_write_block(block, buf);
@@ -228,7 +237,7 @@ void ext2_write_inode_block(inode_t* inode, uint32_t n, uint8_t* buf) {
  * This inode can be freed using `kfree`.
  * Expects `parse_superblock` to have been called.
  */
-inode_t* ext2_get_inode(uint32_t inode) {
+ext2_inode_t* ext2_get_inode(uint32_t inode) {
     if (inode == 0) {
         return NULL;
     }
@@ -243,67 +252,14 @@ inode_t* ext2_get_inode(uint32_t inode) {
 
     uint8_t* tmp = kmalloc(block_size);
     ext2_read_block(table_block + block_offset, tmp);
-    inode_t* in = kmalloc(superblock->inode_size);
+    ext2_inode_t* in = kmalloc(superblock->inode_size);
     memcpy(in, tmp + index_in_block*superblock->inode_size, superblock->inode_size);
     kfree(tmp);
 
     return in;
 }
 
-/* Returns the inode corresponding to the file at `path`.
- * On error, returns 0, the invalid inode.
- * Note: expects a normalized path.
- */
-uint32_t ext2_open(const char* path) {
-    if (!strcmp(path++, "/")) {
-        return EXT2_ROOT_INODE;
-    }
-
-    uint32_t inode = EXT2_ROOT_INODE;
-
-    while (true) {
-        uint32_t offset = 0;
-        ext2_directory_entry_t* entry;
-        uint32_t prev_inode = inode;
-        uint32_t component_len = strchrnul(path, '/') - path;
-        bool last_component = path[component_len] == '\0';
-
-        while ((entry = ext2_readdir(inode, offset)) != NULL) {
-            if (entry->type == DTYPE_INVALID) {
-                kfree(entry);
-                break;
-            }
-
-            offset += entry->entry_size;
-            bool match = component_len == entry->name_len_low &&
-                         !strncmp(path, entry->name, component_len);
-            bool isdir = entry->type == DTYPE_DIR;
-            uint32_t potential_inode = entry->inode;
-
-            kfree(entry);
-
-            if (!match) {
-                continue;
-            }
-
-            if (last_component) {
-                return potential_inode;
-            } else if (isdir) {
-                inode = potential_inode;
-                path = strchr(path, '/') + 1;
-                break;
-            }
-        }
-
-        if (inode == prev_inode) {
-            break;
-        }
-    }
-
-    return 0;
-}
-
-/* Returns the number of a free block, marking it as used.
+/* Returns a free block number, marking it as used.
  */
 uint32_t ext2_allocate_block() {
     uint8_t* tmp = kmalloc(block_size);
@@ -386,7 +342,7 @@ uint32_t ext2_min_dir_entry_size(const char* name) {
 
 /* Update the inode no. `no` on disk with the content of `in`.
  */
-void ext2_update_inode(uint32_t no, inode_t* in) {
+void ext2_update_inode(uint32_t no, ext2_inode_t* in) {
     uint32_t group = (no - 1) / superblock->inodes_per_group;
     uint32_t table_block = group_descriptors[group].inode_table;
     uint32_t block_offset = ((no - 1) * inode_size) / block_size;
@@ -404,7 +360,7 @@ void ext2_update_inode(uint32_t no, inode_t* in) {
  * job.
  * 10$ to anyone who manages to refactor this code to something tolerable.
  */
-uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n) {
+uint32_t ext2_get_or_create_inode_block(ext2_inode_t* in, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = block_size / sizeof(uint32_t);
     // Type matters for pointer arithmetic purposes
@@ -507,7 +463,7 @@ uint32_t ext2_get_or_create_inode_block(inode_t* in, uint32_t n) {
     return 0;
 }
 
-uint32_t ext2_get_inode_block(inode_t* inode, uint32_t n) {
+uint32_t ext2_get_inode_block(ext2_inode_t* inode, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = block_size / sizeof(uint32_t);
     static uint32_t* tmp = NULL;
@@ -556,7 +512,7 @@ uint32_t ext2_get_inode_block(inode_t* inode, uint32_t n) {
  * Returns the inode of the created file.
  */
 uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint32_t type) {
-    inode_t* in = ext2_get_inode(parent_inode);
+    ext2_inode_t* in = ext2_get_inode(parent_inode);
 
     if (!in) {
         printke("add_entry: parent does not exist");
@@ -570,7 +526,7 @@ uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint3
 
     uint8_t* block = kmalloc(block_size);
     ext2_read_inode_block(in, 0, block);
-    ext2_directory_entry_t* e;
+    sos_directory_entry_t* e;
     uint32_t offset = 0;
 
     /* Look for the last entry and resize it */
@@ -598,8 +554,8 @@ uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint3
     /* Create a new null inode */
     uint32_t new_inode = ext2_allocate_inode();
 
-    inode_t new_in;
-    memset(&new_in, 0, sizeof(inode_t));
+    ext2_inode_t new_in;
+    memset(&new_in, 0, sizeof(ext2_inode_t));
 
     // We fill the default entries
     if (type == DTYPE_DIR) {
@@ -652,24 +608,13 @@ uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint3
 }
 
 /* Create a file named `name` in the directory pointed to by `parent_inode`.
+ * `type` is one of the `DENT_*` constants.
  */
-uint32_t ext2_create(const char* name, uint32_t parent_inode) {
-    uint32_t inode = ext2_add_directory_entry(name, parent_inode, DTYPE_FILE);
-    inode_t* in = ext2_get_inode(inode);
+uint32_t ext2_create(const char* name, uint32_t type, uint32_t parent_inode) {
+    uint32_t inode = ext2_add_directory_entry(name, parent_inode, type);
+    ext2_inode_t* in = ext2_get_inode(inode);
 
-    in->type_perms = INODE_FILE;
-
-    ext2_update_inode(inode, in);
-    kfree(in);
-
-    return inode;
-}
-
-uint32_t ext2_mkdir(const char* name, uint32_t parent_inode) {
-    uint32_t inode = ext2_add_directory_entry(name, parent_inode, DTYPE_DIR);
-    inode_t* in = ext2_get_inode(inode);
-
-    in->type_perms = INODE_DIR;
+    in->type_perms = type == DENT_DIRECTORY ? INODE_DIR : INODE_FILE;
 
     ext2_update_inode(inode, in);
     kfree(in);
@@ -681,7 +626,7 @@ uint32_t ext2_mkdir(const char* name, uint32_t parent_inode) {
  * Returns the number of bytes written.
  */
 uint32_t ext2_append(uint32_t inode, uint8_t* data, uint32_t size) {
-    inode_t* in = ext2_get_inode(inode);
+    ext2_inode_t* in = ext2_get_inode(inode);
     uint8_t* tmp = zalloc(block_size);
 
     uint32_t start_block = in->size_lower / block_size;
@@ -722,7 +667,7 @@ uint32_t ext2_append(uint32_t inode, uint8_t* data, uint32_t size) {
  * I had started similarly but had ended up with much worse code.
  */
 uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
-    inode_t* in = ext2_get_inode(inode);
+    ext2_inode_t* in = ext2_get_inode(inode);
 
     if (!in) {
         return 0;
@@ -780,7 +725,7 @@ uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size)
  * `inode` is that of a directory, and `offset` must be at a valid directory
  * entry.
  */
-ext2_directory_entry_t* ext2_readdir(uint32_t inode, uint32_t offset) {
+sos_directory_entry_t* ext2_readdir(uint32_t inode, uint32_t offset) {
     ext2_directory_entry_t ent;
 
     // Read the beginning of the struct to know its size, then read it in full
@@ -798,15 +743,38 @@ ext2_directory_entry_t* ext2_readdir(uint32_t inode, uint32_t offset) {
         return NULL;
     }
 
-    return entry;
+    // This is fine in the specific case of ext2, but not great
+    return (sos_directory_entry_t*) entry;
 }
 
-uint32_t ext2_get_file_size(uint32_t inode) {
-    inode_t* in = ext2_get_inode(inode);
-    uint32_t size = in->size_lower;
+inode_t* ext2_get_fs_inode(uint32_t inode) {
+    ext2_inode_t* in = ext2_get_inode(inode);
+    inode_t* fs_in = NULL;
+
+    if (INODE_TYPE(in->type_perms) == INODE_FILE) {
+        file_inode_t* fi = kmalloc(sizeof(file_inode_t));
+        fi->ino = (inode_t) {
+            .inode_no = inode, .size = in->size_lower, .type = DTYPE_FILE
+        };
+
+        fs_in = (inode_t*) fi;
+    } else if (INODE_TYPE(in->type_perms) == INODE_DIR) {
+        folder_inode_t* fi = kmalloc(sizeof(folder_inode_t));
+        fi->dirty = true;
+        fi->subfiles = LIST_HEAD_INIT(fi->subfiles);
+        fi->subfolders = LIST_HEAD_INIT(fi->subfolders);
+        fi->ino = (inode_t) {
+            .inode_no = inode, .size = in->size_lower, .type = DTYPE_DIR
+        };
+
+        fs_in = (inode_t*) fi;
+    } else {
+        printke("unsupported inode type: %X", INODE_TYPE(in->type_perms));
+    }
+
     kfree(in);
 
-    return size;
+    return fs_in;
 }
 
 void init_ext2(uint8_t* data, uint32_t len) {

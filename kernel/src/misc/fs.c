@@ -9,15 +9,233 @@
 #include <stdio.h>
 #include <math.h>
 
-static list_t file_table;
-static uint32_t current_fd;
+typedef struct tnode_t {
+    char* name;
+    inode_t* inode;
+} tnode_t;
+
+char* dirname(const char* p);
+char* basename(const char* p);
+void fs_print_open_fds();
+void fs_cache_entries(folder_inode_t* dir_ino);
+
+static tnode_t* root;
 
 void init_fs() {
-    file_table = LIST_HEAD_INIT(file_table);
+    root = kmalloc(sizeof(tnode_t));
+    root->name = "/";
+    root->inode = ext2_get_fs_inode(EXT2_ROOT_INODE);
+}
+
+void delete_tnode(tnode_t* tn) {
+    inode_t* in = tn->inode;
+
+    if (in->type == DENT_DIRECTORY) {
+        folder_inode_t* ind = (folder_inode_t*) in;
+
+        while (!list_empty(&ind->subfiles)) {
+            tnode_t* subtn = list_first_entry(&ind->subfiles, tnode_t);
+            delete_tnode(subtn);
+            list_del(list_first(&ind->subfiles));
+        }
+
+        while (!list_empty(&ind->subfolders)) {
+            tnode_t* subtn = list_first_entry(&ind->subfolders, tnode_t);
+            delete_tnode(subtn);
+            list_del(list_first(&ind->subfolders));
+        }
+    }
+
+    kfree(in);
+    kfree(tn->name);
+    kfree(tn);
+}
+
+/* Builds one level of vfs nodes with the children of the given inode.
+ * Do not call twice on the same inode, unless previous entries have been
+ * cleared previously.
+ */
+void fs_cache_entries(folder_inode_t* inode) {
+    sos_directory_entry_t* dent = NULL;
+    uint32_t offset = 0;
+
+    while ((dent = ext2_readdir(inode->ino.inode_no, offset)) != NULL && dent->type != DENT_INVALID) {
+        offset += dent->entry_size;
+        tnode_t* tn = kmalloc(sizeof(tnode_t));
+        tn->inode = ext2_get_fs_inode(dent->inode);
+        tn->name = strndup(dent->name, dent->name_len_low);
+        list_add(dent->type == DENT_FILE ? &inode->subfiles : &inode->subfolders, tn);
+        kfree(dent);
+    }
+
+    inode->dirty = false;
+}
+
+/* Returns an inode_t* from a path.
+ * `flags` can be one of:
+ *  - O_CREAT: create the last component of `path`
+ *  - O_CREATD: same, but as a directory
+ * TODO: prevent creating duplicate entries.
+ */
+inode_t* fs_open(const char* path, uint32_t flags) {
+    char* npath = fs_normalize_path(path);
+
+    if (!strcmp(npath, "/")) {
+        kfree(npath);
+        return root->inode;
+    }
+
+    tnode_t* tnode = root;
+    tnode_t* prev_tnode = NULL;
+    char* part = npath;
+    uint32_t part_len = 0;
+    bool last_part = false;
+
+    while (!last_part && tnode != prev_tnode) {
+        folder_inode_t* inode = (folder_inode_t*) tnode->inode;
+        prev_tnode = tnode;
+        part += part_len + 1; // Skip the separator
+        part_len = strchrnul(part, '/') - part;
+        last_part = part[part_len] == '\0';
+
+        // File creation requested: now's the time
+        if (last_part && (flags & O_CREAT || flags & O_CREATD)) {
+            uint32_t new_ino = ext2_create(part,
+                flags & O_CREAT ? DENT_FILE : DENT_DIRECTORY,
+                inode->ino.inode_no);
+
+            tnode_t* new_tn = kmalloc(sizeof(tnode_t));
+            new_tn->inode = ext2_get_fs_inode(new_ino);
+            new_tn->name = strdup(part);
+            list_add(&inode->subfiles, new_tn);
+        }
+
+        // Build the cache if needed
+        if (inode->dirty) {
+            fs_cache_entries(inode);
+        }
+
+        // Search the cache, starting with subfolders
+        tnode_t* ent;
+        list_for_each_entry(ent, &inode->subfolders) {
+            if (strlen(ent->name) == part_len &&
+                    !strncmp(ent->name, part, part_len)) {
+                tnode = ent;
+                break;
+            }
+        }
+
+        if (tnode != prev_tnode) {
+            continue;
+        }
+
+        // Not a subfolder: check the subfiles
+        list_for_each_entry(ent, &inode->subfiles) {
+            if (strlen(ent->name) == part_len &&
+                    !strncmp(ent->name, part, part_len)) {
+                tnode = ent;
+                break;
+            }
+        }
+    }
+
+    kfree(npath);
+    return tnode != prev_tnode ? tnode->inode : NULL;
+}
+
+/* From an inode number, finds the corresponding inode_t*.
+ */
+inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode) {
+    tnode_t* tn;
+    folder_inode_t* fin;
+
+    list_for_each_entry(tn, &parent->subfiles) {
+        if (tn->inode->inode_no == inode) {
+            return tn->inode;
+        }
+    }
+
+    list_for_each_entry(fin, &parent->subfolders) {
+        if (tn->inode->inode_no == inode) {
+            return tn->inode;
+        }
+
+        inode_t* subresult = fs_find_inode(fin, inode);
+
+        if (subresult) {
+            return subresult;
+        }
+    }
+
+    return NULL;
+}
+
+uint32_t fs_mkdir(const char* path, uint32_t mode) {
+    UNUSED(mode);
+
+    // Fail if the path exists already
+    if (fs_open(path, O_RDONLY)) {
+        return FS_INVALID_INODE;
+    }
+
+    inode_t* in = fs_open(path, O_CREATD);
+
+    if (!in) {
+        return FS_INVALID_INODE;
+    }
+
+    return in->inode_no;
+}
+
+/* A process has released its grip on a file: TODO something.
+ */
+void fs_close(uint32_t inode) {
+    UNUSED(inode);
+}
+
+uint32_t fs_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
+    return ext2_read(inode, offset, buf, size);
+}
+
+uint32_t fs_write(uint32_t inode, uint8_t* buf, uint32_t size) {
+    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
+
+    if (!in) {
+        return 0;
+    }
+
+    uint32_t written = ext2_append(inode, buf, size);
+    in->size += written;
+
+    return written;
+}
+
+uint32_t fs_readdir(uint32_t inode, uint32_t offset, sos_directory_entry_t* d_ent, uint32_t size) {
+    sos_directory_entry_t* ent = ext2_readdir(inode, offset);
+
+    // TODO: check if empty entries aren't actually valid
+    if (ent == NULL || ent->name[0] == '\0') {
+        return 0;
+    }
+
+    uint32_t unpadded_size = min(ent->entry_size, 263);
+
+    if (unpadded_size < size) {
+        memcpy(d_ent, ent, unpadded_size);
+        d_ent->name[d_ent->name_len_low] = '\0';
+    } else {
+        kfree(ent);
+        return 0;
+    }
+
+    kfree(ent);
+
+    return d_ent->entry_size;
 }
 
 /* Returns the absolute version of `p`, free of oddities,
  * dynamically allocated.
+ * TODO: make it use static memory.
  */
 char* fs_normalize_path(const char* p) {
     char* np = kmalloc(MAX_PATH);
@@ -69,12 +287,13 @@ char* fs_normalize_path(const char* p) {
 }
 
 /* Returns the path to the parent directory of the thing pointed to by `p`,
- * dynamically allocated.
+ * statically allocated.
  * Expects `p` to be a normalized path.
+ * TODO: repurpose those functions in libc.
  */
 char* dirname(const char* p) {
+    static char dp[MAX_PATH] = "";
     char* last_sep = strrchr(p, '/');
-    char* dp = kmalloc(MAX_PATH);
 
     strcpy(dp, p);
 
@@ -101,184 +320,4 @@ char* basename(const char* p) {
     }
 
     return last_sep + 1;
-}
-
-uint32_t fs_open(const char* path, uint32_t mode) {
-    char* npath = fs_normalize_path(path);
-    uint32_t inode = 0;
-
-    if (mode & O_CREAT) {
-        char* parent_path = dirname(path);
-        char* filename = basename(path);
-        uint32_t parent_inode = ext2_open(parent_path);
-        inode = ext2_create(filename, parent_inode);
-        kfree(parent_path);
-    } else if (mode & O_RDONLY) {
-        inode = ext2_open(npath);
-    }
-
-    kfree(npath);
-
-    if (inode == FS_INVALID_INODE) {
-        return FS_INVALID_FD;
-    }
-
-    ft_entry_t* entry = kmalloc(sizeof(ft_entry_t));
-
-    entry->fd = ++current_fd;
-    entry->inode = inode;
-    entry->mode = mode;
-    entry->offset = 0;
-    entry->size = ext2_get_file_size(inode);
-
-    list_add(&file_table, entry);
-
-    return entry->fd;
-}
-
-uint32_t fs_mkdir(const char* path, uint32_t mode) {
-    UNUSED(mode);
-
-    uint32_t inode = 0;
-    char* np = fs_normalize_path(path);
-
-    char* parent_path = dirname(np);
-    char* filename = basename(np);
-    uint32_t parent_inode = ext2_open(parent_path);
-
-    inode = ext2_mkdir(filename, parent_inode);
-
-    kfree(parent_path);
-    kfree(np);
-
-    if (!inode) {
-        return FS_INVALID_INODE;
-    }
-
-    return inode;
-}
-
-void fs_print_open() {
-    printk("open file descriptors:");
-
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        printf("%d -> ", entry->fd);
-    }
-
-    printf("end\n");
-}
-
-void fs_close(uint32_t fd) {
-    list_t* iter;
-    ft_entry_t* entry;
-    list_for_each(iter, entry, &file_table) {
-        if (entry->fd == fd) {
-            list_del(iter);
-            kfree(entry);
-            return;
-        }
-    }
-}
-
-uint32_t fs_read(uint32_t fd, uint8_t* buf, uint32_t size) {
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        if (entry->fd == fd && (entry->mode & O_RDONLY || entry->mode & O_RDWR)) {
-            uint32_t read = ext2_read(entry->inode, entry->offset, buf, size);
-            entry->offset += read;
-
-            if (read < size) {
-                buf[read] = (uint8_t) -1; // EOF
-            }
-
-            return read;
-        }
-    }
-
-    return 0;
-}
-
-uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size) {
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        if (entry->fd == fd && entry->mode & O_APPEND) {
-            uint32_t written = ext2_append(entry->inode, buf, size);
-            entry->offset += written;
-            entry->size += written;
-
-            return written;
-        }
-    }
-
-    return 0;
-}
-
-uint32_t fs_readdir(uint32_t fd, sos_directory_entry_t* d_ent, uint32_t size) {
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        if (entry->fd == fd && entry->mode & O_RDONLY) {
-            ext2_directory_entry_t* ent = ext2_readdir(entry->inode, entry->offset);
-
-            // TODO: check if empty entries aren't actually valid
-            if (ent == NULL || ent->name[0] == '\0') {
-                return 0;
-            }
-
-            uint32_t unpadded_size = min(ent->entry_size, 263);
-
-            if (unpadded_size < size) {
-                // TODO: proper assignation depending on fs type
-                memcpy(d_ent, ent, unpadded_size);
-                d_ent->name[d_ent->name_len_low] = '\0';
-            } else {
-                kfree(ent);
-
-                return 0;
-            }
-
-            entry->offset += d_ent->entry_size;
-            kfree(ent);
-
-            return d_ent->entry_size;
-        }
-    }
-
-    return 0;
-}
-
-int32_t fs_fseek(uint32_t fd, int32_t offset, uint32_t whence) {
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        if (entry->fd == fd) {
-            switch (whence) {
-            case SEEK_SET:
-                entry->offset = offset;
-                break;
-            case SEEK_CUR:
-                entry->offset += offset;
-                break;
-            case SEEK_END:
-                entry->offset = entry->size + offset;
-                break;
-            default:
-                return -1;
-            }
-
-            return 0;
-        }
-    }
-
-    return -1;
-}
-
-int32_t fs_ftell(uint32_t fd) {
-    ft_entry_t* entry;
-    list_for_each_entry(entry, &file_table) {
-        if (entry->fd == fd) {
-            return entry->offset;
-        }
-    }
-
-    return -1;
 }

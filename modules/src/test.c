@@ -43,8 +43,12 @@ void tree(char* path, int level) {
 
         if (e->d_type == 2 && e->d_name[0] != '.') {
             int nl = strlen(e->d_name);
-            strcpy(p + strlen(p), "/");
-            strcpy(p + strlen(p), e->d_name);
+
+            if (strcmp(p, "/") != 0) {
+                strcat(p, "/");
+            }
+
+            strcat(p, e->d_name);
             tree(p, level + 1);
             p[strlen(p) - nl - 1] = 0;
         }
@@ -56,9 +60,10 @@ void tree(char* path, int level) {
 }
 
 int main() {
-    char buf[BUF_SIZE] = "";
+    char buf[BUF_SIZE] = "none";
 
     mkdir("/biloute", 0);
+    mkdir("/biloute/blyat", 0);
     FILE* f2 = fopen("/biloute/baloute", "w");
     fclose(f2);
 

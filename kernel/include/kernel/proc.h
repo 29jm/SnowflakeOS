@@ -1,13 +1,22 @@
 #pragma once
 
-#include <list.h>
+#include <kernel/fs.h>
 
+#include <list.h>
 #include <stdint.h>
 #include <stdbool.h>
 
 #define PROC_STACK_PAGES 4
 #define PROC_KERNEL_STACK_PAGES 1
 #define PROC_MAX_FD 1024
+
+typedef struct {
+    uint32_t fd;
+    uint32_t inode;
+    uint32_t mode;
+    uint32_t offset;
+    uint32_t size;
+} ft_entry_t;
 
 // Add new members to the end to avoid messing with the offsets
 typedef struct _proc_t {
@@ -25,7 +34,7 @@ typedef struct _proc_t {
     uint32_t mem_len; // Size of program heap in bytes
     uint32_t sleep_ticks;
     uint8_t fpu_registers[512];
-    list_t fds;
+    list_t filetable;
     char* cwd;
 } process_t;
 
@@ -61,7 +70,12 @@ char* proc_get_cwd();
 void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
 int32_t proc_exec(const char* path, char** argv);
-bool proc_has_fd(uint32_t fd);
-uint32_t proc_open(const char* path, uint32_t mode);
+ft_entry_t* proc_fd_to_entry(uint32_t fd);
+uint32_t proc_open(const char* path, uint32_t flags);
 void proc_close(uint32_t fd);
+uint32_t proc_read(uint32_t fd, uint8_t* buf, uint32_t size);
+int32_t proc_readdir(uint32_t fd, sos_directory_entry_t* dent);
+uint32_t proc_write(uint32_t fd, uint8_t* buf, uint32_t size);
+int32_t proc_fseek(uint32_t fd, int32_t offset, uint32_t whence);
+int32_t proc_ftell(uint32_t fd);
 int32_t proc_chdir(const char* path);
