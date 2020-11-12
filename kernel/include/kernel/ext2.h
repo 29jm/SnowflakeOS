@@ -11,6 +11,7 @@ typedef struct inode_t inode_t;
 
 void init_ext2(uint8_t* data, uint32_t len);
 uint32_t ext2_create(const char* name, uint32_t type, uint32_t parent_inode);
+int32_t ext2_unlink(uint32_t d_ino, uint32_t ino);
 uint32_t ext2_mkdir(const char* name, uint32_t parent_inode);
 uint32_t ext2_open(const char* path);
 uint32_t ext2_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size);

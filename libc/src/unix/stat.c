@@ -27,4 +27,8 @@ char* getcwd(char* buf, size_t size) {
     return (char*) syscall2(SYS_GETCWD, (uintptr_t) buf, (uintptr_t) size);
 }
 
+int unlink(const char* path) {
+    return syscall1(SYS_UNLINK, (uintptr_t) path);
+}
+
 #endif

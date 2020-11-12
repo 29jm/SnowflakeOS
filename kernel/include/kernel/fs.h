@@ -17,6 +17,7 @@ typedef struct inode_t {
     uint32_t inode_no;
     uint32_t size;
     inode_type_t type;
+    uint32_t hardlinks;
 } inode_t;
 
 typedef struct file_inode_t {
@@ -34,6 +35,7 @@ void init_fs();
 char* fs_normalize_path(const char* p);
 inode_t* fs_open(const char* path, uint32_t mode);
 uint32_t fs_mkdir(const char* path, uint32_t mode);
+int32_t fs_unlink(const char* path);
 void fs_close(uint32_t fd);
 uint32_t fs_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size);
 uint32_t fs_write(uint32_t fd, uint8_t* buf, uint32_t size);

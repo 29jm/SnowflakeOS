@@ -187,6 +187,41 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
     return in->inode_no;
 }
 
+int32_t fs_unlink(const char* path) {
+    char* npath = fs_normalize_path(path);
+
+    folder_inode_t* d_in = (folder_inode_t*) fs_open(dirname(npath), O_RDONLY);
+    inode_t* in = fs_open(npath, O_RDONLY);
+    kfree(npath);
+
+    if (in->type == DENT_DIRECTORY) {
+        return -1;
+    }
+
+    if (!d_in || !in) {
+        return -1;
+    }
+
+    // Update the cache
+    list_t* iter;
+    tnode_t* ent;
+    list_for_each(iter, ent, &d_in->subfiles) {
+        if (ent->inode->inode_no == in->inode_no) {
+            kfree(ent->name);
+            kfree(ent);
+
+            if (--in->hardlinks == 0) {
+                kfree(in);
+            }
+
+            list_del(iter);
+            break;
+        }
+    }
+
+    return ext2_unlink(d_in->ino.inode_no, in->inode_no);
+}
+
 /* A process has released its grip on a file: TODO something.
  */
 void fs_close(uint32_t inode) {

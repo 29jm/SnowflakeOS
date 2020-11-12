@@ -108,6 +108,11 @@ typedef struct {
     char name[];
 } ext2_directory_entry_t;
 
+typedef struct dentry_t {
+    char* name;
+    uint32_t inode;
+} dentry_t;
+
 #define INODE_FIFO 0x1000
 #define INODE_CHAR 0x2000
 #define INODE_DIR 0x4000
@@ -235,7 +240,7 @@ void ext2_write_inode_block(ext2_inode_t* inode, uint32_t n, uint8_t* buf) {
 
 /* Returns an inode struct from an inode number.
  * This inode can be freed using `kfree`.
- * Expects `parse_superblock` to have been called.
+ * Note: doesn't check that the inode is valid.
  */
 ext2_inode_t* ext2_get_inode(uint32_t inode) {
     if (inode == 0) {
@@ -300,6 +305,24 @@ uint32_t ext2_allocate_block() {
     return 0;
 }
 
+void ext2_free_block(uint32_t block) {
+    uint32_t group_no = block / superblock->blocks_per_group;
+    uint32_t bitmap_block = group_descriptors[group_no].block_bitmap;
+    uint32_t rel_block = block % superblock->blocks_per_group;
+    uint32_t block_offset = rel_block / (8 * block_size);
+    uint8_t* bitmap = kmalloc(block_size);
+
+    ext2_read_block(bitmap_block + block_offset, bitmap);
+    bitmap[rel_block / 8] &= ~(1 << (rel_block % 8));
+    ext2_write_block(bitmap_block + block_offset, bitmap);
+    kfree(bitmap);
+
+    superblock->free_blocks++;
+    group_descriptors[group_no].free_blocs++;
+    ext2_write_superblock();
+    ext2_write_group_descriptor(group_no);
+}
+
 /* Returns the first free inode number available.
  */
 uint32_t ext2_allocate_inode() {
@@ -334,10 +357,40 @@ uint32_t ext2_allocate_inode() {
     return 0;
 }
 
+/* Marks an inode as free, along with its allocated blocks.
+ */
+void ext2_free_inode(uint32_t ino) {
+    /* Free the blocks owned by the inode */
+    ext2_inode_t* in = ext2_get_inode(ino);
+    uint32_t num_blocks = divide_up(in->size_lower, block_size);
+    kfree(in);
+
+    for (uint32_t iblock = 0; iblock < num_blocks; iblock++) {
+        uint32_t rblock = ext2_get_inode_block(in, iblock);
+        ext2_free_block(rblock);
+    }
+
+    /* Free the inode itself */
+    uint8_t* bitmap = kmalloc(block_size);
+    uint32_t group_no = ino / superblock->inodes_per_group;
+    uint32_t bitmap_block = group_descriptors[group_no].inode_bitmap;
+    uint32_t rel_ino = (ino - 1) % superblock->inodes_per_group;
+
+    ext2_read_block(bitmap_block, bitmap);
+    bitmap[rel_ino / 8] &= ~(1 << (rel_ino % 8));
+    ext2_write_block(bitmap_block, bitmap);
+    kfree(bitmap);
+
+    group_descriptors[group_no].free_inodes++;
+    superblock->free_inodes++;
+    ext2_write_superblock();
+    ext2_write_group_descriptor(group_no);
+}
+
 /* Returns the minimum size of a directory entry with the given filename.
  */
 uint32_t ext2_min_dir_entry_size(const char* name) {
-    return sizeof(ext2_directory_entry_t) + strlen(name);
+    return align_to(sizeof(ext2_directory_entry_t) + strlen(name), 4);
 }
 
 /* Update the inode no. `no` on disk with the content of `in`.
@@ -507,111 +560,147 @@ uint32_t ext2_get_inode_block(ext2_inode_t* inode, uint32_t n) {
     return 0;
 }
 
+/* Returns a list of `dentry_t` corresponding to the entries in the directory
+ * whose inode was given.
+ */
+list_t* ext2_dir_to_list(uint32_t ino) {
+    list_t* list = kmalloc(sizeof(list_t));
+    *list = LIST_HEAD_INIT(*list);
+
+    sos_directory_entry_t* ent = NULL;
+    uint32_t offset = 0;
+
+    do {
+        ent = ext2_readdir(ino, offset);
+
+        if (!ent) {
+            break;
+        }
+
+        dentry_t* tn = kmalloc(sizeof(dentry_t));
+        tn->name = strndup(ent->name, ent->name_len_low);
+        tn->inode = ent->inode;
+
+        list_add(list, tn);
+
+        offset += ent->entry_size;
+        kfree(ent);
+    } while (offset < block_size);
+
+    return list;
+}
+
+/* With `ino` that of a directory, write to it each dentry_t in `dir_entries`.
+ * TODO: make it work for directories spanning more than one block.
+ */
+void ext2_write_dir(uint32_t ino, list_t* dir_entries) {
+    ext2_inode_t* in = ext2_get_inode(ino);
+
+    if (INODE_TYPE(in->type_perms) != INODE_DIR) {
+        return;
+    }
+
+    uint8_t* tmp = kmalloc(block_size);
+    uint32_t offset = 0;
+    dentry_t* tn;
+    list_for_each_entry(tn, dir_entries) {
+        ext2_inode_t* ent_in = ext2_get_inode(tn->inode);
+        ext2_directory_entry_t* ent = (ext2_directory_entry_t*) &tmp[offset];
+        bool last = list_last_entry(dir_entries, dentry_t) == tn;
+
+        ent->inode = tn->inode;
+        ent->name_len_low = strlen(tn->name);
+        ent->type = INODE_TYPE(ent_in->type_perms) == INODE_DIR ? DTYPE_DIR : DTYPE_FILE;
+        ent->entry_size = last ? block_size - offset : ext2_min_dir_entry_size(tn->name);
+        strncpy(ent->name, tn->name, strlen(tn->name));
+
+        offset += ent->entry_size;
+        kfree(ent_in);
+    }
+
+    ext2_write_inode_block(in, 0, tmp);
+    kfree(tmp);
+    kfree(in);
+}
+
+dentry_t* ext2_make_dir_entry(const char* name, uint32_t ino) {
+    dentry_t* tn = kmalloc(sizeof(dentry_t));
+
+    tn->inode = ino;
+    tn->name = strdup(name);
+
+    return tn;
+}
+
+/* Does not free the list itself.
+ */
+void ext2_free_dir_entries(list_t* entries) {
+    while (!list_empty(entries)) {
+        dentry_t* tn = list_first_entry(entries, dentry_t);
+        kfree(tn->name);
+        kfree(tn);
+        list_del(list_first(entries));
+    }
+}
+
 /* Creates a new entry with name `name` in the directory pointed to by
  * `parent_inode` with type `type`, one of the DTYPE_* constants.
  * Returns the inode of the created file.
  */
-uint32_t ext2_add_directory_entry(const char* name, uint32_t parent_inode, uint32_t type) {
-    ext2_inode_t* in = ext2_get_inode(parent_inode);
+uint32_t ext2_add_dentry(const char* name, uint32_t d_ino, uint32_t type) {
+    ext2_inode_t* d_in = ext2_get_inode(d_ino);
 
-    if (!in) {
-        printke("add_entry: parent does not exist");
+    if (!d_in || INODE_TYPE(d_in->type_perms) != INODE_DIR) {
         return 0;
     }
 
-    if (INODE_TYPE(in->type_perms) != INODE_DIR) {
-        printke("add_entry: parent is not a directory");
-        return 0;
-    }
+    list_t* entries = ext2_dir_to_list(d_ino);
+    uint32_t ino = ext2_allocate_inode();
+    ext2_inode_t in;
 
-    uint8_t* block = kmalloc(block_size);
-    ext2_read_inode_block(in, 0, block);
-    sos_directory_entry_t* e;
-    uint32_t offset = 0;
+    // Create the new inode
+    memset(&in, 0, sizeof(ext2_inode_t));
+    in.hardlinks_count = 1;
+    list_add(entries, ext2_make_dir_entry(name, ino));
 
-    /* Look for the last entry and resize it */
-    do {
-        e = ext2_readdir(parent_inode, offset);
+    // Write the parent directory structure to disk
+    ext2_write_dir(d_ino, entries);
 
-        // This is the last entry, resize it to make room for one more
-        // TODO: don't assume this block isn't full
-        if (offset + e->entry_size == block_size) {
-            uint32_t new_size = sizeof(ext2_directory_entry_t) + strlen(e->name);
-            new_size = align_to(new_size, 4);
-
-            e->entry_size = new_size;
-            memcpy(block + offset, e, new_size);
-            offset += new_size;
-            kfree(e);
-
-            break;
-        }
-
-        offset += e->entry_size;
-        kfree(e);
-    } while (offset < block_size);
-
-    /* Create a new null inode */
-    uint32_t new_inode = ext2_allocate_inode();
-
-    ext2_inode_t new_in;
-    memset(&new_in, 0, sizeof(ext2_inode_t));
-
-    // We fill the default entries
+    // If it's a directory, write its entries to disk
     if (type == DTYPE_DIR) {
-        uint8_t* tmp = kmalloc(block_size);
-        ext2_directory_entry_t* dots = kmalloc(sizeof(ext2_directory_entry_t) + 2);
+        in.type_perms = INODE_DIR;
+        in.dbp[0] = ext2_allocate_block();
+        in.size_lower = block_size;
+        ext2_update_inode(ino, &in);
 
-        strncpy(dots->name, ".", 1);
-        *dots = (ext2_directory_entry_t) {
-            .inode = new_inode,
-            .type = DTYPE_DIR,
-            .name_len_low = 1,
-            .entry_size = 12
-        };
+        list_t dot_list = LIST_HEAD_INIT(dot_list);
 
-        memcpy(tmp, dots, dots->entry_size);
-        strncpy(dots->name, "..", 2);
-        dots->inode = parent_inode;
-        dots->name_len_low = 2;
-        dots->entry_size = block_size - 12;
+        dentry_t* dot = ext2_make_dir_entry(".", ino);
+        dentry_t* dots = ext2_make_dir_entry("..", d_ino);
 
-        memcpy(tmp + 12, dots, dots->entry_size);
-        new_in.dbp[0] = ext2_allocate_block();
-        ext2_write_inode_block(&new_in, 0, tmp);
-        kfree(tmp);
+        list_add(&dot_list, dot);
+        list_add(&dot_list, dots);
 
-        new_in.size_lower = block_size;
+        ext2_write_dir(ino, &dot_list);
+        ext2_free_dir_entries(&dot_list);
+    } else {
+        in.type_perms = INODE_FILE;
+        ext2_update_inode(ino, &in);
     }
 
-    ext2_update_inode(new_inode, &new_in);
+    // Free the list of entries, and the rest
+    ext2_free_dir_entries(entries);
+    kfree(entries);
+    kfree(d_in);
 
-    /* Add the entry referencing that inode */
-    uint32_t size = sizeof(ext2_directory_entry_t) + strlen(name);
-    ext2_directory_entry_t* new_entry = kmalloc(size);
-
-    strcpy(new_entry->name, name);
-    *new_entry = (ext2_directory_entry_t) {
-        .inode = new_inode,
-        .type = type,
-        .name_len_low = strlen(name),
-        .entry_size = 1024 - offset
-    };
-
-    memcpy(block + offset, new_entry, size);
-    ext2_write_inode_block(in, 0, block);
-    kfree(new_entry);
-    kfree(block);
-    kfree(in);
-
-    return new_inode;
+    return ino;
 }
 
 /* Create a file named `name` in the directory pointed to by `parent_inode`.
  * `type` is one of the `DENT_*` constants.
  */
 uint32_t ext2_create(const char* name, uint32_t type, uint32_t parent_inode) {
-    uint32_t inode = ext2_add_directory_entry(name, parent_inode, type);
+    uint32_t inode = ext2_add_dentry(name, parent_inode, type);
     ext2_inode_t* in = ext2_get_inode(inode);
 
     in->type_perms = type == DENT_DIRECTORY ? INODE_DIR : INODE_FILE;
@@ -620,6 +709,36 @@ uint32_t ext2_create(const char* name, uint32_t type, uint32_t parent_inode) {
     kfree(in);
 
     return inode;
+}
+
+/* Deletes the directory entry referencing `ino` in `d_ino`, deleting the inode
+ * if it is no longer referenced anywhere.
+ */
+int32_t ext2_unlink(uint32_t d_ino, uint32_t ino) {
+    ext2_inode_t* in = ext2_get_inode(ino);
+
+    list_t* entries = ext2_dir_to_list(d_ino);
+    list_t* iter;
+    dentry_t* ent;
+
+    list_for_each(iter, ent, entries) {
+        if (ent->inode == ino) {
+            kfree(ent->name);
+            kfree(ent);
+            list_del(iter);
+            break;
+        }
+    }
+
+    ext2_write_dir(d_ino, entries);
+
+    if (--in->hardlinks_count == 0) {
+        ext2_free_inode(ino);
+    } else {
+        ext2_update_inode(ino, in);
+    }
+
+    return 0;
 }
 
 /* Appends `size` bytes from `data` to the file pointed to by `inode`.
@@ -753,24 +872,22 @@ inode_t* ext2_get_fs_inode(uint32_t inode) {
 
     if (INODE_TYPE(in->type_perms) == INODE_FILE) {
         file_inode_t* fi = kmalloc(sizeof(file_inode_t));
-        fi->ino = (inode_t) {
-            .inode_no = inode, .size = in->size_lower, .type = DTYPE_FILE
-        };
-
+        fi->ino.type = DTYPE_FILE;
         fs_in = (inode_t*) fi;
     } else if (INODE_TYPE(in->type_perms) == INODE_DIR) {
         folder_inode_t* fi = kmalloc(sizeof(folder_inode_t));
         fi->dirty = true;
         fi->subfiles = LIST_HEAD_INIT(fi->subfiles);
         fi->subfolders = LIST_HEAD_INIT(fi->subfolders);
-        fi->ino = (inode_t) {
-            .inode_no = inode, .size = in->size_lower, .type = DTYPE_DIR
-        };
-
+        fi->ino.type = DTYPE_DIR;
         fs_in = (inode_t*) fi;
     } else {
         printke("unsupported inode type: %X", INODE_TYPE(in->type_perms));
     }
+
+    fs_in->inode_no = inode;
+    fs_in->size = in->size_lower;
+    fs_in->hardlinks = in->hardlinks_count;
 
     kfree(in);
 
