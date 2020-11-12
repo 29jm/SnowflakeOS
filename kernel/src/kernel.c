@@ -53,6 +53,8 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
     init_wm();
     init_proc();
 
+    printk("loading modules");
+
     // Load GRUB modules as programs
     mod_t* modules = (mod_t*) boot->mods_addr;
 
@@ -65,7 +67,7 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
         memcpy(data, (void*) mod.mod_start, size);
 
         if (!strcmp(module_name, "disk")) {
-            init_ext2(data, size);
+            init_fs(init_ext2(data, size));
             continue;
         } else if (!strcmp(module_name, "symbols")) {
             init_stacktrace(data, size);
@@ -74,8 +76,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
         printk("ignored module: %s", module_name);
     }
-
-    init_fs();
 
     proc_exec("/background", NULL);
     proc_exec("/terminal", NULL);

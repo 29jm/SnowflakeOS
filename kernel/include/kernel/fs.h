@@ -8,6 +8,8 @@
 
 #define O_CREATD 32
 
+typedef struct fs_t fs_t;
+
 typedef enum inode_type_t {
     inode_type_file = DENT_FILE,
     inode_type_folder = DENT_DIRECTORY
@@ -18,6 +20,7 @@ typedef struct inode_t {
     uint32_t size;
     inode_type_t type;
     uint32_t hardlinks;
+    fs_t* fs;
 } inode_t;
 
 typedef struct file_inode_t {
@@ -31,7 +34,24 @@ typedef struct folder_inode_t {
     list_t subfiles;
 } folder_inode_t;
 
-void init_fs();
+typedef struct fs_t {
+    inode_t* root;
+    uint32_t (*create)(struct fs_t*, const char*, uint32_t, uint32_t);
+    int32_t (*unlink)(struct fs_t*, uint32_t, uint32_t);
+    uint32_t (*read)(struct fs_t*, uint32_t, uint32_t, uint8_t*, uint32_t);
+    uint32_t (*append)(struct fs_t*, uint32_t, uint8_t*, uint32_t);
+    sos_directory_entry_t* (*readdir)(struct fs_t*, uint32_t, uint32_t);
+    inode_t* (*get_fs_inode)(struct fs_t*, uint32_t);
+} fs_t;
+
+typedef inode_t* (*fs_get_fs_inode_t)(struct fs_t*, uint32_t);
+typedef sos_directory_entry_t* (*fs_readdir_t)(struct fs_t*, uint32_t, uint32_t);
+typedef uint32_t (*fs_append_t)(struct fs_t*, uint32_t, uint8_t*, uint32_t);
+typedef uint32_t (*fs_read_t)(struct fs_t*, uint32_t, uint32_t, uint8_t*, uint32_t);
+typedef int32_t (*fs_unlink_t)(struct fs_t*, uint32_t, uint32_t);
+typedef uint32_t (*fs_create_t)(struct fs_t*, const char*, uint32_t, uint32_t);
+
+void init_fs(fs_t* fs);
 char* fs_normalize_path(const char* p);
 inode_t* fs_open(const char* path, uint32_t mode);
 uint32_t fs_mkdir(const char* path, uint32_t mode);

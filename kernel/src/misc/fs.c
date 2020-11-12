@@ -1,5 +1,4 @@
 #include <kernel/fs.h>
-#include <kernel/ext2.h>
 #include <kernel/proc.h>
 #include <kernel/sys.h>
 
@@ -8,6 +7,8 @@
 #include <list.h>
 #include <stdio.h>
 #include <math.h>
+
+#define FS(inode) ((inode_t*) inode)->fs
 
 typedef struct tnode_t {
     char* name;
@@ -21,10 +22,10 @@ void fs_cache_entries(folder_inode_t* dir_ino);
 
 static tnode_t* root;
 
-void init_fs() {
+void init_fs(fs_t* fs) {
     root = kmalloc(sizeof(tnode_t));
-    root->name = "/";
-    root->inode = ext2_get_fs_inode(EXT2_ROOT_INODE);
+    root->inode = fs->root;
+    root->name = strdup("/");
 }
 
 void delete_tnode(tnode_t* tn) {
@@ -59,10 +60,10 @@ void fs_cache_entries(folder_inode_t* inode) {
     sos_directory_entry_t* dent = NULL;
     uint32_t offset = 0;
 
-    while ((dent = ext2_readdir(inode->ino.inode_no, offset)) != NULL && dent->type != DENT_INVALID) {
+    while ((dent = FS(inode)->readdir(FS(inode), inode->ino.inode_no, offset)) != NULL && dent->type != DENT_INVALID) {
         offset += dent->entry_size;
         tnode_t* tn = kmalloc(sizeof(tnode_t));
-        tn->inode = ext2_get_fs_inode(dent->inode);
+        tn->inode = FS(inode)->get_fs_inode(FS(inode), dent->inode);
         tn->name = strndup(dent->name, dent->name_len_low);
         list_add(dent->type == DENT_FILE ? &inode->subfiles : &inode->subfolders, tn);
         kfree(dent);
@@ -100,14 +101,14 @@ inode_t* fs_open(const char* path, uint32_t flags) {
 
         // File creation requested: now's the time
         if (last_part && (flags & O_CREAT || flags & O_CREATD)) {
-            uint32_t new_ino = ext2_create(part,
+            uint32_t new_ino = FS(inode)->create(FS(inode), part,
                 flags & O_CREAT ? DENT_FILE : DENT_DIRECTORY,
                 inode->ino.inode_no);
 
             tnode_t* new_tn = kmalloc(sizeof(tnode_t));
-            new_tn->inode = ext2_get_fs_inode(new_ino);
+            new_tn->inode = FS(inode)->get_fs_inode(FS(inode), new_ino);
             new_tn->name = strdup(part);
-            list_add(&inode->subfiles, new_tn);
+            list_add(flags & O_CREAT ? &inode->subfiles : &inode->subfolders, new_tn);
         }
 
         // Build the cache if needed
@@ -147,7 +148,6 @@ inode_t* fs_open(const char* path, uint32_t flags) {
  */
 inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode) {
     tnode_t* tn;
-    folder_inode_t* fin;
 
     list_for_each_entry(tn, &parent->subfiles) {
         if (tn->inode->inode_no == inode) {
@@ -155,12 +155,12 @@ inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode) {
         }
     }
 
-    list_for_each_entry(fin, &parent->subfolders) {
+    list_for_each_entry(tn, &parent->subfolders) {
         if (tn->inode->inode_no == inode) {
             return tn->inode;
         }
 
-        inode_t* subresult = fs_find_inode(fin, inode);
+        inode_t* subresult = fs_find_inode((folder_inode_t*) tn->inode, inode);
 
         if (subresult) {
             return subresult;
@@ -219,7 +219,7 @@ int32_t fs_unlink(const char* path) {
         }
     }
 
-    return ext2_unlink(d_in->ino.inode_no, in->inode_no);
+    return FS(d_in)->unlink(FS(d_in), d_in->ino.inode_no, in->inode_no);
 }
 
 /* A process has released its grip on a file: TODO something.
@@ -229,7 +229,8 @@ void fs_close(uint32_t inode) {
 }
 
 uint32_t fs_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
-    return ext2_read(inode, offset, buf, size);
+    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
+    return FS(in)->read(FS(in), inode, offset, buf, size);
 }
 
 uint32_t fs_write(uint32_t inode, uint8_t* buf, uint32_t size) {
@@ -239,14 +240,15 @@ uint32_t fs_write(uint32_t inode, uint8_t* buf, uint32_t size) {
         return 0;
     }
 
-    uint32_t written = ext2_append(inode, buf, size);
+    uint32_t written = FS(in)->append(FS(in), inode, buf, size);
     in->size += written;
 
     return written;
 }
 
 uint32_t fs_readdir(uint32_t inode, uint32_t offset, sos_directory_entry_t* d_ent, uint32_t size) {
-    sos_directory_entry_t* ent = ext2_readdir(inode, offset);
+    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
+    sos_directory_entry_t* ent = FS(in)->readdir(FS(in), inode, offset);
 
     // TODO: check if empty entries aren't actually valid
     if (ent == NULL || ent->name[0] == '\0') {

@@ -81,7 +81,7 @@ int main() {
 
     buf[i] = '\0';
 
-    printf("\ncat /created\n%s", buf);
+    printf("cat /created\n%s", buf);
     fclose(f);
 
     printf("Treeing /:\n");
