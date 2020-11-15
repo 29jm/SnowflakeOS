@@ -100,6 +100,11 @@ typedef struct {
     uint32_t os_specific2[3];
 } ext2_inode_t;
 
+typedef struct dentry_t {
+    char* name;
+    uint32_t inode;
+} dentry_t;
+
 typedef struct {
     uint32_t inode;
     uint16_t entry_size;
@@ -107,11 +112,6 @@ typedef struct {
     uint8_t type;
     char name[];
 } ext2_directory_entry_t;
-
-typedef struct dentry_t {
-    char* name;
-    uint32_t inode;
-} dentry_t;
 
 typedef struct ext2_fs_t {
     fs_t fs;
@@ -207,7 +207,9 @@ fs_t* init_ext2(uint8_t* data, uint32_t len) {
     e2fs->fs.read = (fs_read_t) ext2_read;
     e2fs->fs.readdir = (fs_readdir_t) ext2_readdir;
     e2fs->fs.unlink = (fs_unlink_t) ext2_unlink;
-    e2fs->fs.root = ext2_get_fs_inode(e2fs, EXT2_ROOT_INODE);
+
+    e2fs->fs.uid = e2fs->sb->id[0];
+    e2fs->fs.root = (folder_inode_t*) ext2_get_fs_inode(e2fs, EXT2_ROOT_INODE);
 
     return (fs_t*) e2fs;
 }
@@ -395,10 +397,11 @@ inode_t* ext2_get_fs_inode(ext2_fs_t* fs, uint32_t inode) {
         fi->dirty = true;
         fi->subfiles = LIST_HEAD_INIT(fi->subfiles);
         fi->subfolders = LIST_HEAD_INIT(fi->subfolders);
-        fi->ino.type = DTYPE_DIR;
+        fi->ino.type = DENT_DIRECTORY;
         fs_in = (inode_t*) fi;
     } else {
         printke("unsupported inode type: %X", INODE_TYPE(in->type_perms));
+        return NULL;
     }
 
     fs_in->inode_no = inode;
@@ -675,12 +678,6 @@ static void update_inode(ext2_fs_t* fs, uint32_t ino, ext2_inode_t* in) {
 static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = fs->block_size / sizeof(uint32_t);
-    // Type matters for pointer arithmetic purposes
-    static uint32_t* tmp = NULL;
-
-    if (!tmp) {
-        tmp = zalloc(fs->block_size);
-    }
 
     if (n < 12) {
         if (!in->dbp[n]) {
@@ -689,6 +686,7 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
 
         return in->dbp[n];
     } else if (n < 12 + p) {
+        uint32_t* tmp = zalloc(fs->block_size); // Type matters for pointer arithmetic purposes
         uint32_t relblock = n - 12;
 
         if (!in->sibp) {
@@ -703,8 +701,10 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, in->sibp, (uint8_t*) tmp);
         }
 
+        kfree(tmp);
         return tmp[relblock];
     } else if (n < 12 + p + p*p) {
+        uint32_t* tmp = zalloc(fs->block_size);
         uint32_t relblock = n - 12 - p;
         uint32_t offset_a = relblock / p;
         uint32_t offset_b = relblock % p;
@@ -730,8 +730,10 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, block_a, (uint8_t*) tmp);
         }
 
+        kfree(tmp);
         return tmp[offset_b];
     } else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
+        uint32_t* tmp = zalloc(fs->block_size);
         uint32_t relblock = n - 12 - p - p*p;
         uint32_t offset_a = relblock / (p*p);
         uint32_t offset_b = relblock % (p*p);
@@ -767,6 +769,7 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, block_b, (uint8_t*) tmp);
         }
 
+        kfree(tmp);
         return tmp[offset_c];
     } else {
         printke("invalid inode block");
@@ -778,21 +781,19 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
 static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = fs->block_size / sizeof(uint32_t);
-    static uint32_t* tmp = NULL;
-
-    if (!tmp) {
-        tmp = kmalloc(fs->block_size);
-    }
 
     if (n < 12) {
         return inode->dbp[n];
     } else if (n < 12 + p) {
+        uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12;
 
         read_block(fs, inode->sibp, (uint8_t*) tmp);
 
+        kfree(tmp);
         return tmp[relblock];
     } else if (n < 12 + p + p*p) {
+        uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12 - p;
         uint32_t offset_a = relblock / p;
         uint32_t offset_b = relblock % p;
@@ -800,8 +801,10 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
         read_block(fs, inode->dibp, (uint8_t*) tmp);
         read_block(fs, tmp[offset_a], (uint8_t*) tmp);
 
+        kfree(tmp);
         return tmp[offset_b];
     } else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
+        uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12 - p - p*p;
         uint32_t offset_a = relblock / (p*p);
         uint32_t offset_b = relblock % (p*p);
@@ -811,6 +814,7 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
         read_block(fs, tmp[offset_a], (uint8_t*) tmp);
         read_block(fs, tmp[offset_b], (uint8_t*) tmp);
 
+        kfree(tmp);
         return tmp[offset_c];
     }
 

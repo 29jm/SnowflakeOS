@@ -17,15 +17,13 @@ typedef struct tnode_t {
 
 char* dirname(const char* p);
 char* basename(const char* p);
-void fs_print_open_fds();
-void fs_cache_entries(folder_inode_t* dir_ino);
+uint32_t tnode_to_directory_entry(tnode_t* tn, sos_directory_entry_t* d_ent, uint32_t size);
+void fs_build_tree_level(folder_inode_t* dir_ino, inode_t* parent);
 
 static tnode_t* root;
 
 void init_fs(fs_t* fs) {
-    root = kmalloc(sizeof(tnode_t));
-    root->inode = fs->root;
-    root->name = strdup("/");
+    fs_mount("/", fs);
 }
 
 void delete_tnode(tnode_t* tn) {
@@ -56,15 +54,24 @@ void delete_tnode(tnode_t* tn) {
  * Do not call twice on the same inode, unless previous entries have been
  * cleared previously.
  */
-void fs_cache_entries(folder_inode_t* inode) {
+void fs_build_tree_level(folder_inode_t* inode, inode_t* parent) {
     sos_directory_entry_t* dent = NULL;
     uint32_t offset = 0;
 
     while ((dent = FS(inode)->readdir(FS(inode), inode->ino.inode_no, offset)) != NULL && dent->type != DENT_INVALID) {
         offset += dent->entry_size;
+
         tnode_t* tn = kmalloc(sizeof(tnode_t));
-        tn->inode = FS(inode)->get_fs_inode(FS(inode), dent->inode);
         tn->name = strndup(dent->name, dent->name_len_low);
+
+        if (!strncmp(dent->name, ".", dent->name_len_low)) {
+            tn->inode = (inode_t*) inode;
+        } else if (!strncmp(dent->name, "..", dent->name_len_low)) {
+            tn->inode = parent;
+        } else {
+            tn->inode = FS(inode)->get_fs_inode(FS(inode), dent->inode);
+        }
+
         list_add(dent->type == DENT_FILE ? &inode->subfiles : &inode->subfolders, tn);
         kfree(dent);
     }
@@ -79,6 +86,7 @@ void fs_cache_entries(folder_inode_t* inode) {
  * TODO: prevent creating duplicate entries.
  */
 inode_t* fs_open(const char* path, uint32_t flags) {
+    // printk("open: %s, creat %d, creatd %d", path, (flags & O_CREAT) != 0, (flags & O_CREATD) != 0);
     char* npath = fs_normalize_path(path);
 
     if (!strcmp(npath, "/")) {
@@ -111,17 +119,22 @@ inode_t* fs_open(const char* path, uint32_t flags) {
             list_add(flags & O_CREAT ? &inode->subfiles : &inode->subfolders, new_tn);
         }
 
-        // Build the cache if needed
+        // Build the tree as needed
         if (inode->dirty) {
-            fs_cache_entries(inode);
+            fs_build_tree_level(inode, prev_tnode->inode);
         }
 
-        // Search the cache, starting with subfolders
+        // Search the tree, starting with subfolders
         tnode_t* ent;
         list_for_each_entry(ent, &inode->subfolders) {
             if (strlen(ent->name) == part_len &&
                     !strncmp(ent->name, part, part_len)) {
                 tnode = ent;
+
+                if (((folder_inode_t*) tnode->inode)->dirty) {
+                    fs_build_tree_level((folder_inode_t*) tnode->inode, prev_tnode->inode);
+                }
+
                 break;
             }
         }
@@ -141,26 +154,71 @@ inode_t* fs_open(const char* path, uint32_t flags) {
     }
 
     kfree(npath);
+
     return tnode != prev_tnode ? tnode->inode : NULL;
+}
+
+/* Mounts a filesystem at the given path in the existing VFS.
+ * The first filesystem can be mounted at "/".
+ */
+void fs_mount(const char* mount_point, fs_t* fs) {
+    // Special case for the first filesystem mounted
+    if (!root && !strcmp(mount_point, "/")) {
+        root = kmalloc(sizeof(tnode_t));
+        root->inode = (inode_t*) fs->root;
+        root->name = strdup("/");
+        return;
+    }
+
+    folder_inode_t* mnt_in = (folder_inode_t*) fs_open(mount_point, O_RDONLY);
+
+    if (mnt_in->ino.type != DENT_DIRECTORY) {
+        printke("mount: mountpoint not a directory");
+        return;
+    }
+
+    uint32_t num_children = 0;
+    tnode_t* child;
+    list_for_each_entry(child, &mnt_in->subfolders) {
+        num_children++;
+    }
+
+    if (num_children > 2 || !list_empty(&mnt_in->subfiles)) {
+        printke("mount: mountpoint not empty");
+        return;
+    }
+
+    while (!list_empty(&mnt_in->subfolders)) {
+        tnode_t* tn = list_first_entry(&mnt_in->subfolders, tnode_t);
+        kfree(tn->name);
+        kfree(tn);
+        list_del(list_first(&mnt_in->subfolders));
+    }
+
+    // TODO: make umount possible
+    mnt_in->ino = fs->root->ino;
+    mnt_in->dirty = true;
+    mnt_in->subfiles = LIST_HEAD_INIT(mnt_in->subfiles);
+    mnt_in->subfolders = LIST_HEAD_INIT(mnt_in->subfolders);
 }
 
 /* From an inode number, finds the corresponding inode_t*.
  */
-inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode) {
+inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode, uint32_t fs_no) {
     tnode_t* tn;
 
     list_for_each_entry(tn, &parent->subfiles) {
-        if (tn->inode->inode_no == inode) {
+        if (tn->inode->inode_no == inode && tn->inode->fs->uid == fs_no) {
             return tn->inode;
         }
     }
 
     list_for_each_entry(tn, &parent->subfolders) {
-        if (tn->inode->inode_no == inode) {
+        if (tn->inode->inode_no == inode && tn->inode->fs->uid == fs_no) {
             return tn->inode;
         }
 
-        inode_t* subresult = fs_find_inode((folder_inode_t*) tn->inode, inode);
+        inode_t* subresult = fs_find_inode((folder_inode_t*) tn->inode, inode, fs_no);
 
         if (subresult) {
             return subresult;
@@ -224,50 +282,53 @@ int32_t fs_unlink(const char* path) {
 
 /* A process has released its grip on a file: TODO something.
  */
-void fs_close(uint32_t inode) {
-    UNUSED(inode);
+void fs_close(inode_t* in) {
+    UNUSED(in);
 }
 
-uint32_t fs_read(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
-    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
-    return FS(in)->read(FS(in), inode, offset, buf, size);
+uint32_t fs_read(inode_t* in, uint32_t offset, uint8_t* buf, uint32_t size) {
+    return FS(in)->read(FS(in), in->inode_no, offset, buf, size);
 }
 
-uint32_t fs_write(uint32_t inode, uint8_t* buf, uint32_t size) {
-    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
-
+uint32_t fs_write(inode_t* in, uint8_t* buf, uint32_t size) {
     if (!in) {
         return 0;
     }
 
-    uint32_t written = FS(in)->append(FS(in), inode, buf, size);
+    uint32_t written = FS(in)->append(FS(in), in->inode_no, buf, size);
     in->size += written;
 
     return written;
 }
 
-uint32_t fs_readdir(uint32_t inode, uint32_t offset, sos_directory_entry_t* d_ent, uint32_t size) {
-    inode_t* in = fs_find_inode((folder_inode_t*) root->inode, inode);
-    sos_directory_entry_t* ent = FS(in)->readdir(FS(in), inode, offset);
-
-    // TODO: check if empty entries aren't actually valid
-    if (ent == NULL || ent->name[0] == '\0') {
+uint32_t fs_readdir(inode_t* in, uint32_t index, sos_directory_entry_t* d_ent, uint32_t size) {
+    if (in->type != DENT_DIRECTORY) {
+        printke("not a directory");
         return 0;
     }
 
-    uint32_t unpadded_size = min(ent->entry_size, 263);
+    folder_inode_t* fin = (folder_inode_t*) in;
 
-    if (unpadded_size < size) {
-        memcpy(d_ent, ent, unpadded_size);
-        d_ent->name[d_ent->name_len_low] = '\0';
-    } else {
-        kfree(ent);
+    if (fin->dirty) {
+        printke("dirty inode being readdir'ed");
         return 0;
     }
 
-    kfree(ent);
+    uint32_t i = 0;
+    tnode_t* tn;
+    list_for_each_entry(tn, &fin->subfolders) {
+        if (i++ == index) {
+            return tnode_to_directory_entry(tn, d_ent, size);
+        }
+    }
 
-    return d_ent->entry_size;
+    list_for_each_entry(tn, &fin->subfiles) {
+        if (i++ == index) {
+            return tnode_to_directory_entry(tn, d_ent, size);
+        }
+    }
+
+    return 0;
 }
 
 /* Returns the absolute version of `p`, free of oddities,
@@ -357,4 +418,23 @@ char* basename(const char* p) {
     }
 
     return last_sep + 1;
+}
+
+/* Writes the given `tnode_t` to `d_ent` with proper form, returns the entry size.
+ * If `size` is too small, does nothing and returns 0.
+ */
+uint32_t tnode_to_directory_entry(tnode_t* tn, sos_directory_entry_t* d_ent, uint32_t size) {
+    uint32_t esize = sizeof(sos_directory_entry_t) + strlen(tn->name) + 1;
+
+    if (size < esize) {
+        return 0;
+    }
+
+    d_ent->inode = tn->inode->inode_no;
+    strcpy(d_ent->name, tn->name);
+    d_ent->name_len_low = strlen(tn->name);
+    d_ent->type = tn->inode->type;
+    d_ent->entry_size = esize;
+
+    return esize;
 }

@@ -12,10 +12,11 @@
 
 typedef struct {
     uint32_t fd;
-    uint32_t inode;
+    inode_t* inode;
     uint32_t mode;
     uint32_t offset;
     uint32_t size;
+    uint32_t index; // If it's a directory, where we're at
 } ft_entry_t;
 
 // Add new members to the end to avoid messing with the offsets

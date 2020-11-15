@@ -69,6 +69,9 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
         if (!strcmp(module_name, "disk")) {
             init_fs(init_ext2(data, size));
             continue;
+        } else if (!strcmp(module_name, "disk2")) {
+            fs_mount("/mnt", init_ext2(data, size));
+            continue;
         } else if (!strcmp(module_name, "symbols")) {
             init_stacktrace(data, size);
             continue;

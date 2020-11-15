@@ -98,9 +98,10 @@ assets: assets/pisos_16.png assets/wallpaper.png
 	@convert assets/wallpaper.png misc/wallpaper.rgb
 
 # The dependency on disk stuff is temporary
-misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh
+misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh misc/disk2.img
 	$(info [all] generating grub config)
 	@cp misc/disk.img $(ISODIR)/modules/disk.img
+	@cp misc/disk2.img $(ISODIR)/modules/disk2.img
 	@bash ./misc/gen-grub-config.sh
 
 misc/disk.img: assets modules
@@ -108,11 +109,18 @@ misc/disk.img: assets modules
 	@touch misc/disk.img
 	@dd if=/dev/zero of=misc/disk.img bs=1024 count=10240 2> /dev/null
 	@mkdir -p misc/root/etc
+	@mkdir -p misc/root/mnt
 	@echo "hello ext2 world" > misc/root/motd
 	@echo "version: 0.5" > misc/root/etc/config
 	@mv misc/*.rgb misc/root/
 	@mkfs.ext2 misc/disk.img -d misc/root 2> /dev/null
 	@rm -r misc/root
+
+misc/disk2.img: assets modules
+	$(info [all] writing disk2 image)
+	@touch misc/disk2.img
+	@dd if=/dev/zero of=misc/disk2.img bs=1024 count=1000
+	@mkfs.ext2 misc/disk2.img -d sysroot 2> /dev/null
 
 toolchain:
 	@env -i toolchain/build-toolchain.sh

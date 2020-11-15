@@ -217,7 +217,7 @@ void proc_exit_current_process() {
 
     // Free the file descriptor list
     while (!list_empty(&current_process->filetable)) {
-        fs_close((uint32_t) list_first_entry(&current_process->filetable, ft_entry_t)->fd); // bit ugly
+        fs_close(list_first_entry(&current_process->filetable, ft_entry_t)->inode); // bit ugly
         list_del(list_first(&current_process->filetable));
     }
 
@@ -357,7 +357,7 @@ int32_t proc_exec(const char* path, char** argv) {
     }
 
     uint8_t* data = kmalloc(in->size);
-    uint32_t read = fs_read(in->inode_no, 0, data, in->size);
+    uint32_t read = fs_read(in, 0, data, in->size);
 
     if (read == in->size && in->size) {
         proc_run_code(data, in->size, argv);
@@ -399,10 +399,11 @@ uint32_t proc_open(const char* path, uint32_t flags) {
         ft_entry_t* ent = kmalloc(sizeof(ft_entry_t));
         *ent = (ft_entry_t) {
             .fd = proc_next_fd(),
-            .inode = in->inode_no,
+            .inode = in,
             .mode = 0, // TODO: what's this?
             .offset = 0,
-            .size = in->size
+            .size = in->size,
+            .index = 0
         };
 
         list_add_front(&current_process->filetable, ent);
@@ -419,7 +420,7 @@ void proc_close(uint32_t fd) {
     list_for_each(iter, ent, &current_process->filetable) {
         if (ent->fd == fd) {
             // TODO: At some point, we'll want to have a fs-layer writelock
-            // fs_close(fd);
+            fs_close(ent->inode);
             list_del(iter);
             return;
         }
@@ -442,10 +443,11 @@ int32_t proc_readdir(uint32_t fd, sos_directory_entry_t* dent) {
     ft_entry_t* ent = proc_fd_to_entry(fd);
 
     if (ent) {
-        uint32_t read = fs_readdir(ent->inode, ent->offset, dent, dent->entry_size);
+        uint32_t read = fs_readdir(ent->inode, ent->index, dent, dent->entry_size);
         ent->offset += read;
 
         if (read) {
+            ent->index++;
             return 1;
         }
 
