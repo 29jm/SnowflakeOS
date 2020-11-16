@@ -116,6 +116,9 @@ static void syscall_wm(registers_t* regs) {
         case WM_CMD_OPEN: {
                 wm_param_open_t* param = (wm_param_open_t*) regs->ecx;
                 regs->eax = wm_open_window(param->fb, param->flags);
+                char str[20] = "/wm/";
+                itoa(regs->eax, str+strlen(str), 10);
+                proc_open(str, O_RDONLY);
             } break;
         case WM_CMD_CLOSE:
             wm_close_window(regs->ecx);

@@ -160,6 +160,7 @@ uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf,
 uint32_t ext2_append(ext2_fs_t* fs, uint32_t inode, uint8_t* data, uint32_t size);
 sos_directory_entry_t* ext2_readdir(ext2_fs_t* fs, uint32_t inode, uint32_t offset);
 inode_t* ext2_get_fs_inode(ext2_fs_t* fs, uint32_t inode);
+int32_t ext2_close(fs_t* fs, uint32_t ino);
 
 static void read_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf);
 static void write_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf);
@@ -208,6 +209,7 @@ fs_t* init_ext2(uint8_t* data, uint32_t len) {
     e2fs->fs.read = (fs_read_t) ext2_read;
     e2fs->fs.readdir = (fs_readdir_t) ext2_readdir;
     e2fs->fs.unlink = (fs_unlink_t) ext2_unlink;
+    e2fs->fs.close = (fs_close_t) ext2_close;
 
     e2fs->fs.uid = e2fs->sb->id[0];
     e2fs->fs.root = (folder_inode_t*) ext2_get_fs_inode(e2fs, EXT2_ROOT_INODE);
@@ -405,6 +407,13 @@ inode_t* ext2_get_fs_inode(ext2_fs_t* fs, uint32_t inode) {
     kfree(in);
 
     return fs_in;
+}
+
+int32_t ext2_close(fs_t* fs, uint32_t ino) {
+    UNUSED(fs);
+    UNUSED(ino);
+
+    return 0;
 }
 
 /* Utility functions */

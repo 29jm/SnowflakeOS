@@ -50,8 +50,6 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
     init_ps2();
     init_timer();
-    init_wm();
-    init_proc();
 
     printk("loading modules");
 
@@ -79,6 +77,9 @@ void kernel_main(multiboot_t* boot, uint32_t magic) {
 
         printk("ignored module: %s", module_name);
     }
+
+    init_wm();
+    init_proc();
 
     proc_exec("/background", NULL);
     proc_exec("/terminal", NULL);

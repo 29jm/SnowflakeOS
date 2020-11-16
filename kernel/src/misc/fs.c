@@ -58,21 +58,28 @@ void fs_build_tree_level(folder_inode_t* inode, inode_t* parent) {
     sos_directory_entry_t* dent = NULL;
     uint32_t offset = 0;
 
+    /* Add "." and ".." ourselves, don't trust the fs */
+    tnode_t* tn = kmalloc(sizeof(tnode_t));
+    tn->inode = (inode_t*) inode;
+    tn->name = strdup(".");
+    list_add(&inode->subfolders, tn);
+
+    tn = kmalloc(sizeof(tnode_t));
+    tn->inode = parent;
+    tn->name = strdup("..");
+    list_add(&inode->subfolders, tn);
+
+    /* Add the rest of the entries */
     while ((dent = FS(inode)->readdir(FS(inode), inode->ino.inode_no, offset)) != NULL && dent->type != DENT_INVALID) {
         offset += dent->entry_size;
 
-        tnode_t* tn = kmalloc(sizeof(tnode_t));
-        tn->name = strndup(dent->name, dent->name_len_low);
-
-        if (!strncmp(dent->name, ".", dent->name_len_low)) {
-            tn->inode = (inode_t*) inode;
-        } else if (!strncmp(dent->name, "..", dent->name_len_low)) {
-            tn->inode = parent;
-        } else {
+        if (strncmp(dent->name, ".", dent->name_len_low) && strncmp(dent->name, "..", dent->name_len_low)) {
+            tn = kmalloc(sizeof(tnode_t));
+            tn->name = strndup(dent->name, dent->name_len_low);
             tn->inode = FS(inode)->get_fs_inode(FS(inode), dent->inode);
+            list_add(dent->type == DENT_FILE ? &inode->subfiles : &inode->subfolders, tn);
         }
 
-        list_add(dent->type == DENT_FILE ? &inode->subfiles : &inode->subfolders, tn);
         kfree(dent);
     }
 
@@ -86,7 +93,6 @@ void fs_build_tree_level(folder_inode_t* inode, inode_t* parent) {
  * TODO: prevent creating duplicate entries.
  */
 inode_t* fs_open(const char* path, uint32_t flags) {
-    // printk("open: %s, creat %d, creatd %d", path, (flags & O_CREAT) != 0, (flags & O_CREATD) != 0);
     char* npath = fs_normalize_path(path);
 
     if (!strcmp(npath, "/")) {
@@ -162,7 +168,7 @@ inode_t* fs_open(const char* path, uint32_t flags) {
  * The first filesystem can be mounted at "/".
  */
 void fs_mount(const char* mount_point, fs_t* fs) {
-    // Special case for the first filesystem mounted
+    /* Special case for the first filesystem mounted */
     if (!root && !strcmp(mount_point, "/")) {
         root = kmalloc(sizeof(tnode_t));
         root->inode = (inode_t*) fs->root;
@@ -170,6 +176,7 @@ void fs_mount(const char* mount_point, fs_t* fs) {
         return;
     }
 
+    /* Check the mount point's validity */
     folder_inode_t* mnt_in = (folder_inode_t*) fs_open(mount_point, O_RDONLY);
 
     if (mnt_in->ino.type != DENT_DIRECTORY) {
@@ -188,6 +195,7 @@ void fs_mount(const char* mount_point, fs_t* fs) {
         return;
     }
 
+    /* Empty its "." and ".." entries */
     while (!list_empty(&mnt_in->subfolders)) {
         tnode_t* tn = list_first_entry(&mnt_in->subfolders, tnode_t);
         kfree(tn->name);
@@ -202,32 +210,6 @@ void fs_mount(const char* mount_point, fs_t* fs) {
     mnt_in->subfolders = LIST_HEAD_INIT(mnt_in->subfolders);
 }
 
-/* From an inode number, finds the corresponding inode_t*.
- */
-inode_t* fs_find_inode(folder_inode_t* parent, uint32_t inode, uint32_t fs_no) {
-    tnode_t* tn;
-
-    list_for_each_entry(tn, &parent->subfiles) {
-        if (tn->inode->inode_no == inode && tn->inode->fs->uid == fs_no) {
-            return tn->inode;
-        }
-    }
-
-    list_for_each_entry(tn, &parent->subfolders) {
-        if (tn->inode->inode_no == inode && tn->inode->fs->uid == fs_no) {
-            return tn->inode;
-        }
-
-        inode_t* subresult = fs_find_inode((folder_inode_t*) tn->inode, inode, fs_no);
-
-        if (subresult) {
-            return subresult;
-        }
-    }
-
-    return NULL;
-}
-
 uint32_t fs_mkdir(const char* path, uint32_t mode) {
     UNUSED(mode);
 
@@ -238,35 +220,34 @@ uint32_t fs_mkdir(const char* path, uint32_t mode) {
 
     inode_t* in = fs_open(path, O_CREATD);
 
-    if (!in) {
-        return FS_INVALID_INODE;
-    }
-
-    return in->inode_no;
+    return in ? in->inode_no : FS_INVALID_INODE;
 }
 
 int32_t fs_unlink(const char* path) {
+    /* Check that we're unlinking a file */
     char* npath = fs_normalize_path(path);
-
     folder_inode_t* d_in = (folder_inode_t*) fs_open(dirname(npath), O_RDONLY);
     inode_t* in = fs_open(npath, O_RDONLY);
     kfree(npath);
 
-    if (in->type == DENT_DIRECTORY) {
+    if (!d_in || !in || in->type != DENT_FILE) {
         return -1;
     }
 
-    if (!d_in || !in) {
+    /* Ask the filesystem to unlink that inode */
+    int32_t ret = FS(d_in)->unlink(FS(d_in), d_in->ino.inode_no, in->inode_no);
+
+    if (ret == -1) {
         return -1;
     }
 
-    // Update the cache
+    /* Prune it from the tree */
     list_t* iter;
-    tnode_t* ent;
-    list_for_each(iter, ent, &d_in->subfiles) {
-        if (ent->inode->inode_no == in->inode_no) {
-            kfree(ent->name);
-            kfree(ent);
+    tnode_t* tn;
+    list_for_each(iter, tn, &d_in->subfiles) {
+        if (tn->inode->inode_no == in->inode_no) {
+            kfree(tn->name);
+            kfree(tn);
 
             if (--in->hardlinks == 0) {
                 kfree(in);
@@ -277,13 +258,13 @@ int32_t fs_unlink(const char* path) {
         }
     }
 
-    return FS(d_in)->unlink(FS(d_in), d_in->ino.inode_no, in->inode_no);
+    return 0;
 }
 
-/* A process has released its grip on a file: TODO something.
+/* A process has released its grip on a file: notify the fs.
  */
-void fs_close(inode_t* in) {
-    UNUSED(in);
+int32_t fs_close(inode_t* in) {
+    return FS(in)->close(FS(in), in->inode_no);
 }
 
 uint32_t fs_read(inode_t* in, uint32_t offset, uint8_t* buf, uint32_t size) {

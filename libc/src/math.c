@@ -90,7 +90,7 @@ double pow(double x, double y) {
 }
 
 int powi(int x, int y) {
-    int n = 1;
+    unsigned int n = 1;
 
     while (y--) {
         n *= x;
