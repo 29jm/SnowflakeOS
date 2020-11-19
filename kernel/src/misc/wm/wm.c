@@ -560,4 +560,3 @@ void wm_kbd_callback(kbd_event_t event) {
             }
         }
     }
-}

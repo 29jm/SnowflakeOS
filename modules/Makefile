@@ -16,7 +16,7 @@ install-headers:
 
 clean:
 	$(info [modules] cleaning up)
-	@rm -fv */*.o
+	@rm -f */*.o
 	@find . -executable -type f -delete
 
 $(MODS): % : %.mod
