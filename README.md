@@ -12,13 +12,14 @@ A hobby OS to help me learn about kernel stuff, to eventually get into linux ker
 + PS/2 keyboard
 + PS/2 mouse
 + PIC timer
-+ loading GRUB modules as usermode processes
++ usermode process loading
 + preemptive multitasking
 + VBE graphics
 + window management
-+ basic ext2 support
++ custom GUI toolkit
++ ext2 support
 
-I aim to make the code readable and well-organized. A blog follows the development of this project, here https://29jm.github.io/.
+I aim to make the code readable and well-organized. A blog follows the development of this project, here https://jmnl.xyz/.
 
 ## Dependencies
 
@@ -45,9 +46,12 @@ to build the cross-compiler needed to compile SnowflakeOS. This command will dow
 
 #### Using clang directly
 
-Instead of building your own toolchain, you can compile SnowflakeOS with your system's `clang`: simply uncomment the following lines in the main `Makefile`:
+Instead of building your own toolchain, you can compile SnowflakeOS with your system's `clang`: simply uncomment the following group of lines in the main `Makefile`:
 ```shell
 # CC=clang
+# LD=ld
+# AR=ar
+# AS=as
 # CFLAGS+=-target i386-pc-none-eabi -m32
 # CFLAGS+=-mno-mmx -mno-sse -mno-sse2
 ```

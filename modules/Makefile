@@ -1,4 +1,4 @@
-CFLAGS:=$(CFLAGS) -nostartfiles
+CFLAGS:=$(CFLAGS)
 LDFLAGS:=$(LDFLAGS) -Tmod.ld
 LIBS=-lui -lsnow -lc
 
@@ -21,13 +21,14 @@ clean:
 
 $(MODS): % : %.mod
 	$(info [modules] building $@)
-	mv $^ $@
+	@mv $^ $@
 
 %.mod: %.c mod.ld src/start.o FORCE
-	@$(CC) $< -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS)
+	@$(CC) -c $< -o $*.o $(CFLAGS)
+	@$(LD) src/start.o $*.o -o $@ $(LDFLAGS) $(LIBS)
 
 %.o: %.S
 	$(info [modules] building $@)
-	@$(AS) $< -o $@
+	@$(AS) $(ASFLAGS) $< -o $@
 
 FORCE:

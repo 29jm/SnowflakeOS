@@ -21,8 +21,9 @@ AR=$(HOST)-ar
 AS=$(HOST)-as
 CC=$(HOST)-gcc
 
-CFLAGS=-g -std=gnu11 -ffreestanding -Wall -Wextra
-LDFLAGS=-nostdlib -L$(SYSROOT)/usr/lib
+CFLAGS=-Og -std=gnu11 -ffreestanding -Wall -Wextra
+ASFLAGS=--32
+LDFLAGS=-nostdlib -L$(SYSROOT)/usr/lib -m elf_i386
 
 ifeq ($(UBSAN),1)
 	CFLAGS+=-fsanitize=undefined
@@ -32,6 +33,9 @@ endif
 # clang installation
 
 # CC=clang
+# LD=ld
+# AR=ar
+# AS=as
 # CFLAGS+=-target i386-pc-none-eabi -m32
 # CFLAGS+=-mno-mmx -mno-sse -mno-sse2
 
@@ -44,7 +48,7 @@ PROJECTS=libc snow kernel modules ui
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
 PROJECT_CLEAN=$(PROJECTS:=.clean)
 
-.PHONY: all build qemu bochs clean toolchain $(PROJECTS)
+.PHONY: all build qemu bochs clean toolchain assets $(PROJECTS)
 
 all: build SnowflakeOS.iso
 
@@ -89,6 +93,7 @@ SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) 2> /dev/null
 
 assets: assets/pisos_16.png assets/wallpaper.png
+	$(info [all] generating assets)
 	@convert assets/pisos_16.png misc/pisos_16.rgb
 	@convert assets/wallpaper.png misc/wallpaper.rgb
 
