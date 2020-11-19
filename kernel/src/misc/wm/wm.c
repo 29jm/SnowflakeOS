@@ -10,7 +10,7 @@
 #include <list.h>
 #include <stdlib.h>
 
-#define MOUSE_SIZE 3
+#define MOUSE_SIZE 16
 
 void wm_draw_window(wm_window_t* win, rect_t rect);
 void wm_partial_draw_window(wm_window_t* win, rect_t rect);
@@ -23,7 +23,7 @@ list_t* wm_get_window(uint32_t id);
 void wm_print_windows();
 list_t* wm_get_windows_above(wm_window_t* win);
 rect_t wm_mouse_to_rect(mouse_t mouse);
-void wm_draw_mouse(rect_t old, rect_t new);
+void wm_draw_mouse(rect_t new);
 void wm_mouse_callback(mouse_t curr);
 void wm_kbd_callback(kbd_event_t event);
 
@@ -306,10 +306,6 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
 
     kfree(clip_windows);
 
-    // Clip the mouse cursor too
-    rect_t mouse_rect = wm_mouse_to_rect(mouse);
-    rect_subtract_clip_rect(&clip_rects, mouse_rect);
-
     // Draw what's left
     rect_t* clip;
     list_for_each_entry(clip, &clip_rects) {
@@ -317,6 +313,10 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
             wm_partial_draw_window(win, *clip);
         }
     }
+
+    // Redraw the mouse
+    rect_t mouse_rect = wm_mouse_to_rect(mouse);
+    wm_draw_mouse(mouse_rect);
 
     rect_clear_clipped(&clip_rects);
 }
@@ -444,13 +444,19 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
     return NULL;
 }
 
-void wm_draw_mouse(rect_t old, rect_t new) {
-    wm_refresh_partial(old);
-
+void wm_draw_mouse(rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
-    for (int32_t y = 0; y < new.bottom - new.top; y++) {
-        memset((void*) addr, 127, (new.right - new.left)*fb.bpp/8);
+    for (int32_t y = 0; y < new.bottom - new.top - 6; y++) {
+        memset((void*) addr, 127, (y+1)*fb.bpp/8);
+        addr += fb.pitch;
+    }
+
+    addr += 4*fb.bpp/8;
+
+    for (int32_t y = 0; y < 6; y++) {
+        memset((void*) addr, 127, 3*fb.bpp/8);
+        addr += fb.bpp/8;
         addr += fb.pitch;
     }
 }
@@ -508,7 +514,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
                 wm_draw_window(dragged, new_rect);
 
                 rect = wm_mouse_to_rect(mouse);
-                wm_draw_mouse(rect, rect);
+                wm_draw_mouse(rect);
             }
         }
     }
@@ -547,7 +553,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
         rect_t prev_pos = wm_mouse_to_rect(prev);
         rect_t curr_pos = wm_mouse_to_rect(mouse);
 
-        wm_draw_mouse(prev_pos, curr_pos);
+        wm_refresh_partial(prev_pos);
+        wm_draw_mouse(curr_pos);
     }
 
     // Update the saved state
