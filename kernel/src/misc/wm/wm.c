@@ -8,7 +8,7 @@
 #include <list.h>
 #include <stdlib.h>
 
-#define MOUSE_SIZE 3
+#define MOUSE_SIZE 16
 
 void wm_draw_window(wm_window_t* win, rect_t rect);
 void wm_partial_draw_window(wm_window_t* win, rect_t rect);
@@ -297,8 +297,10 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
     kfree(clip_windows);
 
     // Clip the mouse cursor too
-    rect_t mouse_rect = wm_mouse_to_rect(mouse);
-    rect_subtract_clip_rect(&clip_rects, mouse_rect);
+    // Somehow the clipping part causes the cursor to streak
+    // but without it, the cursor disappears every second if no movement...
+//    rect_t mouse_rect = wm_mouse_to_rect(mouse);
+//    rect_subtract_clip_rect(&clip_rects, mouse_rect);
 
     // Draw what's left
     rect_t* clip;
@@ -439,9 +441,17 @@ void wm_draw_mouse(rect_t old, rect_t new) {
 
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
-    for (int32_t y = 0; y < new.bottom - new.top; y++) {
-        memset((void*) addr, 127, (new.right - new.left)*fb.bpp/8);
+    for (int32_t y = 0; y < new.bottom - new.top - 6; y++) {
+        memset((void*) addr, 255, (y+1)*fb.bpp>>3);
         addr += fb.pitch;
+    }
+
+    addr += 4*fb.bpp>>3;
+
+    for (int32_t y = 0; y < 6; y++) {
+        memset((void*) addr, 255, 3*fb.bpp>>3);
+	addr += fb.bpp>>3;
+	addr += fb.pitch;
     }
 }
 
