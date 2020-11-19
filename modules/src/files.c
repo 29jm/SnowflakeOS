@@ -7,101 +7,104 @@
 #include <dirent.h>
 
 typedef struct {
-    vbox_t list;
+    widget_t widget;
+    vbox_t* vbox;
     char* path;
     bool dirty;
 } folder_view_t;
 
-void folder_view_update(folder_view_t* fv);
+void fv_entry_clicked(button_t* btn) {
+    folder_view_t* fv = (folder_view_t*) W(btn)->data;
+    char* newpath = zalloc(strlen(fv->path) + strlen(btn->text) + 1);
 
-void folder_view_on_click(button_t* entry) {
-    folder_view_t* fv = (folder_view_t*) W(entry)->data;
+    strcpy(newpath, fv->path);
 
-    if (strlen(fv->path) + strlen(entry->text) >= 256) {
-        return;
+    if (strcmp(fv->path, "/")) {
+        strcat(newpath, "/");
     }
 
-    strcat(fv->path, entry->text);
-    folder_view_update(fv);
+    strcat(newpath, btn->text);
+
+    free(fv->path);
+    fv->path = newpath;
+    fv->dirty = true;
 }
 
-void folder_view_update(folder_view_t* fv) {
+void fv_refresh(folder_view_t* fv) {
     DIR* d = opendir(fv->path);
-    vbox_clear(&fv->list);
+    struct dirent* dent;
 
-    struct dirent* e = NULL;
+    vbox_clear(fv->vbox);
 
-    while (d && (e = readdir(d))) {
-        button_t* entry = NULL;
-        char name[256] = "";
+    while (d && (dent = readdir(d)) != NULL) {
+        button_t* btn = button_new(dent->d_name);
 
-        strcpy(name, e->d_name);
+        btn->text = strdup(dent->d_name);
+        W(btn)->flags |= UI_EXPAND_HORIZONTAL;
+        W(btn)->data = fv;
 
-        if (e->d_type == 2) {
-            strcat(name, "/");
-            entry = button_new(name);
-            entry->on_click = folder_view_on_click;
+        if (dent->d_type == DENT_DIRECTORY) {
+            btn->on_click = fv_entry_clicked;
         } else {
-            entry = button_new(name);
+            btn->on_click = NULL;
         }
 
-        W(entry)->flags = UI_EXPAND_HORIZONTAL;
-        W(entry)->data = fv;
-
-        vbox_add(&fv->list, (widget_t*) entry);
-        free(e);
+        vbox_add(fv->vbox, W(btn));
+        free(dent);
     }
 
     if (d) {
         closedir(d);
     }
+
+    fv->dirty = false;
 }
 
-void folder_view_on_free(folder_view_t* fv) {
-    vbox_clear(&fv->list);
-    free(fv->path);
-}
-
-void folder_view_on_draw(folder_view_t* fv, fb_t fb) {
+void fv_on_draw(folder_view_t* fv, fb_t fb) {
     if (fv->dirty) {
-        folder_view_update(fv);
-        fv->dirty = false;
+        fv_refresh(fv);
     }
 
     rect_t r = ui_get_absolute_bounds(W(fv));
-
     snow_draw_rect(fb, r.x, r.y, r.w, r.h, 0x000000);
-    ((widget_draw_t) W(fv)->data)(W(fv), fb);
+    W(fv->vbox)->on_draw(W(fv->vbox), fb);
 }
 
-folder_view_t* folder_view_new(const char* path) {
-    folder_view_t* fv = zalloc(sizeof(folder_view_t));
-    fv->dirty = true;
-    fv->path = zalloc(256);
-    strcpy(fv->path, path);
-    vbox_t* vb = vbox_new();
-    fv->list = *vb;
-    free(vb);
+void fv_on_click(folder_view_t* fv, point_t p) {
+    W(fv->vbox)->on_click(W(fv->vbox), p);
+}
 
-    W(fv)->data = W(fv)->on_draw;
-    W(fv)->on_free = (widget_freed_t) folder_view_on_free;
-    W(fv)->on_draw = (widget_draw_t) folder_view_on_draw;
+void fv_on_free(folder_view_t* fv) {
+    W(fv->vbox)->on_free(W(fv->vbox));
+    free(fv->path);
+}
+
+void fv_on_resize(folder_view_t* fv) {
+    W(fv->vbox)->bounds = W(fv)->bounds;
+    W(fv->vbox)->on_resize(W(fv->vbox));
+}
+
+folder_view_t* fv_new(const char* path) {
+    folder_view_t* fv = zalloc(sizeof(folder_view_t));
+    fv->path = strdup(path);
+    fv->dirty = true;
+    fv->vbox = vbox_new();
+
+    W(fv)->flags = UI_EXPAND;
+    W(fv)->on_click = (widget_clicked_t) fv_on_click;
+    W(fv)->on_draw = (widget_draw_t) fv_on_draw;
+    W(fv)->on_free = (widget_freed_t) fv_on_free;
+    W(fv)->on_resize = (widget_resize_t) fv_on_resize;
 
     return fv;
 }
 
-void refresh(char* p, vbox_t* vb);
-void folder_clicked(button_t* entry);
-
-char path[256] = "/";
-vbox_t* file_list;
-
 int main() {
-    window_t* win = snow_open_window("Files", 400, 247, WM_NORMAL);
+    window_t* win = snow_open_window("Files", 400, 700, WM_NORMAL);
     ui_app_t files = ui_app_new(win, NULL);
     bool running = true;
 
-    folder_view_t* fv = folder_view_new("/");
+    folder_view_t* fv = fv_new("/");
     ui_set_root(files, W(fv));
 
     while (running) {
@@ -112,41 +115,4 @@ int main() {
     }
 
     return 0;
-}
-
-void folder_clicked(button_t* entry) {
-    strcat(path, entry->text);
-    refresh(path, file_list);
-}
-
-void refresh(char* p, vbox_t* vb) {
-    DIR* d = opendir(p);
-    vbox_clear(vb);
-
-    struct dirent* e = NULL;
-
-    while (d && (e = readdir(d))) {
-        button_t* entry = NULL;
-        char name[256] = "";
-
-        strcpy(name, e->d_name);
-        printf("%s\n", name);
-
-        if (e->d_type == 2) {
-            strcat(name, "/");
-            entry = button_new(name);
-            entry->on_click = folder_clicked;
-        } else {
-            entry = button_new(name);
-        }
-
-        entry->widget.flags = UI_EXPAND_HORIZONTAL;
-
-        vbox_add(vb, (widget_t*) entry);
-        free(e);
-    }
-
-    if (d) {
-        closedir(d);
-    }
 }
