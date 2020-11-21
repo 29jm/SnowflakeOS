@@ -310,6 +310,9 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
         }
     }
 
+    rect_t mouse_rect = wm_mouse_to_rect(mouse);
+    wm_draw_mouse(mouse_rect, mouse_rect);
+
     rect_clear_clipped(&clip_rects);
 }
 
@@ -437,19 +440,22 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
 }
 
 void wm_draw_mouse(rect_t old, rect_t new) {
-    wm_refresh_partial(old);
+
+
+    if((old.top != new.top) || (old.left != new.left))
+    	wm_refresh_partial(old);
 
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
     for (int32_t y = 0; y < new.bottom - new.top - 6; y++) {
-        memset((void*) addr, 255, (y+1)*fb.bpp>>3);
+        memset((void*) addr, 127, (y+1)*fb.bpp>>3);
         addr += fb.pitch;
     }
 
     addr += 4*fb.bpp>>3;
 
     for (int32_t y = 0; y < 6; y++) {
-        memset((void*) addr, 255, 3*fb.bpp>>3);
+        memset((void*) addr, 127, 3*fb.bpp>>3);
 	addr += fb.bpp>>3;
 	addr += fb.pitch;
     }
