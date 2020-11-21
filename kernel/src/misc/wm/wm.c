@@ -296,12 +296,6 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
 
     kfree(clip_windows);
 
-    // Clip the mouse cursor too
-    // Somehow the clipping part causes the cursor to streak
-    // but without it, the cursor disappears every second if no movement...
-//    rect_t mouse_rect = wm_mouse_to_rect(mouse);
-//    rect_subtract_clip_rect(&clip_rects, mouse_rect);
-
     // Draw what's left
     rect_t* clip;
     list_for_each_entry(clip, &clip_rects) {
@@ -310,6 +304,7 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
         }
     }
 
+    // Redraw the mouse
     rect_t mouse_rect = wm_mouse_to_rect(mouse);
     wm_draw_mouse(mouse_rect, mouse_rect);
 
