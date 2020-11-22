@@ -67,10 +67,6 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
     wm_assign_z_orders();
     wm_raise_window(win);
 
-    char str[20] = "/wm/";
-    itoa(win->id, str+strlen(str), 10);
-    fs_open(str, O_CREAT);
-
     return win->id;
 }
 
@@ -90,10 +86,6 @@ void wm_close_window(uint32_t win_id) {
         }
 
         wm_refresh_partial(rect);
-
-        char str[20] = "/wm/";
-        itoa(win_id, str+strlen(str), 10);
-        fs_unlink(str);
     } else {
         printke("close: failed to find window of id %d", win_id);
     }

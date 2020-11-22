@@ -21,9 +21,9 @@ A hobby OS to help me learn about kernel stuff, to eventually get into linux ker
 
 I aim to make the code readable and well-organized. A blog follows the development of this project, here https://jmnl.xyz/.
 
-## Dependencies
+## Building & running
 
-### Packages
+### Dependencies
 
 Install the following packages:
 
@@ -67,17 +67,18 @@ If your distro provides you with a cross compiler, you may want to save time and
 
 You may edit `HOST`, or hardcode the executables names directly.
 
-## Running SnowflakeOS
+### Running SnowflakeOS
 
 Run either
 
     make qemu # or
     make bochs
 
-to test SnowflakeOS.
+to test SnowflakeOS in a VM.
 
-## Installing SnowflakeOS
-
-Testing this project on real hardware is possible. You can copy `SnowflakeOS.iso` to an usb drive using `dd`, like you would when making a live usb of another OS, and boot it directly.
-
+Testing this project on real hardware is possible. You can copy `SnowflakeOS.iso` to an usb drive using `dd`, like you would when making a live usb of another OS, and boot it directly.  
 Note that this is rarely ever tested, who knows what it'll do :) I'd love to hear about it if you try this, on which hardware, etc...
+
+## Contributing
+
+Contributions are most welcome, in any form! Consult `CONTRIBUTING.md` and this project's wiki for guidance.
