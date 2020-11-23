@@ -1,58 +1,50 @@
 LIBK_CFLAGS:=$(CFLAGS) -D_KERNEL_
 CFLAGS+=-Wno-format
 
-OBJS:=$(patsubst %.c,%.o,$(wildcard src/*/*.c))
-OBJS+=$(patsubst %.c,%.o,$(wildcard src/*.c))
-
-
-OBJS+=$(patsubst %.S,%.o,$(wildcard src/*/*.S))
-OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
+OBJS+=$(patsubst %.c,%.o,$(shell find src/ -name '*.c'))
+OBJS+=$(patsubst %.S,%.o,$(shell find src/ -name '*.S'))
 
 LIBK_OBJS:=$(OBJS:.o=.libk.o)
 
 # libk is libc but compiled with _KERNEL_ defined
-BINARIES=libc.a libk.a
+LIBC=$(LIBDIR)/libc.a
+LIBK=$(LIBDIR)/libk.a
 
-all: $(BINARIES)
+.PHONY: all clean build install-headers
 
-.PHONY: all clean build install-headers install-libs
-
-libc.a: $(OBJS)
-	$(info [libc] linking $@)
+$(LIBC): $(OBJS)
+	$(info [libc] linking $(notdir $@))
+	@mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(OBJS)
 
-libk.a: $(LIBK_OBJS)
-	$(info [libc] linking $@)
+$(LIBK): $(LIBK_OBJS)
+	$(info [libc] linking $(notdir $@))
+	@mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
-	$(info [libc] building $@)
+	$(info [libc] $@)
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
-	$(info [libc] building $@)
+	$(info [libc] $@)
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.libk.o: %.c
-	$(info [libc] building $@)
+	$(info [libc] $@)
 	@$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 %.libk.o: %.S
-	$(info [libc] building $@)
+	$(info [libc] $@)
 	@$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 clean:
 	$(info [libc] cleaning up)
-	@rm -f $(BINARIES) $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
+	@rm -f $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
 
-build: install-libs
+build: $(LIBC) $(LIBK)
 
 install-headers:
 	$(info [libc] installing headers)
-	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
-
-install-libs: $(BINARIES)
-	$(info [libc] installing shared libraries)
-	@mkdir -p $(SYSROOT)/$(LIBDIR)
-	@cp $(BINARIES) $(SYSROOT)/$(LIBDIR)
+	@mkdir -p $(INCLUDEDIR)
+	@cp -rT include $(INCLUDEDIR)

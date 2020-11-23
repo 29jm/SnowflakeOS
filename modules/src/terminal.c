@@ -114,7 +114,7 @@ int main() {
     str_free(text_buf);
     str_free(input_buf);
 
-    // snow_close_window(win);
+    snow_close_window(win);
 
     return 0;
 }

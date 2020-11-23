@@ -1,30 +1,26 @@
 OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c))
 OBJS+=$(patsubst %.S,%.o,$(wildcard src/*.S))
 
-all: libui.a
+LIBUI=$(LIBDIR)/libui.a
 
-.PHONY: all clean build install-headers install-libs
+.PHONY: all clean build install-headers
 
-libui.a: $(OBJS)
-	$(info [ui] linking $@)
+$(LIBUI): $(OBJS)
+	$(info [ui] linking $(notdir $@))
+	@mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(OBJS)
 
 %.o: %.c
-	$(info [ui] building $@)
+	$(info [ui] $@)
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	$(info [ui] building $@)
+	$(info [ui] $@)
 	@rm -f *.a $(OBJS)
 
-build: install-libs
+build: $(LIBUI)
 
 install-headers:
 	$(info [ui] installing headers)
-	@mkdir -p $(SYSROOT)/$(INCLUDEDIR)
-	@cp -rT include $(SYSROOT)/$(INCLUDEDIR)
-
-install-libs: libui.a
-	$(info [ui] installing shared libraries)
-	@mkdir -p $(SYSROOT)/$(LIBDIR)
-	@cp libui.a $(SYSROOT)/$(LIBDIR)
+	@mkdir -p $(INCLUDEDIR)
+	@cp -rT include $(INCLUDEDIR)

@@ -9,10 +9,6 @@
 #include <kernel/sys.h>
 #endif
 
-#ifndef _KERNEL_
-#include <snow.h>
-#endif
-
 #define MIN_ALIGN 4
 
 typedef struct _mem_block_t {

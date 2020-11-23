@@ -5,13 +5,14 @@ LC_ALL=C
 HOST=i686-elf
 PREFIX=usr
 BOOTDIR=boot
-LIBDIR=$(PREFIX)/lib
-INCLUDEDIR=$(PREFIX)/include
 ISODIR=isodir
 ISO=$(PWD)/$(ISODIR)
 TARGETROOT=$(PWD)/misc/root
 SYSROOTDIR=sysroot
 SYSROOT=$(PWD)/$(SYSROOTDIR)
+
+INCLUDEDIR=$(SYSROOT)/$(PREFIX)/include
+LIBDIR=$(SYSROOT)/$(PREFIX)/lib
 
 PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
 
@@ -21,7 +22,7 @@ AR=$(HOST)-ar
 AS=$(HOST)-as
 CC=$(HOST)-gcc
 
-CFLAGS=-Og -std=gnu11 -ffreestanding -Wall -Wextra
+CFLAGS=-O1 -std=gnu11 -ffreestanding -Wall -Wextra
 ASFLAGS=--32
 LDFLAGS=-nostdlib -L$(SYSROOT)/usr/lib -m elf_i386
 
@@ -39,7 +40,7 @@ endif
 # CFLAGS+=-target i386-pc-none-eabi -m32
 # CFLAGS+=-mno-mmx -mno-sse -mno-sse2
 
-CC+=--sysroot=$(SYSROOT) -isystem=/$(INCLUDEDIR)
+CC+=--sysroot=$(SYSROOT) -isystem=/$(PREFIX)/include
 
 # Make will be called on these folders
 PROJECTS=libc snow kernel modules ui
@@ -64,8 +65,6 @@ $(PROJECTS): $(PROJECT_HEADERS)
 
 # Specify dependencies
 kernel: libc
-snow: libc
-ui: libc snow
 modules: libc snow ui
 
 qemu: SnowflakeOS.iso
@@ -113,14 +112,13 @@ misc/disk.img: assets modules
 	@echo "hello ext2 world" > misc/root/motd
 	@echo "version: 0.5" > misc/root/etc/config
 	@mv misc/*.rgb misc/root/
-	@mkfs.ext2 misc/disk.img -d misc/root 2> /dev/null
-	@rm -r misc/root
+	@mkfs.ext2 misc/disk.img -d misc/root > /dev/null 2>&1
 
 misc/disk2.img: assets modules
 	$(info [all] writing disk2 image)
 	@touch misc/disk2.img
-	@dd if=/dev/zero of=misc/disk2.img bs=1024 count=1000
-	@mkfs.ext2 misc/disk2.img -d sysroot 2> /dev/null
+	@dd if=/dev/zero of=misc/disk2.img bs=1024 count=1000 2> /dev/null
+	@mkfs.ext2 misc/disk2.img -d sysroot > /dev/null 2>&1
 
 toolchain:
 	@env -i toolchain/build-toolchain.sh

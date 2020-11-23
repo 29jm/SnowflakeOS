@@ -1,13 +1,15 @@
 #ifndef _KERNEL_
 
 #include <kernel/uapi/uapi_fs.h>
+#include <kernel/uapi/uapi_syscall.h>
 
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#include <snow.h>
+extern int32_t syscall1(uint32_t eax, uint32_t ebx);
+extern int32_t syscall2(uint32_t eax, uint32_t ebx, uint32_t ecx);
 
 /* Opens the directory pointed to by `path` and returns a directory handle.
  * This handle can later be freed by calling `closedir`.
