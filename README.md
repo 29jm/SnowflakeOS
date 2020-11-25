@@ -19,7 +19,7 @@ A hobby OS to help me learn about kernel stuff, to eventually get into linux ker
 + custom GUI toolkit
 + ext2 support
 
-I aim to make the code readable and well-organized. A blog follows the development of this project, here https://jmnl.xyz/.
+I aim to make the code readable and well-organized. A blog follows the development of this project, here https://jmnl.xyz/, and the [wiki](https://github.com/29jm/SnowflakeOS/wiki) provides more information about the project and its internals.
 
 ## Building & running
 
@@ -30,6 +30,7 @@ Install the following packages:
 + `xorriso` for Debian/Ubuntu; `libisoburn` on Archlinux
 + `grub`
 + `mtools`
++ `imagemagick`
 + `qemu` (recommended)
 + `bochs` (optional)
 + `clang` + development packages, e.g. `base-devel` on Archlinux (optional)
@@ -81,4 +82,4 @@ Note that this is rarely ever tested, who knows what it'll do :) I'd love to hea
 
 ## Contributing
 
-Contributions are most welcome, in any form! Consult `CONTRIBUTING.md` and this project's wiki for guidance.
+Contributions are most welcome, in any form! Consult `CONTRIBUTING.md` and this project's [wiki](https://github.com/29jm/SnowflakeOS/wiki) for guidance.
