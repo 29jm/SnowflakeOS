@@ -23,7 +23,8 @@
 #define SYS_CHDIR 17
 #define SYS_GETCWD 18
 #define SYS_UNLINK 19
-#define SYS_MAX 20 // First invalid syscall number
+#define SYS_RENAME 20
+#define SYS_MAX 21 // First invalid syscall number
 
 #define SYS_INFO_UPTIME 1
 #define SYS_INFO_MEMORY 2

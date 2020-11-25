@@ -261,6 +261,78 @@ int32_t fs_unlink(const char* path) {
     return 0;
 }
 
+/* Renames the file pointed to by `oldp` to `newp`, moving it across directories
+ * as needed. See "man 2 rename" for the expected behavior.
+ * Note: doesn't support renaming a directory to an existing empty directory.
+ */
+int32_t fs_rename(const char* oldp, const char* newp) {
+    inode_t* old = fs_open(oldp, O_RDONLY);
+    inode_t* new  = fs_open(newp, O_RDONLY);
+
+    if (!old) {
+        return -1;
+    }
+
+    if (old->type == DENT_DIRECTORY && new) {
+        return -1;
+    }
+
+    /* Both point to the same file */
+    if (new == old) {
+        return 0;
+    }
+
+    /* Moving across filesystems is unsupported right now */
+    if (new && new->fs != old->fs) {
+        return -1;
+    }
+
+    /* Destination will be replaced, remove it */
+    if (new) {
+        if (fs_unlink(newp) == -1) {
+            return -1;
+        }
+    }
+
+    /* Do the renaming on the fs */
+    char* noldp = fs_normalize_path(oldp);
+    char* nnewp = fs_normalize_path(newp);
+    folder_inode_t* src = (folder_inode_t*) fs_open(dirname(noldp), O_RDONLY);
+    folder_inode_t* dst = (folder_inode_t*) fs_open(dirname(nnewp), O_RDONLY);
+
+    int32_t ret = FS(old)->rename(FS(old), src->ino.inode_no, old->inode_no, dst->ino.inode_no);
+
+    if (ret == -1) {
+        kfree(noldp);
+        kfree(nnewp);
+        return -1;
+    }
+
+    /* Rename in VFS too: remove from the original parent directory */
+    list_t* to_iterate = old->type == DENT_DIRECTORY ?
+        &src->subfolders : &src->subfiles;
+    list_t* iter;
+    tnode_t* tn;
+    list_for_each(iter, tn, to_iterate) {
+        if (tn->inode->inode_no == old->inode_no) {
+            list_del(iter);
+            break;
+        }
+    }
+
+    /* Add to the destination parent directory */
+    kfree(tn->name);
+    tn->name = strdup(basename(nnewp));
+    list_t* to_add_to = old->type == DENT_DIRECTORY ?
+        &dst->subfolders : &dst->subfiles;
+    list_add(to_add_to, tn);
+
+    kfree(noldp);
+    kfree(nnewp);
+
+    return 0;
+}
+
 /* A process has released its grip on a file: notify the fs.
  */
 int32_t fs_close(inode_t* in) {

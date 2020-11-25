@@ -38,6 +38,7 @@ typedef struct fs_t {
     folder_inode_t* root;
     uint32_t uid;
     uint32_t (*create)(struct fs_t*, const char*, uint32_t, uint32_t);
+    int32_t (*rename)(struct fs_t*, uint32_t, uint32_t, uint32_t);
     int32_t (*unlink)(struct fs_t*, uint32_t, uint32_t);
     uint32_t (*read)(struct fs_t*, uint32_t, uint32_t, uint8_t*, uint32_t);
     uint32_t (*append)(struct fs_t*, uint32_t, uint8_t*, uint32_t);
@@ -52,6 +53,7 @@ typedef sos_directory_entry_t* (*fs_readdir_t)(struct fs_t*, uint32_t, uint32_t)
 typedef uint32_t (*fs_append_t)(struct fs_t*, uint32_t, uint8_t*, uint32_t);
 typedef uint32_t (*fs_read_t)(struct fs_t*, uint32_t, uint32_t, uint8_t*, uint32_t);
 typedef int32_t (*fs_unlink_t)(struct fs_t*, uint32_t, uint32_t);
+typedef int32_t (*fs_rename_t)(struct fs_t*, uint32_t, uint32_t, uint32_t);
 typedef uint32_t (*fs_create_t)(struct fs_t*, const char*, uint32_t, uint32_t);
 typedef int32_t (*fs_close_t)(struct fs_t*, uint32_t);
 
@@ -61,6 +63,7 @@ char* fs_normalize_path(const char* p);
 inode_t* fs_open(const char* path, uint32_t mode);
 uint32_t fs_mkdir(const char* path, uint32_t mode);
 int32_t fs_unlink(const char* path);
+int32_t fs_rename(const char* oldp, const char* newp);
 int32_t fs_close(inode_t* in);
 uint32_t fs_read(inode_t* in, uint32_t offset, uint8_t* buf, uint32_t size);
 uint32_t fs_write(inode_t* in, uint8_t* buf, uint32_t size);

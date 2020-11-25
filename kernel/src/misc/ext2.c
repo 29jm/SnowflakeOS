@@ -155,6 +155,7 @@ typedef struct ext2_fs_t {
 
 uint32_t ext2_create(ext2_fs_t* fs, const char* name, uint32_t type, uint32_t parent_inode);
 int32_t ext2_unlink(ext2_fs_t* fs, uint32_t d_ino, uint32_t ino);
+int32_t ext2_rename(ext2_fs_t* fs, uint32_t dir_ino, uint32_t ino, uint32_t destdir_ino);
 uint32_t ext2_mkdir(ext2_fs_t* fs, const char* name, uint32_t parent_inode);
 uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size);
 uint32_t ext2_append(ext2_fs_t* fs, uint32_t inode, uint8_t* data, uint32_t size);
@@ -205,6 +206,7 @@ fs_t* init_ext2(uint8_t* data, uint32_t len) {
 
     e2fs->fs.append = (fs_append_t) ext2_append;
     e2fs->fs.create = (fs_create_t) ext2_create;
+    e2fs->fs.rename = (fs_rename_t) ext2_rename;
     e2fs->fs.get_fs_inode = (fs_get_fs_inode_t) ext2_get_fs_inode;
     e2fs->fs.read = (fs_read_t) ext2_read;
     e2fs->fs.readdir = (fs_readdir_t) ext2_readdir;
@@ -250,6 +252,57 @@ int32_t ext2_unlink(ext2_fs_t* fs, uint32_t d_ino, uint32_t ino) {
     } else {
         update_inode(fs, ino, in);
     }
+
+    return 0;
+}
+
+/* Move `ino` whose parent directory is `dir_ino`, to the directory `destdir_ino`.
+ */
+int32_t ext2_rename(ext2_fs_t* fs, uint32_t dir_ino, uint32_t ino, uint32_t destdir_ino) {
+    list_t* entries = directory_to_entries(fs, dir_ino);
+    list_t* iter;
+    dentry_t* ent;
+
+    if (!entries) {
+        return -1;
+    }
+
+    /* Look for the file to move, remove it from the list */
+    list_for_each(iter, ent, entries) {
+        if (ent->inode == ino) {
+            list_del(iter);
+            break;
+        }
+    }
+
+    /* Not found */
+    if (iter == entries) {
+        free_directory_entries(entries);
+        kfree(entries);
+
+        return -1;
+    }
+
+    /* Update the destination dir's list */
+    list_t* new_entries = directory_to_entries(fs, destdir_ino);
+
+    if (!new_entries) {
+        free_directory_entries(entries);
+        kfree(entries);
+
+        return -1;
+    }
+
+    list_add(new_entries, make_directory_entry(ent->name, ent->inode, ent->type));
+
+    /* Write changes to disk */
+    write_directory_entries(fs, destdir_ino, new_entries);
+    write_directory_entries(fs, dir_ino, entries);
+
+    free_directory_entries(entries);
+    kfree(entries);
+    free_directory_entries(new_entries);
+    kfree(new_entries);
 
     return 0;
 }
@@ -905,6 +958,11 @@ static list_t* directory_to_entries(ext2_fs_t* fs, uint32_t ino) {
     sos_directory_entry_t* ent = NULL;
     ext2_inode_t* in = get_inode(fs, ino);
     uint32_t offset = 0;
+
+    if (!in) {
+        kfree(list);
+        return NULL;
+    }
 
     while (offset < in->size_lower) {
         ent = ext2_readdir(fs, ino, offset);

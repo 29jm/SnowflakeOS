@@ -14,6 +14,8 @@ int printf(const char* __restrict, ...);
 int putchar(int);
 int puts(const char*);
 
+int rename(const char* old, const char* new);
+
 #ifndef _KERNEL_
 FILE* fopen(const char* path, const char* mode);
 int fclose(FILE* stream);

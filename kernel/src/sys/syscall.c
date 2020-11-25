@@ -35,6 +35,7 @@ static void syscall_ftell(registers_t* regs);
 static void syscall_chdir(registers_t* regs);
 static void syscall_getcwd(registers_t* regs);
 static void syscall_unlink(registers_t* regs);
+static void syscall_rename(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -60,6 +61,7 @@ void init_syscall() {
     syscall_handlers[SYS_CHDIR] = syscall_chdir;
     syscall_handlers[SYS_GETCWD] = syscall_getcwd;
     syscall_handlers[SYS_UNLINK] = syscall_unlink;
+    syscall_handlers[SYS_RENAME] = syscall_rename;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -252,4 +254,11 @@ static void syscall_unlink(registers_t* regs) {
     char* path = (char*) regs->ebx;
 
     regs->eax = fs_unlink(path);
+}
+
+static void syscall_rename(registers_t* regs) {
+    char* old_path = (char*) regs->ebx;
+    char* new_path = (char*) regs->ecx;
+
+    regs->eax = fs_rename(old_path, new_path);
 }
