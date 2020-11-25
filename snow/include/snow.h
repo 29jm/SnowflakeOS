@@ -36,7 +36,8 @@ void snow_draw_line(fb_t fb, int x0, int y0, int x1, int y1, uint32_t col);
 void snow_draw_border(fb_t fb, int x, int y, int w, int h, uint32_t col);
 void snow_draw_character(fb_t fb, char c, int x, int y, uint32_t col);
 void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col);
-void snow_draw_rgb(fb_t fb, uint8_t* rgb, int x, int y, int w, int h, uint32_t mask);
+void snow_draw_rgb(fb_t fb, uint8_t* rgb, int x, int y, int w, int h);
+void snow_draw_rgb_masked(fb_t fb, uint8_t* rgb, int x, int y, int w, int h, uint32_t mask);
 
 // GUI functions
 window_t* snow_open_window(char* title, int width, int height, uint32_t flags);

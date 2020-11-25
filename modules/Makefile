@@ -19,15 +19,13 @@ install-headers:
 clean:
 	$(info [modules] cleaning up)
 	@rm -f */*.o
-	@find . -executable -type f -delete
 
-# TODO: every module depends on every other, a change in one rebuilds all of them
 $(MODS): $(OBJS) $(LIB_DEPS) src/start.o
-	$(info [modules] $(notdir $@))
 	@mkdir -p $(TARGETROOT)
 	@$(LD) src/start.o src/$(@F).o -o $@ $(LDFLAGS) $(LIBS)
 
 %.o: %.c
+	$(info [modules] $(notdir $(basename $@)))
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S

@@ -290,6 +290,7 @@ uint32_t ext2_append(ext2_fs_t* fs, uint32_t inode, uint8_t* data, uint32_t size
     in->size_lower += size;
     update_inode(fs, inode, in);
     kfree(tmp);
+    kfree(in);
 
     return size;
 }

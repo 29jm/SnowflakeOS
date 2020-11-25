@@ -6,7 +6,11 @@
 #include <string.h>
 
 // callbacks
-void on_clear_clicked(button_t* button);
+void on_clear_clicked();
+void on_save_clicked();
+
+bool load(const char* path, uint32_t w, uint32_t h);
+void save();
 
 const uint32_t width = 550;
 const uint32_t height = 320;
@@ -36,24 +40,29 @@ int main(int argc, char* argv[]) {
     ui_app_t paint = ui_app_new(win, fd ? icon : NULL);
 
     vbox_t* vbox = vbox_new();
-    ui_set_root(paint, (widget_t*) vbox);
+    ui_set_root(paint, W(vbox));
 
     hbox_t* menu = hbox_new();
     menu->widget.flags &= ~UI_EXPAND_VERTICAL;
     menu->widget.bounds.h = 20;
-    vbox_add(vbox, (widget_t*) menu);
+    vbox_add(vbox, W(menu));
 
     canvas = canvas_new();
-    vbox_add(vbox, (widget_t*) canvas);
+    canvas->color = colors[0];
+    vbox_add(vbox, W(canvas));
 
     for (uint32_t i = 0; i < sizeof(colors)/sizeof(colors[0]); i++) {
         color_button_t* cbutton = color_button_new(colors[i], &canvas->color);
-        hbox_add(menu, (widget_t*) cbutton);
+        hbox_add(menu, W(cbutton));
     }
 
     button_t* button = button_new("Clear");
     button->on_click = on_clear_clicked;
-    hbox_add(menu, (widget_t*) button);
+    hbox_add(menu, W(button));
+
+    button_t* save_button = button_new("Save");
+    save_button->on_click = on_save_clicked;
+    hbox_add(menu, W(save_button));
 
     ui_draw(paint);
     snow_render_window(win);
@@ -64,22 +73,10 @@ int main(int argc, char* argv[]) {
         uint32_t w = strtol(argv[2], NULL, 10);
         uint32_t h = strtol(argv[3], NULL, 10);
 
-        FILE* fd = fopen(fname, "r");
-
-        if (fd) {
-            uint8_t* buf = malloc(w*h*3);
-
-            if ((uint32_t) fread(buf, 3, w*h, fd) < w*h) {
-                printf("paint: file smaller than expected\n");
-            } else {
-                rect_t r = ui_get_absolute_bounds(W(canvas));
-                snow_draw_rgb(win->fb, buf, r.x, r.y, w, h, 0);
-            }
-
-            free(buf);
-            fclose(fd);
+        if (load(argv[1], w, h)) {
+            printf("paint: opened '%s'\n", fname);
         } else {
-            printf("paint: failed to open '%s'\n", fname);
+            printf("paint: failed to load '%s'\n", fname);
         }
     }
 
@@ -105,8 +102,70 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void on_clear_clicked(button_t* button) {
-    (void) button;
-
+void on_clear_clicked() {
     canvas->needs_clearing = true;
+}
+
+void on_save_clicked() {
+    save(NULL);
+}
+
+bool load(const char* path, uint32_t w, uint32_t h) {
+    FILE* fd = fopen(path, "r");
+
+    if (!fd) {
+        return false;
+    }
+
+    uint8_t* buf = malloc(w*h*3);
+
+    if ((uint32_t) fread(buf, 3, w*h, fd) < w*h) {
+        free(buf);
+        return false;
+    } else {
+        rect_t r = ui_get_absolute_bounds(W(canvas));
+        snow_draw_rgb(win->fb, buf, r.x, r.y, w, h);
+    }
+
+    free(buf);
+    fclose(fd);
+
+    return true;
+}
+
+void save() {
+    char fname[256] = "drawing_";
+    rect_t r = ui_get_absolute_bounds(W(canvas));
+
+    itoa(r.w, fname+strlen(fname), 10);
+    strcat(fname, "x");
+    itoa(r.h, fname+strlen(fname), 10);
+    strcat(fname, ".rgb");
+
+    printf("paint: saving to '%s'.\n", fname);
+
+    FILE* fd = fopen(fname, "w");
+
+    if (!fd) {
+        printf("paint: failed to open output file '%s'\n", fname);
+        return;
+    }
+
+    uint8_t* buf = malloc(r.w*r.h*3);
+
+    /* Convert from RGBA to RGB */
+    for (int y = r.y; y < r.y+r.h; y++) {
+        for (int x = r.x; x < r.x+r.w; x++) {
+            uint32_t px = ((uint32_t*) win->fb.address)[y*win->fb.pitch/4 + x];
+            uint8_t* pixbuf = (uint8_t*) &px;
+            uint32_t idx = (y - r.y)*3*r.w + (x - r.x)*3;
+            buf[idx] = pixbuf[2];
+            buf[idx + 1] = pixbuf[1];
+            buf[idx + 2] = pixbuf[0];
+        }
+    }
+
+    fwrite(buf, 3, r.w*r.h, fd);
+    free(buf);
+    fclose(fd);
 }

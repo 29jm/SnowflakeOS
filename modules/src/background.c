@@ -17,7 +17,7 @@ int main() {
         uint32_t n_pixels = win->fb.width*win->fb.height;
         uint8_t* bg = malloc(n_pixels * 3);
         fread(bg, 3, n_pixels, wp);
-        snow_draw_rgb(win->fb, bg, 0, 0, win->fb.width, win->fb.height, 0x000000);
+        snow_draw_rgb(win->fb, bg, 0, 0, win->fb.width, win->fb.height);
         free(bg);
         fclose(wp);
     } else {
@@ -25,7 +25,7 @@ int main() {
     }
 
     snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
-    snow_draw_string(win->fb, "Snowflake OS 0.5", 3, 3, 0x00FFFFFF);
+    snow_draw_string(win->fb, "Snowflake OS 0.6", 3, 3, 0x00FFFFFF);
     snow_render_window(win);
 
     while (true) {
@@ -53,7 +53,7 @@ int main() {
         };
 
         snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
-        snow_draw_string(win->fb, "Snowflake OS 0.5", 3, 3, 0x00FFFFFF);
+        snow_draw_string(win->fb, "Snowflake OS 0.6", 3, 3, 0x00FFFFFF);
         snow_draw_string(win->fb, time_text, x, y, 0xFFFFFF);
         snow_render_window_partial(win, redraw);
 

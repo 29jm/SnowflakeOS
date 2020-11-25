@@ -10,7 +10,7 @@ void titlebar_on_draw(titlebar_t* tb, fb_t fb) {
     snow_draw_rect(fb, r.x, r.y, r.w, r.h, 0x303030);
 
     if (tb->icon) {
-        snow_draw_rgb(fb, tb->icon, r.x+2, r.y+2, 16, 16, 0xFFFFFF);
+        snow_draw_rgb_masked(fb, tb->icon, r.x+2, r.y+2, 16, 16, 0xFFFFFF);
         snow_draw_string(fb, tb->title, r.x+16+5, r.y+3, 0xFFFFFF);
     } else {
         snow_draw_string(fb, tb->title, r.x+3, r.y+3, 0xFFFFFF);
