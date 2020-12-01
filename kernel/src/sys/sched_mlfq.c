@@ -21,6 +21,7 @@ typedef struct {
     proc_node_t* processes1;
     proc_node_t* processes2;
     proc_node_t* processes3;
+    uint32_t flag;
 } sched_mlfq_t;
 
 process_t* sched_mlfq_get_current(sched_t* sched) {
@@ -231,7 +232,7 @@ void sched_mlfq_exit(sched_t* sched, process_t* process) {
     proc_node_t* p3 = sc->processes3;
 
     
-    if(flag=1){  //exit for processes in circular list 2
+    if(flag==1){  //exit for processes in circular list 2
         while (p2->next->process != process) {
            p2 = p2->next;
         }
@@ -243,7 +244,7 @@ void sched_mlfq_exit(sched_t* sched, process_t* process) {
 
         kfree(to_remove);
     }
-    else if(flag=2){    //exit for porcesses in circular list 3
+    else if(flag==2){    //exit for porcesses in circular list 3
         while (p3->next->process != process) {
            p3 = p3->next;
         }
