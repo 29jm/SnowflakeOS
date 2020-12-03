@@ -49,7 +49,7 @@ void sched_mlfq_add(sched_t* sched, process_t* new_process) {
 
     new->process = new_process;
 
-    // Insert the process in the ring, create it if empty
+    // Insert the proces in the ring, create it if empty
     if (!sc->processes1) {
         new->next = new;
         sc->processes1 = new;
