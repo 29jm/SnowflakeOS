@@ -75,7 +75,7 @@ Run either
     make qemu # or
     make bochs
 
-to test SnowflakeOS in a VM.
+to test SnowflakeOS in a VM. See [the edit/debug cycle](https://github.com/29jm/SnowflakeOS/wiki/The-edit-debug-cycle) for more options on how to compile and run SnowflakeOS.
 
 Testing this project on real hardware is possible. You can copy `SnowflakeOS.iso` to an usb drive using `dd`, like you would when making a live usb of another OS, and boot it directly.  
 Note that this is rarely ever tested, who knows what it'll do :) I'd love to hear about it if you try this, on which hardware, etc...

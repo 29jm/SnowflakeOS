@@ -30,7 +30,7 @@ typedef struct {
 } point_t;
 
 /* Main widget class. Other widgets "inherit" it by having a `widget_t` as first
- * struct member, so that they can be casted as `widget_t`.
+ * struct member, so that they can be cast as `widget_t`.
  */
 typedef struct _widget_t {
     struct _widget_t* parent;

@@ -39,6 +39,8 @@ bool focused = true;
 int main() {
     win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
 
+    syscall(SYS_MAKETTY);
+
     str_t* text_buf = str_new(prompt);
     str_t* input_buf = str_new("");
     cursor = true;
@@ -50,16 +52,16 @@ int main() {
     while (running) {
         wm_event_t event = snow_get_event(win);
         wm_kbd_event_t key = event.kbd;
-        bool focus_changed = false;
+        bool needs_redrawing = false;
 
         // Do we have focus?
         if (event.type & WM_EVENT_GAINED_FOCUS) {
             focused = true;
-            focus_changed = true;
+            needs_redrawing = true;
         } else if (event.type & WM_EVENT_LOST_FOCUS) {
             focused = false;
             cursor = false;
-            focus_changed = true;
+            needs_redrawing = true;
         }
 
         // Time & cursor blinks
@@ -74,24 +76,37 @@ int main() {
                 cursor = !cursor;
                 event.type |= WM_EVENT_KBD;
                 event.kbd.pressed = true;
+                needs_redrawing = true;
             }
         }
 
-        // Redraw on input & focus change
-        if (!(event.type & WM_EVENT_KBD && event.kbd.pressed) && !focus_changed) {
-            snow_sleep(10);
-            continue;
+        // Print things that have been output, if any, and append a prompt
+        const uint32_t buf_size = 256;
+        char buf[buf_size];
+        uint32_t read;
+        bool anything_read = false;
+
+        while ((read = fread(buf, 1, buf_size - 1, stdout))) {
+            buf[read] = '\0';
+            str_append(text_buf, buf);
+            needs_redrawing = true;
+            anything_read = true;
         }
 
-        switch (event.kbd.keycode) {
+        if (anything_read) {
+            str_append(text_buf, prompt);
+        }
+
+        if (event.type & WM_EVENT_KBD && event.kbd.pressed) {
+            needs_redrawing = true;
+            switch (key.keycode) {
             case KBD_ENTER:
             case KBD_KP_ENTER:
                 str_append(text_buf, input_buf->buf);
-                str_append(text_buf, "\n");
                 interpret_cmd(text_buf, input_buf);
+                printf("\n");
                 input_buf->buf[0] = '\0';
                 input_buf->len = 0;
-                str_append(text_buf, prompt);
                 break;
             case KBD_BACKSPACE:
                 if (input_buf->len) {
@@ -106,9 +121,12 @@ int main() {
                     str_append(input_buf, str);
                 }
                 break;
+            }
         }
 
-        redraw(text_buf, input_buf);
+        if (needs_redrawing) {
+            redraw(text_buf, input_buf);
+        }
     }
 
     str_free(text_buf);
@@ -227,13 +245,6 @@ void str_append(str_t* str, const char* text) {
 void interpret_cmd(str_t* text_buf, str_t* input_buf) {
     if (!strcmp(input_buf->buf, "exit")) {
         running = false;
-        return;
-    } else if (!strcmp(input_buf->buf, "log")) {
-        sys_info_t info = { .kernel_log = malloc(2048) };
-
-        syscall2(SYS_INFO, SYS_INFO_LOG, (uintptr_t) &info);
-        str_append(text_buf, info.kernel_log);
-        free(info.kernel_log);
         return;
     }
 

@@ -6,6 +6,7 @@
 #include <kernel/fb.h>
 #include <kernel/wm.h>
 #include <kernel/serial.h>
+#include <kernel/pipe.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -36,6 +37,7 @@ static void syscall_chdir(registers_t* regs);
 static void syscall_getcwd(registers_t* regs);
 static void syscall_unlink(registers_t* regs);
 static void syscall_rename(registers_t* regs);
+static void syscall_maketty(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -62,6 +64,7 @@ void init_syscall() {
     syscall_handlers[SYS_GETCWD] = syscall_getcwd;
     syscall_handlers[SYS_UNLINK] = syscall_unlink;
     syscall_handlers[SYS_RENAME] = syscall_rename;
+    syscall_handlers[SYS_MAKETTY] = syscall_maketty;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -261,4 +264,15 @@ static void syscall_rename(registers_t* regs) {
     char* new_path = (char*) regs->ecx;
 
     regs->eax = fs_rename(old_path, new_path);
+}
+
+static void syscall_maketty(registers_t* regs) {
+    ft_entry_t* entry = zalloc(sizeof(ft_entry_t));
+
+    entry->fd = FS_STDOUT_FILENO;
+    entry->inode = pipe_new();
+
+    proc_add_fd(entry);
+
+    regs->eax = 0;
 }

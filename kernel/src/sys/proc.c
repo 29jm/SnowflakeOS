@@ -5,6 +5,7 @@
 #include <kernel/gdt.h>
 #include <kernel/fpu.h>
 #include <kernel/fs.h>
+#include <kernel/pipe.h>
 #include <kernel/sys.h>
 
 #include <kernel/sched_robin.h>
@@ -195,8 +196,6 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
  * Implements the `exit` system call.
  */
 void proc_exit_current_process() {
-    printk("terminating process %d", current_process->pid);
-
     // Free allocated pages: code, heap, stack, page directory
     directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
 
@@ -217,7 +216,8 @@ void proc_exit_current_process() {
 
     // Free the file descriptor list
     while (!list_empty(&current_process->filetable)) {
-        fs_close(list_first_entry(&current_process->filetable, ft_entry_t)->inode); // bit ugly
+        ft_entry_t* ent = list_first_entry(&current_process->filetable, ft_entry_t);
+        fs_close(ent->inode);
         list_del(list_first(&current_process->filetable));
     }
 
@@ -281,6 +281,35 @@ void proc_enter_usermode() {
         "iret\n"
         :: [ustack] "r" (current_process->initial_user_stack)
         : "%eax");
+}
+
+/* Returns the filetable entry associated with fd, if any.
+ */
+ft_entry_t* proc_fd_to_entry(uint32_t fd) {
+    ft_entry_t* ent;
+
+    list_for_each_entry(ent, &current_process->filetable) {
+        if (ent->fd == fd) {
+            return ent;
+        }
+    }
+
+    return NULL;
+}
+
+void proc_add_fd(ft_entry_t* entry) {
+    if (!proc_fd_to_entry(entry->fd)) {
+        list_add_front(&current_process->filetable, entry);
+    }
+}
+
+/* Returns a new and unused fd for the current process.
+ * TODO: make it use the lowest fd available.
+ */
+uint32_t proc_next_fd() {
+    static uint32_t avail = 3;
+
+    return avail++;
 }
 
 uint32_t proc_get_current_pid() {
@@ -350,6 +379,7 @@ void* proc_sbrk(intptr_t size) {
 }
 
 int32_t proc_exec(const char* path, char** argv) {
+    /* Read the executable */
     inode_t* in = fs_open(path, O_RDONLY);
 
     if (!in || in->type != DENT_FILE) {
@@ -360,36 +390,24 @@ int32_t proc_exec(const char* path, char** argv) {
     uint32_t read = fs_read(in, 0, data, in->size);
 
     if (read == in->size && in->size) {
-        proc_run_code(data, in->size, argv);
+        process_t* p = proc_run_code(data, in->size, argv);
+
+        /* If the process to be executed has a parent that has a terminal,
+         * make it this process's terminal too */
+        if (proc_get_current_pid() != 0) {
+            ft_entry_t* stdout = proc_fd_to_entry(1);
+
+            if (stdout) {
+                stdout->inode = pipe_clone(stdout->inode);
+                list_add_front(&p->filetable, stdout);
+            }
+        }
     } else {
         printke("exec failed while reading the executable");
         return -1;
     }
 
     return 0;
-}
-
-/* Returns the filetable entry associated with fd, if any.
- */
-ft_entry_t* proc_fd_to_entry(uint32_t fd) {
-    ft_entry_t* ent;
-
-    list_for_each_entry(ent, &current_process->filetable) {
-        if (ent->fd == fd) {
-            return ent;
-        }
-    }
-
-    return NULL;
-}
-
-/* Returns a new and unused fd for the current process.
- * TODO: make it use the lowest fd available.
- */
-uint32_t proc_next_fd() {
-    static uint32_t avail = 1;
-
-    return avail++;
 }
 
 uint32_t proc_open(const char* path, uint32_t flags) {

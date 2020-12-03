@@ -3,20 +3,18 @@
 #ifdef _KERNEL_
 #include <kernel/term.h>
 #include <kernel/serial.h>
+#else
+#include <kernel/uapi/uapi_syscall.h>
 #endif
 
+extern int32_t syscall1(uint32_t eax, uint32_t ebx);
+
+/* Nothing to do with libc's putchar; this writes to serial output */
 int putchar(int c) {
 #ifdef _KERNEL_
-    // term_putchar(c);
     serial_write(c);
 #else
-    asm volatile (
-        "mov $3, %%eax\n"
-        "mov %[c], %%ebx\n"
-        "int $0x30\n"
-        :: [c] "r" (c)
-        : "%eax", "%ebx"
-    );
+    syscall1(SYS_PUTCHAR, c);
 #endif
     return c;
 }

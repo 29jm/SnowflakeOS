@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <stddef.h>
+#include <unistd.h>
 
 #define EOF -1
 
@@ -9,6 +9,8 @@ typedef struct {
     int32_t fd;
     char* name;
 } FILE;
+
+extern FILE* stdout;
 
 int printf(const char* __restrict, ...);
 int putchar(int);

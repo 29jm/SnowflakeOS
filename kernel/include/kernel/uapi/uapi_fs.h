@@ -22,6 +22,8 @@
 #define DENT_FILE 1
 #define DENT_DIRECTORY 2
 
+#define FS_STDOUT_FILENO 1
+
 typedef struct {
     uint32_t inode;
     uint16_t entry_size;

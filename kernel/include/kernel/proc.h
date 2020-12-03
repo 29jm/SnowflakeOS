@@ -68,10 +68,11 @@ void proc_enter_usermode();
 void proc_switch_process(process_t* next);
 uint32_t proc_get_current_pid();
 char* proc_get_cwd();
+void proc_add_fd(ft_entry_t* entry);
+
 void proc_sleep(uint32_t ms);
 void* proc_sbrk(intptr_t size);
 int32_t proc_exec(const char* path, char** argv);
-ft_entry_t* proc_fd_to_entry(uint32_t fd);
 uint32_t proc_open(const char* path, uint32_t flags);
 void proc_close(uint32_t fd);
 uint32_t proc_read(uint32_t fd, uint8_t* buf, uint32_t size);

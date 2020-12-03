@@ -6,9 +6,16 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#include <kernel/sys.h>
+static FILE __stdout = (FILE) {
+    .fd = STDOUT_FILENO, .name = "stdout"
+};
+
+FILE* stdout = &__stdout;
 
 static void print(const char* data, size_t data_length) {
+#ifndef _KERNEL_
+    fwrite(data, 1, data_length, stdout);
+#endif
     for (size_t i = 0; i < data_length; i++) {
         putchar((int) data[i]);
     }
