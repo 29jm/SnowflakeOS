@@ -6,25 +6,146 @@
 #include <string.h>
 #include <ctype.h>
 
+#define MAXDIGIT 10
+#define NUL_ACTION 0x0
+#define ADD_ACTION 0x1
+#define SUB_ACTION 0x2
+#define MUL_ACTION 0x4
+#define DIV_ACTION 0x8
+#define EQU_ACTION 0x10
+
 uint32_t w = 302;
 uint32_t h = 350;
-char buf[256];
+long int display = 0;
+long int accumulate = 0;
+uint32_t action = NUL_ACTION;
+uint32_t numdigits = 0;
+char buf[MAXDIGIT];
+char dispbuf[MAXDIGIT];
 button_t* text_field;
 
-void num_clicked(button_t* btn) {
-    // uint32_t n = strlen(buf);
+void accumulate_selection(void) {
+    accumulate = 0;
 
-    switch (btn->text[0]) {
-    case '=': // TODO: do stuff
-    case 'C':
-        buf[0] = 0;
+    for(int counter = 0; (counter < MAXDIGIT && isdigit(buf[counter])); counter++)
+        accumulate = accumulate * 10 + (buf[counter] - '0');
+}
+
+void clear_buffer(void) {
+    for(int counter = 0; counter < MAXDIGIT; counter++)
+        buf[counter] = 0;
+    buf[0] = '0';
+    numdigits = 0;
+    accumulate = 0;
+}
+
+void update_buffer(void) {
+    for(int counter = 0; counter < MAXDIGIT; counter++)
+        dispbuf[counter] = 0;
+
+    if(display)
+        itoa(display, dispbuf, 10);
+    else
+        dispbuf[0] = '0';
+}
+
+void clear_vars(void) {
+    clear_buffer();
+    display = 0;
+    action = NUL_ACTION;
+}
+
+void take_action(void) {
+    switch(action) {
+    case ADD_ACTION:
+        display = display + accumulate;
+        break;
+    case SUB_ACTION:
+        display = display - accumulate;
+        break;
+    case MUL_ACTION:
+        display = display * accumulate;
+        break;
+    case DIV_ACTION:
+        if(accumulate == 0) {
+            printf("Division by zero!\n");
+            clear_vars();
+        }
+        else if(display == 0)
+            display = 0;
+        else
+            display = display / accumulate;
+        break;
+    case EQU_ACTION:
         break;
     default:
-        // strcpy(buf+n, btn->text);
+        display = accumulate;
         break;
     }
+    update_buffer();
+    clear_buffer();
+}
 
-    // button_set_text(text_field, buf);
+void num_clicked(button_t* btn) {
+    switch (btn->text[0]) {
+    case '=':
+        take_action();
+#ifdef DEBUG
+        printf("Total is %d\n", display);
+#endif
+        action = EQU_ACTION;
+        break;
+    case 'C':
+        clear_vars();
+        update_buffer();
+#ifdef DEBUG
+        printf("Clear\n");
+#endif
+        break;
+    case '+':
+        take_action();
+        action = ADD_ACTION;
+#ifdef DEBUG
+        printf("Add\n");
+#endif
+        break;
+    case '-':
+        take_action();
+        action = SUB_ACTION;
+#ifdef DEBUG
+        printf("Subtract\n");
+#endif
+        break;
+    case '*':
+        take_action();
+        action = MUL_ACTION;
+#ifdef DEBUG
+        printf("Multiply\n");
+#endif
+        break;
+    case '/':
+        take_action();
+        action = DIV_ACTION;
+#ifdef DEBUG
+        printf("Divide\n");
+#endif
+        break;
+    default:
+#ifdef DEBUG
+        printf("%c\n", btn->text[0]);
+#endif
+        if(numdigits < (MAXDIGIT - 2)) {
+            buf[numdigits++] = btn->text[0];
+            accumulate_selection();
+#ifdef DEBUG
+            printf("%s is %d\n", buf, accumulate);
+#endif
+            strcpy(dispbuf, buf);
+        }
+        else
+            printf("Numeric Overflow!\n");
+        break;
+    }
 }
 
 int main() {
@@ -37,6 +158,8 @@ int main() {
     ui_set_root(app, (widget_t*) main_vb);
 
     button_t* text_field = button_new("TODO");
+    free(text_field->text);
+    text_field->text = dispbuf;
     text_field->widget.flags |= UI_EXPAND_HORIZONTAL;
     vbox_add(main_vb, (widget_t*) text_field);
 
@@ -115,6 +238,9 @@ int main() {
         action_btn->on_click = num_clicked;
         vbox_add(actions_vb, (widget_t*) action_btn);
     }
+
+    clear_vars();
+    update_buffer();
 
     while (true) {
         wm_event_t event = snow_get_event(win);
