@@ -1,0 +1,16 @@
+#!/bin/bash
+
+gcf=$(git clang-format -h 2> /dev/null)
+
+if [ "$?" -ne 0 ]; then
+	exit 0
+fi
+
+output=$(git clang-format --diff)
+
+if [ "$output" != "no modified files to format" -a "$output" != "clang-format did not modify any files" ]; then
+	echo "Formatting issues:"
+	echo "$output"
+	echo "Run 'git clang-format' to apply those changes, then stage & commit"
+	exit 1
+fi

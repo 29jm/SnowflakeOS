@@ -1,0 +1,37 @@
+IndentWidth: 4
+Language: Cpp
+DeriveLineEnding: false
+UseCRLF: false
+UseTab: Never
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<kernel'
+    Priority: 1
+DerivePointerAlignment: false
+PointerAlignment: Left
+AlignAfterOpenBracket: DontAlign
+BreakBeforeBraces: Attach
+AlignConsecutiveAssignments: false
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: false
+BreakConstructorInitializers: AfterColon
+BreakBeforeBinaryOperators: NonAssignment
+ColumnLimit: 100
+IndentCaseBlocks: false
+IndentCaseLabels: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+SpaceBeforeCpp11BracedList: true
+AllowAllArgumentsOnNextLine: true
+PenaltyBreakAssignment: 100
+PenaltyExcessCharacter: 1
+SpaceBeforeParens: ControlStatementsExceptForEachMacros
+SpaceBeforeSquareBrackets: false
+SpacesInContainerLiterals: true
+SpaceInEmptyBlock: true
+SpacesBeforeTrailingComments: 1
+SpaceAfterCStyleCast: true
+StatementMacros: ['UNUSED']

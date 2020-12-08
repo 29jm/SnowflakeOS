@@ -23,6 +23,7 @@ Please do! Developers tend to develop blind spots after a while, new ideas are w
 + Make sure there is a corresponding issue in the tracker, create one if needed
 + If you need help, ask
     + Even if you don't, the project owner will pop up after a while with unsolicited advice
++ (Optional) Setup `clang-format` for automatic style formatting (see the [next section](#coding-guidelines))
 + Read the **coding guidelines** in the [next section](#coding-guidelines) of this page
 + Consult this project's wiki, there are rare cases where it may help
 + Open your PR to get feedback
@@ -32,7 +33,17 @@ Please do! Developers tend to develop blind spots after a while, new ideas are w
 
 ## Coding guidelines
 
-Readability is considered important; try to keep the coding style uniform. Here are the guidelines in use:
+Readability is considered important; try to keep the coding style uniform. Here are two ways to do that:
+
+### clang-format
+
+`clang-format` allows for automatic reformatting of code to adhere to this project's style guidelines. Setting it up is quick and easy:
+1. install `clang-format` (depending on your distro, installing `clang` may be enough)
+2. check if `git-clang-format` is now installed, if not, grab it from [here](https://github.com/llvm-mirror/clang/blob/master/tools/clang-format/git-clang-format) and put it somewhere in your `PATH`
+3. run `cp .githooks/pre-commit .git/hooks/` to enable automatic checks upon committing
+4. or just run `git clang-format --diff` by hand to run the checks, and `git clang-format` to apply the recommended changes
+
+### in human-readable form
 
 + indent using four spaces
 + use snake_case at all times
