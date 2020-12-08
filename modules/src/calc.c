@@ -21,7 +21,7 @@ long int accumulate = 0;
 uint32_t action = NUL_ACTION;
 uint32_t numdigits = 0;
 char buf[MAXDIGIT];
-char dispbuf[MAXDIGIT];
+char *dispbuf;
 button_t* text_field;
 
 void accumulate_selection(void) {
@@ -56,7 +56,7 @@ void clear_vars(void) {
 }
 
 void take_action(void) {
-    switch(action) {
+    switch (action) {
     case ADD_ACTION:
         display = display + accumulate;
         break;
@@ -135,6 +135,7 @@ int main() {
 
     button_t* text_field = button_new("TODO");
     free(text_field->text);
+    dispbuf = (char*) malloc(MAXDIGIT * sizeof(char)); 
     text_field->text = dispbuf;
     text_field->widget.flags |= UI_EXPAND_HORIZONTAL;
     vbox_add(main_vb, (widget_t*) text_field);
