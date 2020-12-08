@@ -333,6 +333,17 @@ int32_t fs_rename(const char* oldp, const char* newp) {
     return 0;
 }
 
+int32_t fs_stat(const char* path, stat_t* buf) {
+    printk("stat: %s", path);
+    inode_t* in = fs_open(path, O_RDONLY);
+
+    if (!in) {
+        return -1;
+    }
+
+    return FS(in)->stat(FS(in), in->inode_no, buf);
+}
+
 /* A process has released its grip on a file: notify the fs.
  */
 int32_t fs_close(inode_t* in) {

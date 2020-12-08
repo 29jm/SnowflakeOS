@@ -31,3 +31,11 @@ typedef struct {
     uint8_t type;
     char name[];
 } sos_directory_entry_t;
+
+typedef struct stat_t {
+    uint32_t st_dev;
+    uint32_t st_ino;
+    uint32_t st_mode;
+    uint32_t st_nlink;
+    uint32_t st_size;
+} stat_t;

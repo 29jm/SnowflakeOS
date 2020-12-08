@@ -31,4 +31,21 @@ int unlink(const char* path) {
     return syscall1(SYS_UNLINK, (uintptr_t) path);
 }
 
+int stat(const char* path, struct stat* buf) {
+    stat_t statbuf;
+    int ret = syscall2(SYS_STAT, (uintptr_t) path, (uintptr_t) &statbuf);
+
+    if (ret) {
+        return ret;
+    }
+
+    buf->st_dev = statbuf.st_dev;
+    buf->st_ino = statbuf.st_ino;
+    buf->st_mode = statbuf.st_mode;
+    buf->st_nlink = statbuf.st_nlink;
+    buf->st_size = statbuf.st_size;
+
+    return 0;
+}
+
 #endif

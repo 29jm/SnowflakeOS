@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stddef.h>
 #include <kernel/uapi/uapi_fs.h>
+
+#include <stddef.h>
 
 #define STDOUT_FILENO FS_STDOUT_FILENO
 

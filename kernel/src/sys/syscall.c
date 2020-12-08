@@ -38,6 +38,7 @@ static void syscall_getcwd(registers_t* regs);
 static void syscall_unlink(registers_t* regs);
 static void syscall_rename(registers_t* regs);
 static void syscall_maketty(registers_t* regs);
+static void syscall_stat(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -65,6 +66,7 @@ void init_syscall() {
     syscall_handlers[SYS_UNLINK] = syscall_unlink;
     syscall_handlers[SYS_RENAME] = syscall_rename;
     syscall_handlers[SYS_MAKETTY] = syscall_maketty;
+    syscall_handlers[SYS_STAT] = syscall_stat;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -275,4 +277,11 @@ static void syscall_maketty(registers_t* regs) {
     proc_add_fd(entry);
 
     regs->eax = 0;
+}
+
+static void syscall_stat(registers_t* regs) {
+    const char* path = (const char*) regs->ebx;
+    stat_t* buf = (stat_t*) regs->ecx;
+
+    regs->eax = fs_stat(path, buf);
 }
