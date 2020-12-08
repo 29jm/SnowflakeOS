@@ -132,6 +132,8 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
     }
 }
 
+/* Creates an `lbox_t` with the requested direction, `UI_HBOX` or `UI_VBOX`.
+ */
 lbox_t* lbox_new(uint32_t direction) {
     lbox_t* lbox = zalloc(sizeof(lbox_t));
 
@@ -154,6 +156,8 @@ vbox_t* vbox_new() {
     return lbox_new(UI_VBOX);
 }
 
+/* Appends a widget to the container, resizing elements as needed.
+ */
 void lbox_add(lbox_t* lbox, widget_t* widget) {
     widget->parent = (widget_t*) lbox;
 
@@ -161,6 +165,9 @@ void lbox_add(lbox_t* lbox, widget_t* widget) {
     lbox_on_resize(lbox);
 }
 
+/* Destroys the children of this container. Their `on_free` method is called
+ * if present and any reference to them becomes invalid.
+ */
 void lbox_clear(lbox_t* lbox) {
     while (!list_empty(&lbox->children)) {
         list_t* elem = list_first(&lbox->children);
@@ -175,10 +182,14 @@ void lbox_clear(lbox_t* lbox) {
     }
 }
 
+/* Appends a widget to the right of the last element of the vbox.
+ */
 void vbox_add(vbox_t* vbox, widget_t* widget) {
     lbox_add(vbox, widget);
 }
 
+/* Appends a widget below the last element of the hbox.
+ */
 void hbox_add(hbox_t* hbox, widget_t* widget) {
     lbox_add(hbox, widget);
 }
@@ -187,7 +198,6 @@ void vbox_clear(vbox_t* vbox) {
     lbox_clear(vbox);
 }
 
-void lbox_free(lbox_t* lbox) {
-    lbox_clear(lbox);
-    free(lbox);
+void hbox_clear(hbox_t* hbox) {
+    lbox_clear(hbox);
 }

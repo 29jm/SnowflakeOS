@@ -32,7 +32,7 @@ button_t* button_new(char* text) {
     button_t* button = zalloc(sizeof(button_t));
     uint32_t margin = 2;
 
-    button->text = strdup(text); // TODO: free this
+    button->text = strdup(text);
     button->widget.bounds.w = strlen(text)*8 + 4*margin;
     button->widget.bounds.h = 16 + 2*margin; // 2px margin
     button->widget.on_draw = (widget_draw_t) button_on_draw;

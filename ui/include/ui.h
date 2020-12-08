@@ -6,20 +6,19 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
 #include <list.h>
 
+#define W(w) ((widget_t*) w)
+#define UI_ICON_SIZE (16*16*3)
+
+// Generic widget flags
 #define UI_EXPAND_VERTICAL 1
 #define UI_EXPAND_HORIZONTAL 2
 #define UI_EXPAND (UI_EXPAND_VERTICAL | UI_EXPAND_HORIZONTAL)
 
-// VBox/HBox
+// Flags for lbox.c
 #define UI_VBOX UI_EXPAND_VERTICAL
 #define UI_HBOX UI_EXPAND_HORIZONTAL
-
-#define UI_ICON_SIZE (16*16*3)
-
-#define W(w) ((widget_t*) w)
 
 typedef struct {
     int32_t x, y, w, h;
@@ -29,20 +28,25 @@ typedef struct {
     int32_t x, y;
 } point_t;
 
-/* Main widget class. Other widgets "inherit" it by having a `widget_t` as first
- * struct member, so that they can be cast as `widget_t`.
+/* Generic type representing an ui component, like a button, a text field...
+ * Contains the properties common to all of those: dimensions, hints on how to
+ * size them, their place in the hierarchy, and callbacks for the operations
+ * relevant to them.
  */
-typedef struct _widget_t {
-    struct _widget_t* parent;
+typedef struct widget_t {
+    /* Every widget but the root has a parent container */
+    struct widget_t* parent;
+    /* Bounds of the widget, relative to its parent */
     rect_t bounds;
     uint32_t flags;
-    // For passing around data in callbacks
+    /* For passing around data in callbacks, unused by the toolkit itself */
     void* data;
-    void (*on_click)(struct _widget_t*, point_t);
-    void (*on_mouse_move)(struct _widget_t*, point_t);
-    void (*on_draw)(struct _widget_t*, fb_t);
-    void (*on_free)(struct _widget_t*);
-    void (*on_resize)(struct _widget_t*);
+    /* Callbacks, to be set by widget implementations when relevant */
+    void (*on_click)(struct widget_t*, point_t);
+    void (*on_mouse_move)(struct widget_t*, point_t);
+    void (*on_draw)(struct widget_t*, fb_t);
+    void (*on_free)(struct widget_t*);
+    void (*on_resize)(struct widget_t*);
 } widget_t;
 
 typedef void (*widget_clicked_t)(widget_t*, point_t);
@@ -51,13 +55,24 @@ typedef void (*widget_draw_t)(widget_t*, fb_t);
 typedef void (*widget_resize_t)(widget_t*);
 typedef void (*widget_freed_t)(widget_t*);
 
+/* Represents the Ui of an application, in the sense that it holds the root widget.
+ * Created with `ui_app_new`.
+ * Note: using this structure and related functions is not strictly necessary in
+ * order to use the ui toolkit, it's just convenient.
+ */
 typedef struct {
     fb_t* fb;
     widget_t* root;
 } ui_app_t;
 
-/* UI widgets.
- */
+/* UI widget types: they all 'inherit' the widget structure by having a widget
+ * type as first member. This way, pointers to specialized widgets can safely
+ * be cast to `widget_ŧ`, allowing for some genericity.
+ * A macro is defined to shorten this common cast, `W(object)`. */
+
+/* Linear box, a container that holds widgets in the horizontal or vertical
+ * direction. Prefer using `vbox_ŧ` or `hbox_t` and related functions instead
+ * of `lbox_t`, which implements them. */
 typedef struct {
     widget_t widget;
     list_t children;
