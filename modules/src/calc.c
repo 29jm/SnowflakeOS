@@ -27,12 +27,12 @@ button_t* text_field;
 void accumulate_selection(void) {
     accumulate = 0;
 
-    for(int counter = 0; (counter < MAXDIGIT && isdigit(buf[counter])); counter++)
+    for (int counter = 0; (counter < MAXDIGIT && isdigit(buf[counter])); counter++)
         accumulate = accumulate * 10 + (buf[counter] - '0');
 }
 
 void clear_buffer(void) {
-    for(int counter = 0; counter < MAXDIGIT; counter++)
+    for (int counter = 0; counter < MAXDIGIT; counter++)
         buf[counter] = 0;
     buf[0] = '0';
     numdigits = 0;
@@ -40,10 +40,10 @@ void clear_buffer(void) {
 }
 
 void update_buffer(void) {
-    for(int counter = 0; counter < MAXDIGIT; counter++)
+    for (int counter = 0; counter < MAXDIGIT; counter++)
         dispbuf[counter] = 0;
 
-    if(display)
+    if (display)
         itoa(display, dispbuf, 10);
     else
         dispbuf[0] = '0';
@@ -67,11 +67,11 @@ void take_action(void) {
         display = display * accumulate;
         break;
     case DIV_ACTION:
-        if(accumulate == 0) {
+        if (accumulate == 0) {
             printf("Division by zero!\n");
             clear_vars();
         }
-        else if(display == 0)
+        else if (display == 0)
             display = 0;
         else
             display = display / accumulate;
@@ -90,56 +90,32 @@ void num_clicked(button_t* btn) {
     switch (btn->text[0]) {
     case '=':
         take_action();
-#ifdef DEBUG
-        printf("Total is %d\n", display);
-#endif
         action = EQU_ACTION;
         break;
     case 'C':
         clear_vars();
         update_buffer();
-#ifdef DEBUG
-        printf("Clear\n");
-#endif
         break;
     case '+':
         take_action();
         action = ADD_ACTION;
-#ifdef DEBUG
-        printf("Add\n");
-#endif
         break;
     case '-':
         take_action();
         action = SUB_ACTION;
-#ifdef DEBUG
-        printf("Subtract\n");
-#endif
         break;
     case '*':
         take_action();
         action = MUL_ACTION;
-#ifdef DEBUG
-        printf("Multiply\n");
-#endif
         break;
     case '/':
         take_action();
         action = DIV_ACTION;
-#ifdef DEBUG
-        printf("Divide\n");
-#endif
         break;
     default:
-#ifdef DEBUG
-        printf("%c\n", btn->text[0]);
-#endif
-        if(numdigits < (MAXDIGIT - 2)) {
+        if (numdigits < (MAXDIGIT - 2)) {
             buf[numdigits++] = btn->text[0];
             accumulate_selection();
-#ifdef DEBUG
-            printf("%s is %d\n", buf, accumulate);
-#endif
             strcpy(dispbuf, buf);
         }
         else
