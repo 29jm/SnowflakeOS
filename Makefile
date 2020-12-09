@@ -78,6 +78,7 @@ bochs: SnowflakeOS.iso
 
 clean: $(PROJECT_CLEAN)
 	@rm -rf $(SYSROOTDIR)
+	@rm -rf $(TARGETROOT)
 	@rm -rf $(ISODIR)
 	@rm -f SnowflakeOS.iso
 	@rm -f misc/grub.cfg

@@ -163,7 +163,7 @@ int strncasecmp(const char* s1, const char* s2, size_t n) {
 }
 
 int strcasecmp(const char* s1, const char* s2) {
-    while (*s1 && *s1 == *s2) {
+    while (*s1 && tolower(*s1) == tolower(*s2)) {
         s1++;
         s2++;
     }

@@ -191,6 +191,10 @@ void* realloc(void* ptr, size_t size) {
  * Note: in the kernel, this function is renamed to `kfree`.
  */
 void free(void* pointer) {
+    if (!pointer) {
+        return;
+    }
+
     mem_block_t* block = mem_get_block(pointer);
     block->size &= ~1;
     used_memory -= block->size;

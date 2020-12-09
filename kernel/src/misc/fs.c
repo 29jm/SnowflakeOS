@@ -334,7 +334,6 @@ int32_t fs_rename(const char* oldp, const char* newp) {
 }
 
 int32_t fs_stat(const char* path, stat_t* buf) {
-    printk("stat: %s", path);
     inode_t* in = fs_open(path, O_RDONLY);
 
     if (!in) {

@@ -393,7 +393,7 @@ uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf,
                 memcpy(buf, tmp + start_offset, fs->block_size - start_offset);
             } else {
                 read_inode_block(fs, in, block_no,
-                    buf + (block_no - start_block)*fs->block_size);
+                    buf + (block_no - start_block)*fs->block_size - start_offset);
             }
         }
 
