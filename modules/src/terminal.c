@@ -160,8 +160,8 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
         str_append(text_buf, "_");
     }
 
+    char line_buf[max_col + 1];
     char* text_view = text_buf->buf;
-    char* line_buf = malloc(max_col + 1);
     uint32_t n_lines = count_lines(text_buf);
 
     // Scroll the buffer as needed
@@ -190,8 +190,6 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
 
         y += char_height;
     }
-
-    free(line_buf);
 
     // De-concatenate
     text_buf->buf[text_buf->len - input_buf->len] = '\0';
