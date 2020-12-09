@@ -43,7 +43,7 @@ endif
 CC+=--sysroot=$(SYSROOT) -isystem=/$(PREFIX)/include
 
 # Make will be called on these folders
-PROJECTS=libc snow kernel modules ui
+PROJECTS=libc snow kernel modules ui doomgeneric
 
 # Generate project sub-targets
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
@@ -66,6 +66,7 @@ $(PROJECTS): $(PROJECT_HEADERS)
 # Specify dependencies
 kernel: libc
 modules: libc snow ui
+doomgeneric: libc snow ui
 
 qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -display sdl -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
@@ -91,10 +92,11 @@ SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	@cp misc/grub.cfg $(ISODIR)/boot/grub
 	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) 2> /dev/null
 
-assets: assets/pisos_16.png assets/wallpaper.png
+assets: assets/pisos_16.png assets/wallpaper.png assets/DOOM1.WAD
 	$(info [all] generating assets)
 	@convert assets/pisos_16.png misc/pisos_16.rgb
 	@convert assets/wallpaper.png misc/wallpaper.rgb
+	@cp assets/DOOM1.WAD misc/root/
 
 # The dependency on disk stuff is temporary
 misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh misc/disk2.img

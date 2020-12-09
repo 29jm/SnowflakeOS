@@ -1,5 +1,7 @@
 #ifndef _KERNEL_
 
+#include <kernel/uapi/uapi_syscall.h>
+
 #include <stdlib.h>
 
 void exit(int status) {
@@ -12,6 +14,10 @@ void exit(int status) {
     );
 
     __builtin_unreachable();
+}
+
+int system(const char* command) {
+    return syscall1(SYS_EXEC, (uintptr_t) command);
 }
 
 #endif

@@ -19,6 +19,10 @@ unsigned long __udivdi3(unsigned long a, unsigned long b) {
     return a / b;
 }
 
+long __divdi3(long a, long b) {
+    return a / b;
+}
+
 unsigned long __umoddi3(unsigned long a, unsigned long b) {
     return a % b;
 }

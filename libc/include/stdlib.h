@@ -35,11 +35,13 @@ void abort();
 #ifndef _KERNEL_
 __attribute__((__noreturn__))
 void exit(int status);
+int system(const char* command);
 #endif
 
 char* itoa(int value, char* str, int base);
 int atoi(const char* s);
 long int strtol(const char* nptr, char** endptr, int base);
+double strtod(const char* nptr, char** endptr);
 
 int abs(int n);
 

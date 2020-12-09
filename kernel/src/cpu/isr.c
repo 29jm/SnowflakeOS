@@ -98,8 +98,7 @@ void isr_handler(registers_t* regs) {
     if (isr_handlers[regs->int_no]) {
         handler_t handler = isr_handlers[regs->int_no];
         handler(regs);
-    }
-    else {
+    } else {
         printke("unhandled %s %d: %s",
             regs->int_no < 32 ? "exception" : "interrupt", regs->int_no,
             regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
@@ -115,8 +114,7 @@ void isr_register_handler(uint32_t num, handler_t handler) {
     if (isr_handlers[num]) {
         printke("interrupt handler %d already registered", num,
             exception_msgs[num]);
-    }
-    else {
+    } else {
         isr_handlers[num] = handler;
     }
 }

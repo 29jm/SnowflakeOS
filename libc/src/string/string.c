@@ -144,3 +144,28 @@ int strncmp(const char* s1, const char* s2, size_t n) {
 
     return *s1 - *s2;
 }
+
+/* For <strings.h>
+ */
+int strncasecmp(const char* s1, const char* s2, size_t n) {
+    while (n && *s1 && tolower(*s1) == tolower(*s2)) {
+        s1++;
+        s2++;
+        n--;
+    }
+
+    if (n == 0) {
+        return 0;
+    }
+
+    return *s1 - *s2;
+}
+
+int strcasecmp(const char* s1, const char* s2) {
+    while (*s1 && *s1 == *s2) {
+        s1++;
+        s2++;
+    }
+
+    return *s1 - *s2;
+}
