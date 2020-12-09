@@ -1,6 +1,7 @@
-#include <string.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 uint32_t strlen(const char* string) {
     uint32_t result = 0;

@@ -18,7 +18,8 @@
 #ifndef W_MAIN_H
 #define W_MAIN_H
 
+#include "doomtype.h"
+
 boolean W_ParseCommandLine(void);
 
 #endif /* #ifndef W_MAIN_H */
-

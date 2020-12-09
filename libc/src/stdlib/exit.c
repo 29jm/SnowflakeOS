@@ -4,15 +4,10 @@
 
 #include <stdlib.h>
 
-void exit(int status) {
-    asm volatile (
-        "mov $1, %%eax\n"
-        "mov %[status], %%ebx\n"
-        "int $0x30\n"
-        :: [status] "r" (status)
-        : "%eax"
-    );
+int32_t syscall1(uint32_t eax, uint32_t ebx);
 
+void exit(int status) {
+    syscall1(SYS_EXIT, status);
     __builtin_unreachable();
 }
 

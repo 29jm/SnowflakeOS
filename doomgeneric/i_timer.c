@@ -17,14 +17,13 @@
 //
 
 #include "i_timer.h"
-#include "doomtype.h"
 
 #include "doomgeneric.h"
+#include "doomtype.h"
 
 #include <stdarg.h>
 //#include <sys/time.h>
 //#include <unistd.h>
-
 
 //
 // I_GetTime
@@ -33,14 +32,11 @@
 
 static uint32_t basetime = 0;
 
-
-int I_GetTicks(void)
-{
-	return DG_GetTicksMs();
+int I_GetTicks(void) {
+    return DG_GetTicksMs();
 }
 
-int  I_GetTime (void)
-{
+int I_GetTime(void) {
     uint32_t ticks;
 
     ticks = I_GetTicks();
@@ -50,16 +46,14 @@ int  I_GetTime (void)
 
     ticks -= basetime;
 
-    return (ticks * TICRATE) / 1000;    
+    return (ticks * TICRATE) / 1000;
 }
-
 
 //
 // Same as I_GetTime, but returns time in milliseconds
 //
 
-int I_GetTimeMS(void)
-{
+int I_GetTimeMS(void) {
     uint32_t ticks;
 
     ticks = I_GetTicks();
@@ -72,24 +66,19 @@ int I_GetTimeMS(void)
 
 // Sleep for a specified number of ms
 
-void I_Sleep(int ms)
-{
-    //SDL_Delay(ms);
-    //usleep (ms * 1000);
+void I_Sleep(int ms) {
+    // SDL_Delay(ms);
+    // usleep (ms * 1000);
 
-	DG_SleepMs(ms);
+    DG_SleepMs(ms);
 }
 
-void I_WaitVBL(int count)
-{
-    //I_Sleep((count * 1000) / 70);
+void I_WaitVBL(int count) {
+    // I_Sleep((count * 1000) / 70);
 }
 
-
-void I_InitTimer(void)
-{
+void I_InitTimer(void) {
     // initialize timer
 
-    //SDL_Init(SDL_INIT_TIMER);
+    // SDL_Init(SDL_INIT_TIMER);
 }
-

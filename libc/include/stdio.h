@@ -23,8 +23,6 @@ int snprintf(char* str, size_t size, const char* format, ...);
 int vsprintf(char* str, const char* format, va_list ap);
 int vsnprintf(char* str, size_t size, const char* format, va_list ap);
 
-int rename(const char* old, const char* new);
-
 /* Those write to files, which the kernel better not do through the libc, rather
  * through its `fs_*` functions.
  */

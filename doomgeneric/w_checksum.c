@@ -16,27 +16,25 @@
 //       Generate a checksum of the WAD directory.
 //
 
+#include "w_checksum.h"
+
+#include "m_misc.h"
+#include "sha1.h"
+#include "w_wad.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "m_misc.h"
-#include "sha1.h"
-#include "w_checksum.h"
-#include "w_wad.h"
-
-static wad_file_t **open_wadfiles = NULL;
+static wad_file_t** open_wadfiles = NULL;
 static int num_open_wadfiles = 0;
 
-static int GetFileNumber(wad_file_t *handle)
-{
+static int GetFileNumber(wad_file_t* handle) {
     int i;
     int result;
 
-    for (i=0; i<num_open_wadfiles; ++i)
-    {
-        if (open_wadfiles[i] == handle)
-        {
+    for (i = 0; i < num_open_wadfiles; ++i) {
+        if (open_wadfiles[i] == handle) {
             return i;
         }
     }
@@ -44,8 +42,7 @@ static int GetFileNumber(wad_file_t *handle)
     // Not found in list.  This is a new file we haven't seen yet.
     // Allocate another slot for this file.
 
-    open_wadfiles = realloc(open_wadfiles,
-                            sizeof(wad_file_t *) * (num_open_wadfiles + 1));
+    open_wadfiles = realloc(open_wadfiles, sizeof(wad_file_t*) * (num_open_wadfiles + 1));
     open_wadfiles[num_open_wadfiles] = handle;
 
     result = num_open_wadfiles;
@@ -54,8 +51,7 @@ static int GetFileNumber(wad_file_t *handle)
     return result;
 }
 
-static void ChecksumAddLump(sha1_context_t *sha1_context, lumpinfo_t *lump)
-{
+static void ChecksumAddLump(sha1_context_t* sha1_context, lumpinfo_t* lump) {
     char buf[9];
 
     M_StringCopy(buf, lump->name, sizeof(buf));
@@ -65,8 +61,7 @@ static void ChecksumAddLump(sha1_context_t *sha1_context, lumpinfo_t *lump)
     SHA1_UpdateInt32(sha1_context, lump->size);
 }
 
-void W_Checksum(sha1_digest_t digest)
-{
+void W_Checksum(sha1_digest_t digest) {
     sha1_context_t sha1_context;
     unsigned int i;
 
@@ -77,11 +72,9 @@ void W_Checksum(sha1_digest_t digest)
     // Go through each entry in the WAD directory, adding information
     // about each entry to the SHA1 hash.
 
-    for (i=0; i<numlumps; ++i)
-    {
+    for (i = 0; i < numlumps; ++i) {
         ChecksumAddLump(&sha1_context, &lumpinfo[i]);
     }
-    
+
     SHA1_Final(digest, &sha1_context);
 }
-

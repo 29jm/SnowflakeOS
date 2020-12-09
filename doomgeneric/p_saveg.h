@@ -20,6 +20,8 @@
 #ifndef __P_SAVEG__
 #define __P_SAVEG__
 
+#include "doomtype.h"
+
 #include <stdio.h>
 
 // maximum size of a savegame description

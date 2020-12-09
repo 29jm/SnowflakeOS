@@ -50,7 +50,7 @@ typedef struct
     // If NULL, no init function is called.
 
     void (*InitMode)(byte *palette);
-    
+
     // Function to call to draw the screen from the source buffer.
     // Return true if draw was successful.
 
@@ -110,6 +110,7 @@ void I_FinishUpdate (void);
 void I_ReadScreen (byte* scr);
 
 void I_BeginRead (void);
+void I_EndRead(void);
 
 void I_SetWindowTitle(char *title);
 
