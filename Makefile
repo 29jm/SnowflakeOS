@@ -93,7 +93,7 @@ SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
 	@cp misc/grub.cfg $(ISODIR)/boot/grub
 	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) 2> /dev/null
 
-assets: assets/pisos_16.png assets/wallpaper.png assets/DOOM1.WAD
+assets: assets/pisos_16.png assets/wallpaper.png
 	$(info [all] generating assets)
 	@convert assets/pisos_16.png misc/pisos_16.rgb
 	@convert assets/wallpaper.png misc/wallpaper.rgb
@@ -109,13 +109,13 @@ misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh misc/disk2.img
 misc/disk.img: assets modules
 	$(info [all] writing disk image)
 	@touch misc/disk.img
-	@dd if=/dev/zero of=misc/disk.img bs=1024 count=10240 2> /dev/null
+	@dd if=/dev/zero of=misc/disk.img bs=1024 count=12000 2> /dev/null
 	@mkdir -p misc/root/etc
 	@mkdir -p misc/root/mnt
 	@echo "hello ext2 world" > misc/root/motd
 	@echo "version: 0.5" > misc/root/etc/config
 	@mv misc/*.rgb misc/root/
-	@mkfs.ext2 misc/disk.img -d misc/root > /dev/null 2>&1
+	mkfs.ext2 misc/disk.img -d misc/root # > /dev/null 2>&1
 
 misc/disk2.img: assets modules
 	$(info [all] writing disk2 image)

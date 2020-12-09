@@ -347,12 +347,15 @@ void* W_CacheLumpNum(int lumpnum, int tag) {
 
         result = lump->wad_file->mapped + lump->position;
     } else if (lump->cache != NULL) {
+        printf("W_CacheLumpNum: lump was already cache\n");
         // Already cached, so just switch the zone tag.
 
         result = lump->cache;
         Z_ChangeTag(lump->cache, tag);
     } else {
         // Not yet loaded, so load it now
+        printf("W_CacheLumpNum: lump was not yet loaded\n");
+        printf("W_CacheLumpNum: lump length: %d\n", W_LumpLength(lumpnum));
 
         lump->cache = Z_Malloc(W_LumpLength(lumpnum), tag, &lump->cache);
         W_ReadLump(lumpnum, lump->cache);
@@ -366,7 +369,9 @@ void* W_CacheLumpNum(int lumpnum, int tag) {
 // W_CacheLumpName
 //
 void* W_CacheLumpName(char* name, int tag) {
-    return W_CacheLumpNum(W_GetNumForName(name), tag);
+    int lnum = W_GetNumForName(name);
+    printf("W_CacheLumpName: %s -> lump %d\n", name, lnum);
+    return W_CacheLumpNum(lnum, tag);
 }
 
 //

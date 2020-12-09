@@ -6,7 +6,7 @@ endif
 
 CFLAGS+=-nostartfiles
 LDFLAGS+=-Tmod.ld
-CFLAGS+=-Wall -Wno-unused-parameter -D_DEFAULT_SOURCE # -DUSEASM -DNORMALUNIX -DLINUX -DSNDSERV
+CFLAGS+=-Wall -Wno-unused-parameter -DNORMALUNIX -DLINUX -DSNDSERV # -DUSEASM -D_DEFAULT_SOURCE
 LIBS+=-lc -lsnow
 
 # subdirectory for objects

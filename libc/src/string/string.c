@@ -12,6 +12,16 @@ uint32_t strlen(const char* string) {
     return result;
 }
 
+size_t strnlen(const char* string, size_t max_len) {
+    uint32_t result = 0;
+
+    while (result < max_len && string[result]) {
+        result++;
+    }
+
+    return result;
+}
+
 char* strcpy(char* dest, const char* src) {
     uint32_t i;
 
@@ -25,12 +35,13 @@ char* strcpy(char* dest, const char* src) {
 }
 
 char* strncpy(char* dest, const char* src, size_t n) {
-    uint32_t len = strlen(src);
-    uint32_t max = len > n ? n : len;
+    uint32_t len = strnlen(src, n);
 
-    for (uint32_t i = 0; i < max; i++) {
-        dest[i] = src[i];
+    if (len != n) {
+        memset(dest + len, '\0', n - len);
     }
+
+    memcpy(dest, src, len);
 
     return dest;
 }

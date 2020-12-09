@@ -44,4 +44,3 @@ void DEH_AddStringReplacement(char *from_text, char *to_text);
 #endif
 
 #endif /* #ifndef DEH_STR_H */
-
