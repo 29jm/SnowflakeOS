@@ -24,13 +24,6 @@ char buf[MAXDIGIT];
 char *dispbuf;
 button_t* text_field;
 
-void accumulate_selection(void) {
-    accumulate = 0;
-
-    for (int counter = 0; (counter < MAXDIGIT && isdigit(buf[counter])); counter++)
-        accumulate = accumulate * 10 + (buf[counter] - '0');
-}
-
 void clear_buffer(void) {
     for (int counter = 0; counter < MAXDIGIT; counter++)
         buf[counter] = 0;
@@ -115,7 +108,7 @@ void num_clicked(button_t* btn) {
     default:
         if (numdigits < (MAXDIGIT - 2)) {
             buf[numdigits++] = btn->text[0];
-            accumulate_selection();
+            accumulate = strtol(buf, NULL, 10);
             strcpy(dispbuf, buf);
         }
         else
