@@ -12,21 +12,6 @@ static FILE __stdout = (FILE) {STDOUT_FILENO, "stdout"};
 FILE* stdout = &__stdout;
 FILE* stderr = &__stdout;
 
-/* Both gcc and clang generate calls to these two during the compilation of
- * `stb_sprintf` for some reason. Let's not link with -lgcc again.
- */
-unsigned long __udivdi3(unsigned long a, unsigned long b) {
-    return a / b;
-}
-
-long __divdi3(long a, long b) {
-    return a / b;
-}
-
-unsigned long __umoddi3(unsigned long a, unsigned long b) {
-    return a % b;
-}
-
 static char* callback(const char* buf, void* fd, int len) {
     (void) fd;
 

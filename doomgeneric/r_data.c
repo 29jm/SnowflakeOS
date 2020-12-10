@@ -424,6 +424,7 @@ void R_InitTextures(void) {
         M_StringCopy(name, name_p + i * 8, sizeof(name));
         patchlookup[i] = W_CheckNumForName(name);
     }
+
     W_ReleaseLumpName(DEH_String("PNAMES"));
 
     // Load the map texture definitions from textures.lmp.
