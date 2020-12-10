@@ -21,7 +21,7 @@ long int accumulate = 0;
 uint32_t action = NUL_ACTION;
 uint32_t numdigits = 0;
 char buf[MAXDIGIT];
-char *dispbuf;
+char dispbuf[MAXDIGIT];
 button_t* text_field;
 
 void clear_buffer(void) {
@@ -115,6 +115,7 @@ void num_clicked(button_t* btn) {
             printf("Numeric Overflow!\n");
         break;
     }
+    strcpy(text_field->text, dispbuf);
 }
 
 int main() {
@@ -126,10 +127,7 @@ int main() {
     vbox_t* main_vb = vbox_new();
     ui_set_root(app, (widget_t*) main_vb);
 
-    button_t* text_field = button_new("TODO");
-    free(text_field->text);
-    dispbuf = (char*) malloc(MAXDIGIT * sizeof(char)); 
-    text_field->text = dispbuf;
+    text_field = button_new("          ");
     text_field->widget.flags |= UI_EXPAND_HORIZONTAL;
     vbox_add(main_vb, (widget_t*) text_field);
 
@@ -211,6 +209,7 @@ int main() {
 
     clear_vars();
     update_buffer();
+    strcpy(text_field->text, dispbuf);
 
     while (true) {
         wm_event_t event = snow_get_event(win);
