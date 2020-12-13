@@ -479,7 +479,9 @@ uint32_t proc_write(uint32_t fd, uint8_t* buf, uint32_t size) {
     ft_entry_t* ent = proc_fd_to_entry(fd);
 
     if (ent) {
-        return fs_write(ent->inode, buf, size);
+        uint32_t written = fs_write(ent->inode, buf, size);
+        ent->offset += written;
+        return written;
     }
 
     return 0;
