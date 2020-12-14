@@ -4,8 +4,10 @@
 #include <snow.h>
 #include <stdio.h>
 #include <string.h>
+#include <ui.h>
 
-static window_t* win;
+static ui_app_t app;
+static pixel_buffer_t* pixbuf;
 static int key = 0;
 
 int convertToDoomKey(int kc, char repr) {
@@ -36,19 +38,22 @@ int convertToDoomKey(int kc, char repr) {
 }
 
 void DG_Init() {
-    win = snow_open_window("doom", DOOMGENERIC_RESX, DOOMGENERIC_RESY, WM_NORMAL);
+    app = ui_app_new("doom", DOOMGENERIC_RESX, DOOMGENERIC_RESY, NULL);
+
+    pixbuf = pixel_buffer_new();
+    ui_set_root(app, W(pixbuf));
 }
 
 void DG_DrawFrame() {
-    wm_event_t evt = snow_get_event(win);
+    wm_event_t evt = snow_get_event(app.win);
 
     if (evt.type & WM_EVENT_KBD) {
         key = convertToDoomKey(evt.kbd.keycode, evt.kbd.repr);
         key |= evt.kbd.pressed << 16;
     }
 
-    memcpy((void*) win->fb.address, DG_ScreenBuffer, DOOMGENERIC_RESX * DOOMGENERIC_RESY * 4);
-    snow_render_window(win);
+    pixel_buffer_draw(pixbuf, DG_ScreenBuffer, DOOMGENERIC_RESX, DOOMGENERIC_RESY);
+    ui_draw(app);
 }
 
 void DG_SleepMs(uint32_t ms) {
@@ -77,5 +82,5 @@ int DG_GetKey(int* pressed, unsigned char* doomkey) {
 }
 
 void DG_SetWindowTitle(const char* title) {
-
+    ui_set_title(app, title);
 }

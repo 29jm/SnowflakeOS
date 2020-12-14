@@ -7,7 +7,8 @@ endif
 CFLAGS+=-nostartfiles
 LDFLAGS+=-Tmod.ld
 CFLAGS+=-Wall -Wno-unused-parameter -DNORMALUNIX -DLINUX -DSNDSERV # -DUSEASM -D_DEFAULT_SOURCE
-LIBS+=-lc -lsnow
+LIBS+=-lui -lsnow -lc
+LIB_DEPS=$(LIBDIR)/libc.a $(LIBDIR)/libui.a $(LIBDIR)/libsnow.a
 
 # subdirectory for objects
 OBJDIR=objs
@@ -28,7 +29,7 @@ clean:
 	rm -f $(OUTPUT).gdb
 	rm -f $(OUTPUT).map
 
-$(OUTPUT): $(OBJS)
+$(OUTPUT): $(OBJS) $(LIB_DEPS)
 	@echo [Linking $@]
 	$(VB)$(LD) $(LDFLAGS) $(OBJS) -o $(OUTPUT) $(LIBS) -Map=$(OUTPUT).map
 
