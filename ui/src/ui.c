@@ -22,35 +22,52 @@ void ui_set_root(ui_app_t app, widget_t* widget) {
     vbox_add(root, widget);
 }
 
-/* Creates the base widget structure of a GUI app, bundled in `ui_app_t` form.
- * This means a titlebar with an optional icon, within a vbox, whose second
- * element will be the user-facing root widget.
- * `icon`, if not null, should point to an RGB array of size 16x16px, 3 bytes
- * per pixel.
+/* Opens a window with the specified title, dimensions and optional icon.
+ * Creates a basic widget hierarchy: a root vbox, containing a titlebar,
+ * and whose (initially inexistent) second element is the content of the
+ * window.
+ * The content of the window must be set later with `ui_set_root`.
+ * Note: `icon`, if not NULL, must point to an RGB array of size 16x16px,
+ * 3 bytes per pixel.
  */
-ui_app_t ui_app_new(window_t* win, const uint8_t* icon) {
-    ui_app_t app;
+ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon) {
+    titlebar_t* tb = titlebar_new(title, icon);
+    window_t* win = snow_open_window(title, width, height + W(tb)->bounds.h, WM_NORMAL);
 
     vbox_t* vbox = vbox_new();
-    vbox->widget.bounds = (rect_t) {
-        0, 0, win->width, win->height
-    };
+    vbox->widget.bounds = (rect_t) {0, 0, win->fb.width, win->fb.height};
 
-    titlebar_t* tb = titlebar_new(win->title, icon);
+    vbox_add(vbox, W(tb));
 
-    vbox_add(vbox, (widget_t*) tb);
-
-    app.fb = &win->fb;
-    app.root = (widget_t*) vbox;
-
-    return app;
+    return (ui_app_t) {win, W(vbox)};
 }
 
-/* Draws the app to its window's framebuffer. The user is expected to call
- * `snow_draw_window` afterwards to actually render anything to the screen.
+/* Frees the resources associated with the app, and closes the corresponding
+ * window.
+ */
+void ui_app_destroy(ui_app_t app) {
+    if (app.root->on_free) {
+        app.root->on_free(app.root);
+    }
+
+    snow_close_window(app.win);
+}
+
+/* Redraw the app and refresh the window. Usually called in the main loop of
+ * a program.
+ * TODO: refresh only elements that have changed.
  */
 void ui_draw(ui_app_t app) {
-    app.root->on_draw(app.root, *app.fb);
+    app.root->on_draw(app.root, app.win->fb);
+    snow_render_window(app.win);
+}
+
+/* Sets the window title.
+ */
+void ui_set_title(ui_app_t app, const char* title) {
+    vbox_t* vb = (vbox_t*) app.root;
+    titlebar_t* tb = list_first_entry(&vb->children, titlebar_t);
+    titlebar_set_title(tb, title);
 }
 
 /* Updates the UI according to the event passed in. Must be called in the

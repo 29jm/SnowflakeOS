@@ -20,14 +20,13 @@ const uint32_t colors[] = {
     0xFF3CC7, 0xF0F600, 0x00E5E8, 0x007C77
 };
 
-window_t* win;
+ui_app_t paint;
 canvas_t* canvas;
 uint32_t color;
 bool running = true;
 uint8_t* icon = NULL;
 
 int main(int argc, char* argv[]) {
-    win = snow_open_window("Pisos", width, height, WM_NORMAL);
     icon = zalloc(3*16*16);
     color = colors[0];
     FILE* fd = fopen("/pisos_16.rgb", "r");
@@ -37,7 +36,9 @@ int main(int argc, char* argv[]) {
         fclose(fd);
     }
 
-    ui_app_t paint = ui_app_new(win, fd ? icon : NULL);
+    paint = ui_app_new("pisos", width, height, fd ? icon : NULL);
+
+    free(icon);
 
     vbox_t* vbox = vbox_new();
     ui_set_root(paint, W(vbox));
@@ -65,7 +66,6 @@ int main(int argc, char* argv[]) {
     hbox_add(menu, W(save_button));
 
     ui_draw(paint);
-    snow_render_window(win);
 
     if (argc == 4) {
         char* fname = argv[1];
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     }
 
     while (running) {
-        wm_event_t event = snow_get_event(win);
+        wm_event_t event = snow_get_event(paint.win);
 
         if (!event.type) {
             continue;
@@ -93,11 +93,9 @@ int main(int argc, char* argv[]) {
 
         ui_handle_input(paint, event);
         ui_draw(paint);
-        snow_render_window(win);
     }
 
-    free(icon);
-    snow_close_window(win);
+    ui_app_destroy(paint);
 
     return 0;
 }
@@ -124,7 +122,7 @@ bool load(const char* path, uint32_t w, uint32_t h) {
         return false;
     } else {
         rect_t r = ui_get_absolute_bounds(W(canvas));
-        snow_draw_rgb(win->fb, buf, r.x, r.y, w, h);
+        snow_draw_rgb(paint.win->fb, buf, r.x, r.y, w, h);
     }
 
     free(buf);
@@ -152,11 +150,12 @@ void save() {
     }
 
     uint8_t* buf = malloc(r.w*r.h*3);
+    fb_t* fb = &paint.win->fb;
 
     /* Convert from RGBA to RGB */
     for (int y = r.y; y < r.y+r.h; y++) {
         for (int x = r.x; x < r.x+r.w; x++) {
-            uint32_t px = ((uint32_t*) win->fb.address)[y*win->fb.pitch/4 + x];
+            uint32_t px = ((uint32_t*) fb->address)[y * fb->pitch / 4 + x];
             uint8_t* pixbuf = (uint8_t*) &px;
             uint32_t idx = (y - r.y)*3*r.w + (x - r.x)*3;
             buf[idx] = pixbuf[2];

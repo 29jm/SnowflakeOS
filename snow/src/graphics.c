@@ -170,6 +170,14 @@ void snow_draw_string(fb_t fb, char* str, int x, int y, uint32_t col) {
     }
 }
 
+void snow_draw_rgba(fb_t fb, uint32_t* rgba, int x, int y, int w, int h) {
+    uint32_t* offset = pixel_offset(fb, x, y);
+
+    for (int i = 0; i < h; i++) {
+        memcpy(offset + i * w, rgba + i * w, sizeof(uint32_t) * w);
+    }
+}
+
 void snow_draw_rgb(fb_t fb, uint8_t* rgb, int x, int y, int w, int h) {
     for (int i = 0, c = 0; i < h; i++) {
         for (int j = 0; j < w; j++, c += 3) {

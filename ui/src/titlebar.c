@@ -43,3 +43,11 @@ titlebar_t* titlebar_new(const char* title, const uint8_t* icon) {
 
     return tb;
 }
+
+void titlebar_set_title(titlebar_t* tb, const char* title) {
+    if (tb->title) {
+        free(tb->title);
+    }
+
+    tb->title = strdup(title);
+}

@@ -61,7 +61,7 @@ typedef void (*widget_freed_t)(widget_t*);
  * order to use the ui toolkit, it's just convenient.
  */
 typedef struct {
-    fb_t* fb;
+    window_t* win;
     widget_t* root;
 } ui_app_t;
 
@@ -110,9 +110,18 @@ typedef struct {
     uint32_t color;
 } canvas_t;
 
+typedef struct {
+    widget_t widget;
+    uint32_t* pixels;
+    uint32_t width;
+    uint32_t height;
+} pixel_buffer_t;
+
 bool point_in_rect(point_t p, rect_t r);
-ui_app_t ui_app_new(window_t* win, const uint8_t* icon);
+ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon);
+void ui_app_destroy(ui_app_t app);
 void ui_set_root(ui_app_t app, widget_t* widget);
+void ui_set_title(ui_app_t app, const char* title);
 void ui_draw(ui_app_t app);
 void ui_handle_input(ui_app_t app, wm_event_t event);
 rect_t ui_get_absolute_bounds(widget_t* widget);
@@ -131,7 +140,11 @@ void button_set_on_click(button_t* button, void (*callback)(button_t*));
 void button_set_text(button_t* button, const char* text);
 
 titlebar_t* titlebar_new(const char* title, const uint8_t* icon);
+void titlebar_set_title(titlebar_t* tb, const char* title);
 
 color_button_t* color_button_new(uint32_t color, uint32_t* to_set);
 
 canvas_t* canvas_new();
+
+pixel_buffer_t* pixel_buffer_new();
+void pixel_buffer_draw(pixel_buffer_t* pb, uint32_t* pixels, uint32_t width, uint32_t height);

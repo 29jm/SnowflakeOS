@@ -100,18 +100,16 @@ folder_view_t* fv_new(const char* path) {
 }
 
 int main() {
-    window_t* win = snow_open_window("Files", 400, 700, WM_NORMAL);
-    ui_app_t files = ui_app_new(win, NULL);
+    ui_app_t files = ui_app_new("files", 400, 700, NULL);
     bool running = true;
 
     folder_view_t* fv = fv_new("/");
     ui_set_root(files, W(fv));
 
     while (running) {
-        wm_event_t e = snow_get_event(win);
+        wm_event_t e = snow_get_event(files.win);
         ui_handle_input(files, e);
         ui_draw(files);
-        snow_render_window(win);
     }
 
     return 0;

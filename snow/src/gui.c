@@ -14,7 +14,7 @@ uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
 
 /* Returns a window object that can be used to draw things in.
  */
-window_t* snow_open_window(char* title, int width, int height, uint32_t flags) {
+window_t* snow_open_window(const char* title, int width, int height, uint32_t flags) {
     window_t* win = (window_t*) malloc(sizeof(window_t));
     uint32_t bpp = 32;
 

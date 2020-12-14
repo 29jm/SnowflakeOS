@@ -119,8 +119,7 @@ void num_clicked(button_t* btn) {
 }
 
 int main() {
-    window_t* win = snow_open_window("calc", w, h, WM_NORMAL);
-    ui_app_t app = ui_app_new(win, NULL);
+    ui_app_t app = ui_app_new("calc", w, h, NULL);
 
     /* Main vbox */
 
@@ -212,13 +211,12 @@ int main() {
     strcpy(text_field->text, dispbuf);
 
     while (true) {
-        wm_event_t event = snow_get_event(win);
+        wm_event_t event = snow_get_event(app.win);
 
         ui_handle_input(app, event);
 
         if (event.type) {
             ui_draw(app);
-            snow_render_window(win);
         }
 
         snow_sleep(30);
