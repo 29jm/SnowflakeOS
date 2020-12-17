@@ -53,7 +53,7 @@ int main() {
         };
 
         snow_draw_rect(win->fb, 0, 0, win->fb.width, 22, 0x303030);
-        snow_draw_string(win->fb, "Snowflake OS 0.6", 3, 3, 0x00FFFFFF);
+        snow_draw_string(win->fb, "Snowflake OS 0.7", 3, 3, 0x00FFFFFF);
         snow_draw_string(win->fb, time_text, x, y, 0xFFFFFF);
         snow_render_window_partial(win, redraw);
 

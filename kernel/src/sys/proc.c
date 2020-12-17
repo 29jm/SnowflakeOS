@@ -347,7 +347,6 @@ void proc_exit() {
     proc_schedule();
 }
 
-
 uint32_t proc_get_current_pid() {
     if (current_process) {
         return current_process->pid;
