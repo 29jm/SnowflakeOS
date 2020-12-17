@@ -115,7 +115,7 @@ misc/disk.img: assets modules
 	@echo "hello ext2 world" > misc/root/motd
 	@echo "version: 0.5" > misc/root/etc/config
 	@mv misc/*.rgb misc/root/
-	mkfs.ext2 misc/disk.img -d misc/root # > /dev/null 2>&1
+	@mkfs.ext2 misc/disk.img -d misc/root > /dev/null 2>&1
 
 misc/disk2.img: assets modules
 	$(info [all] writing disk2 image)

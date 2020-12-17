@@ -161,7 +161,7 @@ void paging_fault_handler(registers_t* regs) {
     }
 
     if (pid) {
-        proc_exit_current_process();
+        proc_exit();
     } else {
         abort();
     }

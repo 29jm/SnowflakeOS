@@ -192,40 +192,6 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv) {
     return process;
 }
 
-/* Terminates the currently executing process.
- * Implements the `exit` system call.
- */
-void proc_exit_current_process() {
-    // Free allocated pages: code, heap, stack, page directory
-    directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
-
-    for (uint32_t i = 0; i < 768; i++) {
-        if (!(pd[i] & PAGE_PRESENT)) {
-            continue;
-        }
-
-        uintptr_t page = pd[i] & PAGE_FRAME;
-        pmm_free_page(page);
-    }
-
-    uintptr_t pd_page = pd[1023] & PAGE_FRAME;
-    pmm_free_page(pd_page);
-
-    // Free the kernel stack
-    kfree((void*) (current_process->kernel_stack - 0x1000 * PROC_KERNEL_STACK_PAGES + 4));
-
-    // Free the file descriptor list
-    while (!list_empty(&current_process->filetable)) {
-        ft_entry_t* ent = list_first_entry(&current_process->filetable, ft_entry_t);
-        fs_close(ent->inode);
-        list_del(list_first(&current_process->filetable));
-    }
-
-    // This last line is actually safe, and necessary
-    scheduler->sched_exit(scheduler, current_process);
-    proc_schedule();
-}
-
 /* Runs the scheduler. The scheduler may then decide to elect a new process, or
  * not.
  */
@@ -272,7 +238,7 @@ void proc_enter_usermode() {
         "mov %%eax, %%es\n"
         "mov %%eax, %%fs\n"
         "mov %%eax, %%gs\n"
-        "push %%eax\n"        // %ss
+        "push %%eax\n"       // %ss
         "mov %[ustack], %%eax\n"
         "push %%eax\n"       // %esp
         "push $0x202\n"      // %eflags with IF set
@@ -297,10 +263,46 @@ ft_entry_t* proc_fd_to_entry(uint32_t fd) {
     return NULL;
 }
 
-void proc_add_fd(ft_entry_t* entry) {
-    if (!proc_fd_to_entry(entry->fd)) {
-        list_add_front(&current_process->filetable, entry);
+/* Removes a file descriptor from the current process's list.
+ * Frees it entirely if unused.
+ */
+void proc_release_fd(uint32_t fd) {
+    ft_entry_t* ent;
+    list_t* iter;
+
+    list_for_each(iter, ent, &current_process->filetable) {
+        if (ent->fd == fd) {
+            list_del(iter);
+            ent->refcount--;
+
+            if (ent->refcount == 0) {
+                /* TODO: this is out of place... the fs doesn't care about
+                 * "open" or "close" */
+                fs_close(ent->inode);
+                free(ent);
+            }
+
+            break;
+        }
     }
+}
+
+/* Adds or replaces a file descriptor for the current process.
+ * Increments the refcount of the passed entry.
+ */
+void proc_add_fd(ft_entry_t* entry) {
+    ft_entry_t* ent;
+    list_t* iter;
+
+    list_for_each(iter, ent, &current_process->filetable) {
+        if (ent->fd == entry->fd) {
+            proc_release_fd(ent->fd);
+            break;
+        }
+    }
+
+    entry->refcount++;
+    list_add_front(&current_process->filetable, entry);
 }
 
 /* Returns a new and unused fd for the current process.
@@ -311,6 +313,40 @@ uint32_t proc_next_fd() {
 
     return avail++;
 }
+
+/* Terminates the currently executing process.
+ * Implements the `exit` system call.
+ */
+void proc_exit() {
+    // Free allocated pages: code, heap, stack, page directory
+    directory_entry_t* pd = (directory_entry_t*) 0xFFFFF000;
+
+    for (uint32_t i = 0; i < 768; i++) {
+        if (!(pd[i] & PAGE_PRESENT)) {
+            continue;
+        }
+
+        uintptr_t page = pd[i] & PAGE_FRAME;
+        pmm_free_page(page);
+    }
+
+    uintptr_t pd_page = pd[1023] & PAGE_FRAME;
+    pmm_free_page(pd_page);
+
+    // Free the kernel stack
+    kfree((void*) (current_process->kernel_stack - 0x1000 * PROC_KERNEL_STACK_PAGES + 4));
+
+    // Free the file descriptor list
+    while (!list_empty(&current_process->filetable)) {
+        ft_entry_t* ent = list_first_entry(&current_process->filetable, ft_entry_t);
+        proc_release_fd(ent->fd);
+    }
+
+    // This last line is actually safe, and necessary
+    scheduler->sched_exit(scheduler, current_process);
+    proc_schedule();
+}
+
 
 uint32_t proc_get_current_pid() {
     if (current_process) {
@@ -392,14 +428,13 @@ int32_t proc_exec(const char* path, char** argv) {
     if (read == in->size && in->size) {
         process_t* p = proc_run_code(data, in->size, argv);
 
-        /* If the process to be executed has a parent that has a terminal,
-         * make it this process's terminal too */
-        if (proc_get_current_pid() != 0) {
-            ft_entry_t* stdout = proc_fd_to_entry(1);
+        // Clone file descriptors
+        if (proc_get_current_pid()) {
+            ft_entry_t* ent;
 
-            if (stdout) {
-                stdout->inode = pipe_clone(stdout->inode);
-                list_add_front(&p->filetable, stdout);
+            list_for_each_entry(ent, &current_process->filetable) {
+                ent->refcount++;
+                list_add_front(&p->filetable, ent);
             }
         }
     } else {
@@ -415,14 +450,14 @@ uint32_t proc_open(const char* path, uint32_t flags) {
 
     if (in) {
         ft_entry_t* ent = kmalloc(sizeof(ft_entry_t));
-        *ent = (ft_entry_t) {
-            .fd = proc_next_fd(),
-            .inode = in,
-            .mode = 0, // TODO: what's this?
-            .offset = 0,
-            .size = in->size,
-            .index = 0
-        };
+
+        ent->fd = proc_next_fd();
+        ent->inode = in;
+        ent->mode = 0; // TODO: make use of this or delete it?
+        ent->offset = 0;
+        ent->size = in->size;
+        ent->index = 0;
+        ent->refcount = 1;
 
         list_add_front(&current_process->filetable, ent);
 

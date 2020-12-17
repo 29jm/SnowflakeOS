@@ -12,7 +12,6 @@ typedef struct pipe_fs_t {
     uint32_t buf_size;
     uint32_t content_start;
     uint32_t content_size;
-    uint32_t refcount;
 } pipe_fs_t;
 
 uint32_t pipe_read(pipe_fs_t* pipe, uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
@@ -51,11 +50,9 @@ uint32_t pipe_append(pipe_fs_t* pipe, uint32_t inode, uint8_t* data, uint32_t si
 int32_t pipe_close(pipe_fs_t* fs, uint32_t ino) {
     UNUSED(ino);
 
-    if (--fs->refcount == 0) {
-        kfree(fs->buf);
-        kfree(fs->fs.root);
-        kfree(fs);
-    }
+    kfree(fs->buf);
+    kfree(fs->fs.root);
+    kfree(fs);
 
     return 0;
 }
@@ -68,7 +65,6 @@ inode_t* pipe_new() {
     pipe_fs_t* fs = (pipe_fs_t*) p->fs;
     fs->buf = zalloc(PIPE_SIZE);
     fs->buf_size = PIPE_SIZE;
-    fs->refcount = 1;
 
     p->fs->root = (folder_inode_t*) p;
     p->fs->read = (fs_read_t) pipe_read;
@@ -76,10 +72,4 @@ inode_t* pipe_new() {
     p->fs->close = (fs_close_t) pipe_close;
 
     return p;
-}
-
-inode_t* pipe_clone(inode_t* pipe) {
-    ((pipe_fs_t*) pipe->fs)->refcount++;
-
-    return pipe;
 }

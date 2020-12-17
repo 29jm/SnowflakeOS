@@ -96,7 +96,7 @@ static void syscall_exit(registers_t* regs) {
     UNUSED(regs);
 
     // TODO: exit status?
-    proc_exit_current_process();
+    proc_exit();
 }
 
 static void syscall_sleep(registers_t* regs) {

@@ -17,6 +17,7 @@ typedef struct {
     uint32_t offset;
     uint32_t size;
     uint32_t index; // If it's a directory, where we're at
+    uint32_t refcount;
 } ft_entry_t;
 
 // Add new members to the end to avoid messing with the offsets
@@ -63,7 +64,7 @@ process_t* proc_run_code(uint8_t* code, uint32_t size, char** argv);
 void proc_print_processes();
 void proc_schedule();
 void proc_timer_callback();
-void proc_exit_current_process();
+void proc_exit();
 void proc_enter_usermode();
 void proc_switch_process(process_t* next);
 uint32_t proc_get_current_pid();
