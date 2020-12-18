@@ -33,9 +33,8 @@ build: $(KERNEL)
 
 install-headers:
 	$(info [kernel] installing headers)
-	@mkdir -p $(INCLUDEDIR)
 	@cp -rT include $(INCLUDEDIR)
 
 clean:
-	$(info [kernel] cleaning)
+	$(info [kernel] $@)
 	@rm -f SnowflakeOS.kernel $(OBJS) *.o */*.o */*/*.o *.map

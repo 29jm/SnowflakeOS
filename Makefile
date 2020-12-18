@@ -49,7 +49,18 @@ PROJECTS=libc snow kernel modules ui doomgeneric
 PROJECT_HEADERS=$(PROJECTS:=.headers) # appends .headers to every project name
 PROJECT_CLEAN=$(PROJECTS:=.clean)
 
-.PHONY: all build qemu bochs clean toolchain assets $(PROJECTS)
+ASSETS_IMAGE=$(notdir $(shell find assets/used -name '*.png'))
+ASSETS_IMAGE:=$(ASSETS_IMAGE:%=$(TARGETROOT)/%)
+ASSETS_IMAGE:=$(patsubst %.png,%.rgb,$(ASSETS_IMAGE))
+
+ASSETS_OTHER=$(shell find assets/used -type f ! -name '*.png')
+ASSETS_OTHER:=$(notdir $(ASSETS_OTHER))
+ASSETS_OTHER:=$(ASSETS_OTHER:%=$(TARGETROOT)/%)
+
+DISKIMAGE=$(ISODIR)/modules/disk.img
+GRUBCFG=$(ISODIR)/boot/grub/grub.cfg
+
+.PHONY: all build qemu bochs clean toolchain assets
 
 all: build SnowflakeOS.iso
 
@@ -59,7 +70,7 @@ strict: build
 build: $(PROJECTS)
 
 # Copy headers before building anything
-$(PROJECTS): $(PROJECT_HEADERS)
+$(PROJECTS): $(PROJECT_HEADERS) | $(TARGETROOT) $(LIBDIR)
 	$(info [$@] building)
 	@$(MAKE) -C $@ build
 
@@ -83,51 +94,53 @@ clean: $(PROJECT_CLEAN)
 	@rm -f SnowflakeOS.iso
 	@rm -f misc/grub.cfg
 	@rm -f misc/disk.img
-	@rm -f misc/*.rgb
-	@rm -f xbochs.log
-	@rm -f irq.log
+	@rm -f *.log
 
-SnowflakeOS.iso: build misc/grub.cfg misc/disk.img
+SnowflakeOS.iso: $(PROJECTS) $(GRUBCFG)
 	$(info [all] writing $@)
-	@mkdir -p $(ISODIR)/boot/grub
-	@cp misc/grub.cfg $(ISODIR)/boot/grub
 	@grub-mkrescue -o SnowflakeOS.iso $(ISODIR) 2> /dev/null
 
-assets: assets/pisos_16.png assets/wallpaper.png
-	$(info [all] generating assets)
-	@convert assets/pisos_16.png misc/pisos_16.rgb
-	@convert assets/wallpaper.png misc/wallpaper.rgb
-	@cp assets/*.WAD misc/root/
+assets: $(ASSETS_IMAGE) $(ASSETS_OTHER)
+	$(info [all] building assets)
 
-# The dependency on disk stuff is temporary
-misc/grub.cfg: build misc/disk.img misc/gen-grub-config.sh misc/disk2.img
+$(ASSETS_IMAGE) $(ASSETS_OTHER): | $(TARGETROOT)
+
+$(ASSETS_IMAGE): $(TARGETROOT)/%.rgb : assets/used/%.png
+	@convert $< $@
+
+$(ASSETS_OTHER): $(TARGETROOT)/% : assets/used/%
+	@cp $< $@
+
+$(GRUBCFG): $(DISKIMAGE)
 	$(info [all] generating grub config)
-	@cp misc/disk.img $(ISODIR)/modules/disk.img
-	@cp misc/disk2.img $(ISODIR)/modules/disk2.img
+	@mkdir -p $(ISODIR)/boot/grub
 	@bash ./misc/gen-grub-config.sh
 
-misc/disk.img: assets modules
+$(DISKIMAGE): modules doomgeneric $(ASSETS_IMAGE) $(ASSETS_OTHER)
 	$(info [all] writing disk image)
-	@touch misc/disk.img
-	@dd if=/dev/zero of=misc/disk.img bs=1024 count=12000 2> /dev/null
-	@mkdir -p misc/root/etc
-	@mkdir -p misc/root/mnt
-	@echo "hello ext2 world" > misc/root/motd
-	@echo "version: 0.5" > misc/root/etc/config
-	@mv misc/*.rgb misc/root/
-	@mkfs.ext2 misc/disk.img -d misc/root > /dev/null 2>&1
-
-misc/disk2.img: assets modules
-	$(info [all] writing disk2 image)
-	@touch misc/disk2.img
-	@dd if=/dev/zero of=misc/disk2.img bs=1024 count=1000 2> /dev/null
-	@mkfs.ext2 misc/disk2.img -d sysroot > /dev/null 2>&1
+	@mkdir -p $(ISODIR)/modules
+	@touch $(DISKIMAGE)
+	@dd if=/dev/zero of=$(DISKIMAGE) bs=1024 count=12000 2> /dev/null
+	@mkdir -p $(TARGETROOT)/{etc,mnt}
+	@echo "hello ext2 world" > $(TARGETROOT)/motd
+	@echo "version: 0.7" > $(TARGETROOT)/etc/config
+	@mkfs.ext2 $(DISKIMAGE) -d $(TARGETROOT) > /dev/null 2>&1
 
 toolchain:
 	@env -i toolchain/build-toolchain.sh
 
+$(TARGETROOT):
+	@mkdir -p $(TARGETROOT)
+
+$(INCLUDEDIR):
+	@mkdir -p $(INCLUDEDIR)
+
+$(LIBDIR):
+	@mkdir -p $(LIBDIR)
+
+
 # Automatic rules for our generated sub-targets
-%.headers: %/
+%.headers: %/ | $(INCLUDEDIR)
 	@$(MAKE) -C $< install-headers
 
 %.clean: %/

@@ -7,7 +7,6 @@ LIBSNOW=$(LIBDIR)/libsnow.a
 
 $(LIBSNOW): $(OBJS)
 	$(info [snow] linking $(notdir $@))
-	mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(OBJS)
 
 %.o: %.c
@@ -26,5 +25,4 @@ build: $(LIBSNOW)
 
 install-headers:
 	$(info [snow] installing headers)
-	@mkdir -p $(INCLUDEDIR)
 	@cp -rT include $(INCLUDEDIR)

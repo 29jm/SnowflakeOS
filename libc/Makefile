@@ -14,12 +14,10 @@ LIBK=$(LIBDIR)/libk.a
 
 $(LIBC): $(OBJS)
 	$(info [libc] linking $(notdir $@))
-	@mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(OBJS)
 
 $(LIBK): $(LIBK_OBJS)
 	$(info [libc] linking $(notdir $@))
-	@mkdir -p $(LIBDIR)
 	@$(AR) rcs $@ $(LIBK_OBJS)
 
 %.o: %.c
@@ -39,12 +37,11 @@ $(LIBK): $(LIBK_OBJS)
 	@$(CC) -c $< -o $@ $(LIBK_CFLAGS)
 
 clean:
-	$(info [libc] cleaning up)
+	$(info [libc] $@)
 	@rm -f $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
 
 build: $(LIBC) $(LIBK)
 
 install-headers:
 	$(info [libc] installing headers)
-	@mkdir -p $(INCLUDEDIR)
 	@cp -rT include $(INCLUDEDIR)

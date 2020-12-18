@@ -4,7 +4,6 @@ else
 	VB=@
 endif
 
-CFLAGS+=-nostartfiles
 LDFLAGS+=-Tmod.ld
 CFLAGS+=-Wall -Wno-unused-parameter -DNORMALUNIX -DLINUX -DSNDSERV # -DUSEASM -D_DEFAULT_SOURCE
 LIBS+=-lui -lsnow -lc
@@ -24,19 +23,22 @@ build: $(OUTPUT)
 install-headers:
 
 clean:
-	rm -rf $(OBJDIR)
-	rm -f $(OUTPUT)
-	rm -f $(OUTPUT).gdb
-	rm -f $(OUTPUT).map
+	@rm -rf $(OBJDIR)
+	@rm -f $(OUTPUT)
+	@rm -f $(OUTPUT).gdb
+	@rm -f $(OUTPUT).map
 
-$(OUTPUT): $(OBJS) $(LIB_DEPS)
+$(OUTPUT): $(OBJS) $(LIB_DEPS) | $(TARGETROOT)
 	@echo [Linking $@]
 	$(VB)$(LD) $(LDFLAGS) $(OBJS) -o $(OUTPUT) $(LIBS) -Map=$(OUTPUT).map
 
 $(OBJS): | $(OBJDIR)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR)
+	@mkdir -p $(OBJDIR)
+
+$(TARGETROOT):
+	@mkdir -p $(TARGETROOT)
 
 $(OBJDIR)/%.o: %.c
 	@echo [Compiling $<]

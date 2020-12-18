@@ -6,7 +6,7 @@ LIB_DEPS=$(LIBDIR)/libc.a $(LIBDIR)/libui.a $(LIBDIR)/libsnow.a
 
 MODS=$(patsubst %.c,%,$(wildcard src/*.c))
 MODS:=$(notdir $(MODS))
-MODS:=$(MODS:%=$(TARGETROOT)/%)
+MODS:=$(addprefix $(TARGETROOT)/,$(MODS))
 EXECUTABLES=$(notdir $(MODS))
 OBJS=$(EXECUTABLES:%=src/%.o)
 
@@ -17,12 +17,11 @@ build: $(MODS)
 install-headers:
 
 clean:
-	$(info [modules] cleaning up)
+	$(info [modules] $@)
 	@rm -f */*.o
 
-$(MODS): $(OBJS) $(LIB_DEPS) src/start.o
-	@mkdir -p $(TARGETROOT)
-	@$(LD) src/start.o src/$(@F).o -o $@ $(LDFLAGS) $(LIBS)
+$(MODS): $(TARGETROOT)/% : src/%.o src/start.o
+	@$(LD) src/start.o $< -o $@ $(LDFLAGS) $(LIBS)
 
 %.o: %.c
 	$(info [modules] $(notdir $(basename $@)))

@@ -22,5 +22,4 @@ build: $(LIBUI)
 
 install-headers:
 	$(info [ui] installing headers)
-	@mkdir -p $(INCLUDEDIR)
 	@cp -rT include $(INCLUDEDIR)
