@@ -48,8 +48,7 @@ int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
     }
 
     for (size_t i = 0; i < n; i++) {
-        uint8_t* i_pos = ref->data + (i % ref->size);
-        *i_pos = *(data + i);
+        ref->data[i % ref->size] = data[i];
     }
     ref->w_pos = ((ref->w_pos + n) % ref->size) == 0 ? n : (ref->w_pos + n);
     ref->unread_data = ref->unread_data + n;
@@ -69,9 +68,7 @@ size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     }
 
     for (size_t i = 0; i < max; i++) {
-        cp_ptr = (uint8_t*) buffer + (i % ref->size);
-        byte = *(ref->data + (r_car + i));
-        *cp_ptr = byte;
+        buffer[i % ref->size] = ref->data[(r_car + i)];
     }
 
     ref->unread_data = ref->unread_data - max;
