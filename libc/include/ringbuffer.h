@@ -1,9 +1,11 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
-#define RINGBUFFER_EOD -1
-typedef unsigned long int size_t;
+#define RINGBUFFER_OK 0
+#define RINGBUFFER_OVERFLOW 1
+
 
 /**
  * ringbuffer type for SnowflakeOS, this structure deals in bytes
@@ -11,27 +13,27 @@ typedef unsigned long int size_t;
  * read/write consistent lengths or do some separate bookkeeping
  */
 typedef struct _ringbuffer {
-    size_t sz; // total size
-    size_t unr_data; // how much unread data there is
-    size_t w_pos; // write offset
-    size_t r_pos; // read offset
-    uint8_t* data; // data buffer proper
+    size_t size;
+    size_t unread_data;
+    size_t w_pos;
+    size_t r_pos;
+    uint8_t* data;
 } ringbuffer_t;
 
 /**
  * initialize a ringbuffer for use
- * takes a pointer to a declared ring buffer and initializes it with size sz
- * it will be allocated in sz * isz
+ * takes a pointer to a declared ring buffer and initializes it with size size
+ * it will be allocated in size * isz
  * returns: 0 on success -1 on failure, if this fails consider
  * the ringbuffer pointed at by ref invalid and unsafe to use
  * errno is likely to have a cause for the failure
  */
-int ringbuffer_init(ringbuffer_t* ref, size_t sz);
+int ringbuffer_init(ringbuffer_t* ref, size_t size);
 
 /**
  * allocate and initialize a ringbuffer
  */
-ringbuffer_t* ringbuffer_new(size_t sz);
+ringbuffer_t* ringbuffer_new(size_t size);
 
 /**
  * get the size of unread data in the buffer
@@ -43,12 +45,12 @@ size_t ringbuffer_used(ringbuffer_t* ref);
  * writing more data would overwrite data
  * that has not been read yet
  */
-size_t ringbuffer_free(ringbuffer_t* ref);
+size_t ringbuffer_available(ringbuffer_t* ref);
 
 /**
  * disposes of the ringbuff freeing it's allocated memory
  */
-int ringbuffer_dispose(ringbuffer_t* ref);
+void ringbuffer_free(ringbuffer_t* ref);
 
 /**
  * write n bytes to the ringbuffer pointed at by ref
