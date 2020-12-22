@@ -1,4 +1,4 @@
-#include <mm_malloc.h>
+#include <stdlib.h>
 #include <ringbuffer.h>
 
 int ringbuffer_init(ringbuffer_t* ref, uint32_t sz) {
