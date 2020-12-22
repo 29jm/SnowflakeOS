@@ -29,6 +29,11 @@ typedef struct _ringbuffer {
 int ringbuffer_init(ringbuffer_t* ref, size_t sz);
 
 /**
+ * allocate and initialize a ringbuffer
+ */
+ringbuffer_t* ringbuffer_new(size_t sz);
+
+/**
  * disposes of the ringbuff freeing it's allocated memory
  */
 int ringbuffer_dispose(ringbuffer_t* ref);
