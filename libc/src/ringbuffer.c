@@ -1,6 +1,12 @@
 #include <ringbuffer.h>
 #include <stdlib.h>
 
+/* Initialize a ringbuffer for use takes a pointer to a declared ring buffer
+ * and initializes it with size size it will be allocated in size * isz
+ * returns: 0 on success -1 on failure, if this fails consider the ringbuffer
+ * pointed at by ref invalid and unsafe to use errno is likely to have a cause
+ * for the failure
+ */
 int ringbuffer_init(ringbuffer_t* ref, size_t size) {
     ref->size = size;
     ref->unread_data = 0;
@@ -17,6 +23,7 @@ int ringbuffer_init(ringbuffer_t* ref, size_t size) {
     return 0;
 }
 
+/* Allocate and initialize a ringbuffer returns NULL on failure to allocate */
 ringbuffer_t* ringbuffer_new(size_t size) {
     ringbuffer_t* ref = malloc(sizeof(ringbuffer_t));
     if (ringbuffer_init(ref, size) == -1) {
@@ -31,6 +38,9 @@ size_t ringbuffer_used(ringbuffer_t* ref) {
     return ref->unread_data;
 }
 
+/* How much space is available before the writing more data would overwrite data
+ * that has not been read yet
+ */
 size_t ringbuffer_available(ringbuffer_t* ref) {
     return ref->size - ref->unread_data;
 }
@@ -40,6 +50,10 @@ void ringbuffer_free(ringbuffer_t* ref) {
     free(ref);
 }
 
+/* Write n bytes to the ringbuffer pointed at by ref returns 0 if the data did
+ * fit, 1 if old data was overwritten or -1 if there is insufficient space before
+ * the read pointer to place the data
+ */
 int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
     uint8_t* pos = ref->data + ref->w_pos;
 
@@ -56,6 +70,11 @@ int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
     return !((ref->w_pos + n) > ref->size) ? RINGBUFFER_OK : RINGBUFFER_OVERFLOW;
 }
 
+/* Read n bytes from the ringbuffer pointed at by ref into block returns n if a
+ * full block is read vallues < n indicate that there is less data than n
+ * available and the returned value was read to buffer a return of 0 means no
+ * data was available to read also note that buffer is not cleared between reads
+ */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     uint8_t byte;
     uint8_t* cp_ptr;
