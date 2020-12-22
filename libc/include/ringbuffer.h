@@ -12,7 +12,7 @@ typedef unsigned long int size_t;
  */
 typedef struct _ringbuffer {
     size_t sz;
-    size_t used;
+    size_t avail;
     uint8_t* data;
     size_t w_pos;
     size_t r_pos;
@@ -38,12 +38,14 @@ int ringbuffer_dispose(ringbuffer_t* ref);
  * returns 0 if the data did fit, 1 if old data was overwritten or
  * -1 if there is insufficient space before the read pointer to place the data
  */
-int ringbuffer_write(ringbuffer_t* ref, void* data, size_t n);
+int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data);
 
 /**
  * read n bytes from the ringbuffer pointed at by ref into block 
  * returns n if a full block is read vallues < n indicate
  * that there is less data than n available and
- * the returned value was read to block
+ * the returned value was read to buffer
+ * a return of 0 means no data was available to read
+ * also note that buffer is not cleared of data after n or the returned value
  */
-int ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* block);
+size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer);
