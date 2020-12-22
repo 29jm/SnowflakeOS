@@ -11,11 +11,11 @@ typedef unsigned long int size_t;
  * read/write consistent lengths or do some separate bookkeeping
  */
 typedef struct _ringbuffer {
-    size_t sz;
-    size_t avail;
-    uint8_t* data;
-    size_t w_pos;
-    size_t r_pos;
+    size_t sz; // total size
+    size_t unr_data; // how much unread data there is
+    size_t w_pos; // write offset
+    size_t r_pos; // read offset
+    uint8_t* data; // data buffer proper
 } ringbuffer_t;
 
 /**
@@ -32,6 +32,18 @@ int ringbuffer_init(ringbuffer_t* ref, size_t sz);
  * allocate and initialize a ringbuffer
  */
 ringbuffer_t* ringbuffer_new(size_t sz);
+
+/**
+ * get the size of unread data in the buffer
+ */
+size_t ringbuffer_used(ringbuffer_t* ref);
+
+/**
+ * how much space is available before the
+ * writing more data would overwrite data
+ * that has not been read yet
+ */
+size_t ringbuffer_free(ringbuffer_t* ref);
 
 /**
  * disposes of the ringbuff freeing it's allocated memory

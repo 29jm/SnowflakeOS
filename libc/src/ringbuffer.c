@@ -3,7 +3,7 @@
 
 int ringbuffer_init(ringbuffer_t* ref, size_t sz) {
     ref->sz = sz;
-    ref->avail = 0;
+    ref->unr_data = 0;
 
 // alloc the needed size for this ringbuff and use kmalloc
 // if this is compiled with the proper flag
@@ -37,6 +37,14 @@ ringbuffer_t* ringbuffer_new(size_t sz) {
     return ref;
 }
 
+size_t ringbuffer_used(ringbuffer_t* ref) {
+    return ref->unr_data;
+}
+
+size_t ringbuffer_free(ringbuffer_t* ref) {
+    return ref->sz - ref->unr_data;
+}
+
 int ringbuffer_dispose(ringbuffer_t* ref) {
 #ifndef __KERNEL__
     free(ref->data);
@@ -60,7 +68,7 @@ int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
         *i_pos = *(data + i);
     }
     ref->w_pos = ((ref->w_pos + n) % ref->sz) == 0 ? n : (ref->w_pos + n);
-    ref->avail = ref->avail + n;
+    ref->unr_data = ref->unr_data + n;
     // returns 0 if the data did fit, 1 if old data was overwritten or
     // -1 if there is insufficient space before the read pointer to place the data
     return !wraps ? 0 : 1;
@@ -70,10 +78,10 @@ size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     uint8_t byte;
     uint8_t* cp_ptr;
     size_t r_car = ref->r_pos % ref->sz;
-    // read n or avail if it is less than n
-    size_t max = ref->avail >= n ? n : ref->avail;
+    // read n or unr_data if it is less than n
+    size_t max = ref->unr_data >= n ? n : ref->unr_data;
 
-    if (ref->avail <= 0) {
+    if (ref->unr_data <= 0) {
         return 0;
     }
 
@@ -83,7 +91,7 @@ size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
         *cp_ptr = byte;
     }
 
-    ref->avail = ref->avail - max;
+    ref->unr_data = ref->unr_data - max;
     ref->r_pos = ((ref->r_pos + max) % ref->sz) == 0 ? n : (ref->r_pos + max);
     return max;
 }
