@@ -55,39 +55,34 @@ void ringbuffer_free(ringbuffer_t* ref) {
     free(ref);
 }
 
-/* Write n bytes to the ringbuffer pointed at by ref returns 0 if the data did
- * fit, 1 if old data was overwritten or -1 if there is insufficient space before
- * the read pointer to place the data
+/* Attempt to write n bytes of data into the buffer ref, returns the number of
+ * bytes written
  */
-int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
-
-    if (ref->w_pos + n == ref->r_pos) {
-        return -1;
+size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
+    for (size_t i = ref->w_pos; i < n; i++) {
+        ref->data[i % ref->size] = buffer[i];
     }
 
-    for (size_t i = 0; i < n; i++) {
-        ref->data[i % ref->size] = data[i];
-    }
-    ref->w_pos = ((ref->w_pos + n) % ref->size) == 0 ? n : (ref->w_pos + n);
-    ref->unread_data = ref->unread_data + n;
-    // returns 0 if the data did fit, 1 if old data was overwritten
-    return !((ref->w_pos + n) > ref->size) ? RINGBUFFER_OK : RINGBUFFER_OVERFLOW;
+    ref->unread_data = (ref->w_pos + n);
+    ref->w_pos = ((ref->w_pos + n) % ref->size) + 1;
+
+    return ref->size > n ? n : ref->size;
 }
 
 /* Read n bytes from the ringbuffer pointed at by ref into block returns n if a
- * full block is read vallues < n indicate that there is less data than n
+ * full block is read values < n indicate that there is less data than n
  * available and the returned value was read to buffer a return of 0 means no
- * data was available to read also note that buffer is not cleared between reads
+ * data was available to read also note that buffer is not cleared so any data
+ * after the read bytes is untouched.
  */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
-    size_t r_car = ref->r_pos % ref->size;
     size_t to_read = ref->unread_data >= n ? n : ref->unread_data;
 
     for (size_t i = 0; i < to_read; i++) {
-        buffer[i % ref->size] = ref->data[r_car + i];
+        buffer[i] = ref->data[(ref->r_pos + i) % ref->size];
     }
 
     ref->unread_data = ref->unread_data - to_read;
-    ref->r_pos = ((ref->r_pos + to_read) % ref->size) == 0 ? n : (ref->r_pos + to_read);
+    ref->r_pos = ((ref->r_pos + to_read) % ref->size);
     return to_read;
 }

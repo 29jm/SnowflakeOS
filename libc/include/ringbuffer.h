@@ -3,8 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-#define RINGBUFFER_OK 0
-#define RINGBUFFER_OVERFLOW 1
 
 /*
  * ringbuffer type for SnowflakeOS, this structure deals in bytes
@@ -29,6 +27,6 @@ size_t ringbuffer_available(ringbuffer_t* ref);
 
 void ringbuffer_free(ringbuffer_t* ref);
 
-int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data);
+size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer);
 
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer);
