@@ -26,6 +26,11 @@ int ringbuffer_init(ringbuffer_t* ref, size_t size) {
 /* Allocate and initialize a ringbuffer returns NULL on failure to allocate */
 ringbuffer_t* ringbuffer_new(size_t size) {
     ringbuffer_t* ref = malloc(sizeof(ringbuffer_t));
+
+    if (ref == NULL) {
+        return NULL;
+    }
+
     if (ringbuffer_init(ref, size) == -1) {
         free(ref);
         ref = NULL;
@@ -55,7 +60,6 @@ void ringbuffer_free(ringbuffer_t* ref) {
  * the read pointer to place the data
  */
 int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
-    uint8_t* pos = ref->data + ref->w_pos;
 
     if (ref->w_pos + n == ref->r_pos) {
         return -1;
@@ -76,21 +80,14 @@ int ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* data) {
  * data was available to read also note that buffer is not cleared between reads
  */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
-    uint8_t byte;
-    uint8_t* cp_ptr;
     size_t r_car = ref->r_pos % ref->size;
-    // read n or unr_data if it is less than n
-    size_t max = ref->unread_data >= n ? n : ref->unread_data;
+    size_t to_read = ref->unread_data >= n ? n : ref->unread_data;
 
-    if (ref->unread_data <= 0) {
-        return 0;
+    for (size_t i = 0; i < to_read; i++) {
+        buffer[i % ref->size] = ref->data[r_car + i];
     }
 
-    for (size_t i = 0; i < max; i++) {
-        buffer[i % ref->size] = ref->data[(r_car + i)];
-    }
-
-    ref->unread_data = ref->unread_data - max;
-    ref->r_pos = ((ref->r_pos + max) % ref->size) == 0 ? n : (ref->r_pos + max);
-    return max;
+    ref->unread_data = ref->unread_data - to_read;
+    ref->r_pos = ((ref->r_pos + to_read) % ref->size) == 0 ? n : (ref->r_pos + to_read);
+    return to_read;
 }

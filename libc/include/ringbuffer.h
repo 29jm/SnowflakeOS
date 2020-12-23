@@ -1,11 +1,10 @@
 #pragma once
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-
 #define RINGBUFFER_OK 0
 #define RINGBUFFER_OVERFLOW 1
-
 
 /*
  * ringbuffer type for SnowflakeOS, this structure deals in bytes
@@ -19,7 +18,6 @@ typedef struct _ringbuffer {
     size_t r_pos;
     uint8_t* data;
 } ringbuffer_t;
-
 
 int ringbuffer_init(ringbuffer_t* ref, size_t size);
 
