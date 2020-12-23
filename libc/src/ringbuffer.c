@@ -63,7 +63,7 @@ size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
         ref->data[i % ref->size] = buffer[i];
     }
 
-    ref->unread_data = (ref->w_pos + n);
+    ref->unread_data = (ref->w_pos + n) % ref->size;
     ref->w_pos = ((ref->w_pos + n) % ref->size) + 1;
 
     return ref->size > n ? n : ref->size;
