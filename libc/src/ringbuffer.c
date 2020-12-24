@@ -1,5 +1,6 @@
 #include <ringbuffer.h>
 #include <stdlib.h>
+#include <math.h>
 
 /* Initialize a ringbuffer for use takes a pointer to a declared ring buffer
  * and initializes it with size size it will be allocated in size * isz
@@ -10,15 +11,12 @@
 int ringbuffer_init(ringbuffer_t* ref, size_t size) {
     ref->size = size;
     ref->unread_data = 0;
-
-    ref->data = (uint8_t*) malloc(size);
+    ref->r_pos = 0;
+    ref->data = malloc(size);
 
     if (ref->data == NULL) {
         return -1;
     }
-
-    ref->r_pos = 0;
-    ref->w_pos = 0;
 
     return 0;
 }
@@ -59,14 +57,20 @@ void ringbuffer_free(ringbuffer_t* ref) {
  * bytes written
  */
 size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
-    for (size_t i = ref->w_pos; i < n; i++) {
+    size_t w_pos = (ref->r_pos + ref->unread_data) % ref->size;
+
+    for (size_t i = w_pos; i < n; i++) {
         ref->data[i % ref->size] = buffer[i];
     }
 
-    ref->unread_data = (ref->w_pos + n) % ref->size;
-    ref->w_pos = ((ref->w_pos + n) % ref->size) + 1;
+    /* Have we erased old data? */
+    if (n > ringbuffer_available(ref)) {
+        ref->r_pos = (w_pos + n) % ref->size;
+    }
 
-    return ref->size > n ? n : ref->size;
+    ref->unread_data = min(ref->unread_data + n, ref->size);
+
+    return min(n, ref->size);
 }
 
 /* Read n bytes from the ringbuffer pointed at by ref into block returns n if a
@@ -76,13 +80,14 @@ size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
  * after the read bytes is untouched.
  */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
-    size_t to_read = ref->unread_data >= n ? n : ref->unread_data;
+    size_t to_read = min(n, ref->unread_data);
 
     for (size_t i = 0; i < to_read; i++) {
         buffer[i] = ref->data[(ref->r_pos + i) % ref->size];
     }
 
     ref->unread_data = ref->unread_data - to_read;
-    ref->r_pos = ((ref->r_pos + to_read) % ref->size);
+    ref->r_pos = (ref->r_pos + to_read) % ref->size;
+
     return to_read;
 }

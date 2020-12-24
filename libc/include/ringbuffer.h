@@ -12,7 +12,6 @@
 typedef struct _ringbuffer {
     size_t size;
     size_t unread_data;
-    size_t w_pos;
     size_t r_pos;
     uint8_t* data;
 } ringbuffer_t;
