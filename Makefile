@@ -33,12 +33,12 @@ endif
 # Uncomment the following group of lines to compile with the system's
 # clang installation
 
-CC=clang
-LD=ld
-AR=ar
-AS=as
-CFLAGS+=-target i386-pc-none-eabi -m32
-CFLAGS+=-mno-mmx -mno-sse -mno-sse2
+# CC=clang
+# LD=ld
+# AR=ar
+# AS=as
+# CFLAGS+=-target i386-pc-none-eabi -m32
+# CFLAGS+=-mno-mmx -mno-sse -mno-sse2
 
 CC+=--sysroot=$(SYSROOT) -isystem=/$(PREFIX)/include
 
