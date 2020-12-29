@@ -35,8 +35,8 @@ uint32_t timer_get_tick() {
 
 /* Returns the time since boot in seconds
  */
-double timer_get_time() {
-    return current_tick*(1.0/TIMER_FREQ);
+float timer_get_time() {
+    return current_tick * (1.0f / TIMER_FREQ);
 }
 
 /* Registers a callback to be called on each timer tick.

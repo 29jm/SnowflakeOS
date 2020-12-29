@@ -770,13 +770,14 @@ static void update_inode(ext2_fs_t* fs, uint32_t ino, ext2_inode_t* in) {
 static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = fs->block_size / sizeof(uint32_t);
+    uint32_t ret = 0;
 
     if (n < 12) {
         if (!in->dbp[n]) {
             in->dbp[n] = allocate_block(fs);
         }
 
-        return in->dbp[n];
+        ret = in->dbp[n];
     } else if (n < 12 + p) {
         uint32_t* tmp = zalloc(fs->block_size); // Type matters for pointer arithmetic purposes
         uint32_t relblock = n - 12;
@@ -793,8 +794,8 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, in->sibp, (uint8_t*) tmp);
         }
 
+        ret = tmp[relblock];
         kfree(tmp);
-        return tmp[relblock];
     } else if (n < 12 + p + p*p) {
         uint32_t* tmp = zalloc(fs->block_size);
         uint32_t relblock = n - 12 - p;
@@ -822,8 +823,8 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, block_a, (uint8_t*) tmp);
         }
 
+        ret = tmp[offset_b];
         kfree(tmp);
-        return tmp[offset_b];
     } else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
         uint32_t* tmp = zalloc(fs->block_size);
         uint32_t relblock = n - 12 - p - p*p;
@@ -861,29 +862,29 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
             write_block(fs, block_b, (uint8_t*) tmp);
         }
 
+        ret = tmp[offset_c];
         kfree(tmp);
-        return tmp[offset_c];
     } else {
         printke("invalid inode block");
     }
 
-    return 0;
+    return ret;
 }
 
 static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = fs->block_size / sizeof(uint32_t);
+    uint32_t ret = 0;
 
     if (n < 12) {
-        return inode->dbp[n];
+        ret = inode->dbp[n];
     } else if (n < 12 + p) {
         uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12;
 
         read_block(fs, inode->sibp, (uint8_t*) tmp);
-
+        ret = tmp[relblock];
         kfree(tmp);
-        return tmp[relblock];
     } else if (n < 12 + p + p*p) {
         uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12 - p;
@@ -892,9 +893,8 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
 
         read_block(fs, inode->dibp, (uint8_t*) tmp);
         read_block(fs, tmp[offset_a], (uint8_t*) tmp);
-
+        ret = tmp[offset_b];
         kfree(tmp);
-        return tmp[offset_b];
     } else if (n < 12 + p + p*p + p*p*p) { // TODO: test this
         uint32_t* tmp = kmalloc(fs->block_size);
         uint32_t relblock = n - 12 - p - p*p;
@@ -905,14 +905,15 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
         read_block(fs, inode->tibp, (uint8_t*) tmp);
         read_block(fs, tmp[offset_a], (uint8_t*) tmp);
         read_block(fs, tmp[offset_b], (uint8_t*) tmp);
-
+        ret = tmp[offset_c];
         kfree(tmp);
-        return tmp[offset_c];
     }
 
-    printke("invalid inode block");
+    if (!ret) {
+        printke("invalid inode block");
+    }
 
-    return 0;
+    return ret;
 }
 
 /* Creates a new entry with name `name` in the directory pointed to by

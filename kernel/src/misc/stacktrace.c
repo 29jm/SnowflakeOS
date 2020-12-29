@@ -28,7 +28,7 @@ char* symbol_for_addr(uintptr_t* addr) {
     char* last_sym = 0, * current_sym = 0;
     char* curr = (char*) symbols;
 
-    while (curr < (char*) symbols + len) {
+    while (curr && curr < (char*) symbols + len) {
         current = strtol(curr, &current_sym, 16);
         current_sym = current_sym + 1;
 
@@ -61,7 +61,8 @@ void stacktrace_print() {
     while (stackframe) {
         addr = stackframe->eip;
         char* sym = symbol_for_addr(&addr);
-        char* end = strchr(sym, '\n');
+        sym = sym ? sym : "<not found>";
+        char* end = strchrnul(sym, '\n');
 
         *end = '\0';
         printk(" %p: %s", addr, sym);

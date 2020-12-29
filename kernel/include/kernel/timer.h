@@ -5,7 +5,7 @@
 void init_timer();
 void timer_callback();
 uint32_t timer_get_tick();
-double timer_get_time();
+float timer_get_time();
 void timer_register_callback(handler_t handler);
 void timer_remove_callback(handler_t handler);
 

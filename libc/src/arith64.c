@@ -118,4 +118,10 @@ uint64_t __umoddi3(uint64_t a, uint64_t b) {
     return r;
 }
 
+int64_t __moddi3(int64_t a, int64_t b) {
+    uint64_t r;
+    __divmoddi4(abs(a), abs(b), &r);
+    return negate(r, a); // negate remainder if numerator is negative
+}
+
 #undef abs
