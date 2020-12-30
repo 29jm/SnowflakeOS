@@ -57,16 +57,17 @@ void ringbuffer_free(ringbuffer_t* ref) {
  * bytes written
  */
 size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
-    size_t w_pos = (ref->r_pos + ref->unread_data) % ref->size;
+    size_t w_pos = (ref->r_pos + n) % ref->size;
+    printf("w_pos %d, r_pos %d, unread_data %d\n", w_pos, ref->r_pos, ref->unread_data);
 
-    for (size_t i = w_pos; i < n; i++) {
-        ref->data[i % ref->size] = buffer[i];
+    for (size_t i = 0; i < n; i++) {
+        ref->data[(w_pos + i) % ref->size] = buffer[i];
     }
 
-    /* Have we erased old data? */
-    if (n > ringbuffer_available(ref)) {
-        ref->r_pos = (w_pos + n) % ref->size;
-    }
+    // /* Have we erased old data? */
+    // if (n > ringbuffer_available(ref)) {
+    // ref->r_pos = (w_pos + n) % ref->size;
+    // }
 
     ref->unread_data = min(ref->unread_data + n, ref->size);
 
@@ -81,6 +82,8 @@ size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
  */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     size_t to_read = min(n, ref->unread_data);
+
+    printf("r_pos %d, unread_data %d\n", ref->r_pos, ref->unread_data);
 
     for (size_t i = 0; i < to_read; i++) {
         buffer[i] = ref->data[(ref->r_pos + i) % ref->size];

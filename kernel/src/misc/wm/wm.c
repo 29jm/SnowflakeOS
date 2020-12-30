@@ -39,7 +39,7 @@ static mouse_t mouse;
 void buffer_dump(void* buff, size_t len) {
     for (size_t i = 0; i < len; i++)
     {
-        printf("%#2X ", ((uint8_t*)buff)[i]);
+        printf("%d:%#2X ", i, ((uint8_t*)buff)[i]);
     }
     printf("\n");
 }
@@ -69,7 +69,6 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         /*TODO: make this size configurable*/
         .events = ringbuffer_new(5 * sizeof(wm_event_t))
     };
-    printf("win eqeue has %d events in it\n", ringbuffer_available(win->events));
 
     win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
 
@@ -155,9 +154,11 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
     wm_window_t* win = list_entry(item, wm_window_t);
 
     if (ringbuffer_used(win->events)) {
-        printf("%d events available before delivery\n", ringbuffer_used(win->events) / sizeof(wm_event_t));
+        // printf("win %d has %d events available before delivery\n", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
         ringbuffer_read(win->events, sizeof(wm_event_t), (uint8_t*)event);
-        printf("%d events available after delivery\n", ringbuffer_used(win->events) / sizeof(wm_event_t));
+        // printf("win %d has %d events available after delivery\n", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
+        printf("ringbuff used %d\n", win->id, win->events->unread_data);
+        // buffer_dump(event, sizeof(wm_event_t));
         printf("delivered event to window\n");
     } else {
         memset(event, 0, sizeof(wm_event_t));
@@ -596,7 +597,14 @@ void wm_kbd_callback(kbd_event_t event) {
             kbd_ev.kbd.keycode = event.keycode;
             kbd_ev.kbd.pressed = event.pressed;
             kbd_ev.kbd.repr = event.repr;
+            // printf("\n\nwin %d has %d events available before adding\nevent to add:\n\t", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
+            // buffer_dump(&kbd_ev, sizeof(wm_event_t));
+
             ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*)&kbd_ev);
+
+            // printf("win %d has %d events available after adding\nringbuffer data after add:\n\t", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
+            // buffer_dump(win->events->data, win->events->size);
+            // printf("\nadded event to window\n\n");
 
             if (!(win->flags & WM_SKIP_INPUT)) {
                 return;
