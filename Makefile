@@ -14,7 +14,7 @@ SYSROOT=$(PWD)/$(SYSROOTDIR)
 INCLUDEDIR=$(SYSROOT)/$(PREFIX)/include
 LIBDIR=$(SYSROOT)/$(PREFIX)/lib
 
-PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
+PATH:=$(PATH):/sbin:$(PWD)/toolchain/compiler/bin
 
 MAKE:=$(MAKE) -s
 LD=$(HOST)-ld
