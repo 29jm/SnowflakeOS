@@ -5,10 +5,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <list.h>
+#include <ringbuffer.h>
 
 #include <kernel/uapi/uapi_wm.h>
 
 #define WM_NOT_DRAWN  ((uint32_t) 1 << 31) // Window has _never_ been called wm_render_window
+#define WM_WINEVBUFF_SZ 5
 
 /* ufb: the window's buffer in userspace. Used by the client for drawing
  *  operations. We copy this buffer on request to `kfb`.
@@ -22,7 +24,8 @@ typedef struct _wm_window_t {
     int32_t y;
     uint32_t id;
     uint32_t flags;
-    wm_event_t event;
+    // wm_event_t event;
+    ringbuffer_t* events;
 } wm_window_t;
 
 // We exposed `wm_rect_t` to userspace, rename it here for convenience
