@@ -14,7 +14,7 @@ SYSROOT=$(PWD)/$(SYSROOTDIR)
 INCLUDEDIR=$(SYSROOT)/$(PREFIX)/include
 LIBDIR=$(SYSROOT)/$(PREFIX)/lib
 
-PATH:=$(PATH):$(PWD)/toolchain/compiler/bin
+PATH:=$(PATH):/sbin:$(PWD)/toolchain/compiler/bin
 
 MAKE:=$(MAKE) -s
 LD=$(HOST)-ld
@@ -80,7 +80,7 @@ modules: libc snow ui
 doomgeneric: libc snow ui
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64 -display sdl -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
+	qemu-system-x86_64 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
 	cat serial.log
 
 bochs: SnowflakeOS.iso
