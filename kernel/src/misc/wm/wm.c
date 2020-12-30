@@ -67,7 +67,7 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
         /*TODO: make this size configurable*/
-        .events = ringbuffer_new(10 * sizeof(wm_event_t))
+        .events = ringbuffer_new(5 * sizeof(wm_event_t))
     };
     printf("win eqeue has %d events in it\n", ringbuffer_available(win->events));
 
@@ -155,7 +155,10 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
     wm_window_t* win = list_entry(item, wm_window_t);
 
     if (ringbuffer_used(win->events)) {
+        printf("%d events available before delivery\n", ringbuffer_used(win->events) / sizeof(wm_event_t));
         ringbuffer_read(win->events, sizeof(wm_event_t), (uint8_t*)event);
+        printf("%d events available after delivery\n", ringbuffer_used(win->events) / sizeof(wm_event_t));
+        printf("delivered event to window\n");
     } else {
         memset(event, 0, sizeof(wm_event_t));
     }
