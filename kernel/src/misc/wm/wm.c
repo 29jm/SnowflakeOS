@@ -45,6 +45,7 @@ void buffer_dump(void* buff, size_t len) {
 }
 
 void init_wm() {
+    printk("wm window event buffer size: %d", WM_WINEVBUFF_SZ);
     fb = fb_get_info();
     windows = LIST_HEAD_INIT(windows);
 
@@ -67,7 +68,7 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
         /*TODO: make this size configurable*/
-        .events = ringbuffer_new(5 * sizeof(wm_event_t))
+        .events = ringbuffer_new(WM_WINEVBUFF_SZ * sizeof(wm_event_t))
     };
 
     win->kfb.address = (uintptr_t) kmalloc(buff->height*buff->pitch);
@@ -159,7 +160,7 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
         // printf("win %d has %d events available after delivery\n", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
         // printf("ringbuff used %d\n", win->id, win->events->unread_data);
         // buffer_dump(event, sizeof(wm_event_t));
-        printf("delivered event to window\n");
+        // printf("delivered event to window\n");
     } else {
         memset(event, 0, sizeof(wm_event_t));
     }
