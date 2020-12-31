@@ -39,6 +39,9 @@ static uint32_t divide_up(uint32_t n, uint32_t d) {
     return 1 + n / d;
 }
 
+/* Dumps any contiguous memory structure's bytes as a string of hex octets with
+ * position numbers to aid in debugging efforts
+ */
 inline void dbg_buffer_dump(void* buff, size_t len) {
     for (size_t i = 0; i < len; i++) {
         printf("%d:%#2X ", i, ((uint8_t*) buff)[i]);

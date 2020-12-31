@@ -59,7 +59,6 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .kfb = *buff,
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
-        /*TODO: make this size configurable*/
         .events = ringbuffer_new(WM_EVENT_QUEUE_SIZE * sizeof(wm_event_t))
     };
 
@@ -481,9 +480,6 @@ void wm_mouse_callback(mouse_t raw_curr) {
     // Move the cursor
     float dx = (raw_curr.x - raw_prev.x)*sens;
     float dy = (raw_curr.y - raw_prev.y)*sens;
-    // store the mouse event for inclusion in the ringbuffer
-    wm_event_t drag_ev;
-    wm_event_t uc_ev;
 
     mouse.x += dx;
     mouse.y += dy;
