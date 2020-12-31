@@ -38,7 +38,6 @@ static fb_t fb;
 static mouse_t mouse;
 
 void init_wm() {
-    printk("wm window event buffer size: %d", WM_WINEVBUFF_SZ);
     fb = fb_get_info();
     windows = LIST_HEAD_INIT(windows);
 

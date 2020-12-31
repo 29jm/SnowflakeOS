@@ -11,8 +11,8 @@
  */
 typedef struct _ringbuffer {
     size_t size;
-    size_t w_base;
     size_t r_base;
+    size_t data_size;
     uint8_t* data;
 } ringbuffer_t;
 

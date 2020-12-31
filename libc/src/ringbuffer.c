@@ -5,8 +5,8 @@
 /* Initilize a ringbuffer that was pre-allocated */
 int ringbuffer_init(ringbuffer_t* ref, size_t size) {
     ref->size = size;
-    ref->w_base = 0;
     ref->r_base = 0;
+    ref->data_size = 0;
     ref->data = malloc(size);
 
     if (ref->data == NULL) {
@@ -35,10 +35,7 @@ ringbuffer_t* ringbuffer_new(size_t size) {
 /* How much data is available in the buffer
  */
 size_t ringbuffer_available(ringbuffer_t* ref) {
-    long distance;
-
-    distance = ref->w_base - ref->r_base;
-    return distance >= 0 ? distance : distance * -1;
+    return ref->data_size;
 }
 
 void ringbuffer_free(ringbuffer_t* ref) {
@@ -50,17 +47,19 @@ void ringbuffer_free(ringbuffer_t* ref) {
  * bytes written
  */
 size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
+    size_t w_base = ref->r_base + ref->data_size;
 
     for (size_t i = 0; i < n; i++) {
-        ref->data[(ref->w_base + i) % ref->size] = buffer[i];
+        ref->data[(w_base + i) % ref->size] = buffer[i];
     }
 
-    // /* Have we erased old data? */
-    // if (n > ringbuffer_available(ref)) {
-    // ref->r_pos = (w_pos + n) % ref->size;
-    // }
+    /* Have we erased old data? */
+    if (n > ref->size - ringbuffer_available(ref)) {
+        ref->r_base = (w_base + n) % ref->size;
+    }
 
-    ref->w_base = (ref->w_base + n) % ref->size;
+    ref->data_size = min(ref->data_size + n, ref->size);
+
     return min(n, ref->size);
 }
 
@@ -78,6 +77,7 @@ size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     }
 
     ref->r_base = (ref->r_base + to_read) % ref->size;
+    ref->data_size -= to_read;
 
     return to_read;
 }
