@@ -36,6 +36,14 @@ static uint32_t id_count = 0;
 static fb_t fb;
 static mouse_t mouse;
 
+void buffer_dump(void* buff, size_t len) {
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%d:%#2X ", i, ((uint8_t*)buff)[i]);
+    }
+    printf("\n");
+}
+
 void init_wm() {
     printk("wm window event buffer size: %d", WM_WINEVBUFF_SZ);
     fb = fb_get_info();
