@@ -37,7 +37,16 @@ static uint32_t id_count = 0;
 static fb_t fb;
 static mouse_t mouse;
 
+void buffer_dump(void* buff, size_t len) {
+    for (size_t i = 0; i < len; i++)
+    {
+        printf("%d:%#2X ", i, ((uint8_t*)buff)[i]);
+    }
+    printf("\n");
+}
+
 void init_wm() {
+    printk("wm window event buffer size: %d", WM_WINEVBUFF_SZ);
     fb = fb_get_info();
     windows = LIST_HEAD_INIT(windows);
 
@@ -481,6 +490,9 @@ void wm_mouse_callback(mouse_t raw_curr) {
     // Move the cursor
     float dx = (raw_curr.x - raw_prev.x)*sens;
     float dy = (raw_curr.y - raw_prev.y)*sens;
+    // store the mouse event for inclusion in the ringbuffer
+    wm_event_t drag_ev;
+    wm_event_t uc_ev;
 
     mouse.x += dx;
     mouse.y += dy;
