@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <list.h>
+#include <ringbuffer.h>
 
 #include <kernel/uapi/uapi_wm.h>
 
@@ -22,7 +23,7 @@ typedef struct _wm_window_t {
     int32_t y;
     uint32_t id;
     uint32_t flags;
-    wm_event_t event;
+    ringbuffer_t* events;
 } wm_window_t;
 
 // We exposed `wm_rect_t` to userspace, rename it here for convenience
