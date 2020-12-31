@@ -153,11 +153,11 @@ void wm_get_event(uint32_t win_id, wm_event_t* event) {
 
     wm_window_t* win = list_entry(item, wm_window_t);
 
-    if (ringbuffer_used(win->events)) {
+    if (ringbuffer_available(win->events)) {
         // printf("win %d has %d events available before delivery\n", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
         ringbuffer_read(win->events, sizeof(wm_event_t), (uint8_t*)event);
         // printf("win %d has %d events available after delivery\n", win->id, ringbuffer_used(win->events) / sizeof(wm_event_t));
-        printf("ringbuff used %d\n", win->id, win->events->unread_data);
+        // printf("ringbuff used %d\n", win->id, win->events->unread_data);
         // buffer_dump(event, sizeof(wm_event_t));
         printf("delivered event to window\n");
     } else {
@@ -189,7 +189,7 @@ void wm_raise_window(wm_window_t* win) {
     // This is the first window to be opened
     if (!focused) {
         focused = win;
-        win_ev.type |= WM_EVENT_GAINED_FOCUS;
+        win_ev.type = WM_EVENT_GAINED_FOCUS;
         ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*)&win_ev);
         return;
     }
@@ -200,8 +200,8 @@ void wm_raise_window(wm_window_t* win) {
     }
 
     // Change focus only then
-    active_ev.type |= WM_EVENT_LOST_FOCUS;
-    win_ev.type |= WM_EVENT_GAINED_FOCUS;
+    active_ev.type = WM_EVENT_LOST_FOCUS;
+    win_ev.type = WM_EVENT_GAINED_FOCUS;
     ringbuffer_write(focused->events, sizeof(wm_event_t), (uint8_t*)&active_ev);
     ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*)&win_ev);
     focused = win;
@@ -544,7 +544,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
         if (!been_dragged) {
             rect_t r = rect_from_window(dragged);
 
-            drag_ev.type |= WM_EVENT_CLICK;
+            drag_ev.type = WM_EVENT_CLICK;
             drag_ev.mouse.position = wm_mouse_to_rect(mouse);
             drag_ev.mouse.position.top -= r.top;
             drag_ev.mouse.position.left -= r.left;
@@ -563,7 +563,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
         if (under_cursor) {
             rect_t r = rect_from_window(under_cursor);
 
-            uc_ev.type |= WM_EVENT_MOUSE_MOVE;
+            uc_ev.type = WM_EVENT_MOUSE_MOVE;
             uc_ev.mouse.position = wm_mouse_to_rect(mouse);
             uc_ev.mouse.position.top -= r.top;
             uc_ev.mouse.position.left -= r.left;
@@ -593,7 +593,7 @@ void wm_kbd_callback(kbd_event_t event) {
         wm_window_t* win;
 
         list_for_each_entry_rev(iter, win, &windows) {
-            kbd_ev.type |= WM_EVENT_KBD;
+            kbd_ev.type = WM_EVENT_KBD;
             kbd_ev.kbd.keycode = event.keycode;
             kbd_ev.kbd.pressed = event.pressed;
             kbd_ev.kbd.repr = event.repr;
