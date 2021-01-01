@@ -18,7 +18,7 @@ $(LIBSNOW): $(OBJS)
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	$(info [snow] cleaning up)
+	$(info [snow] $@)
 	@rm -f *.a $(OBJS)
 
 build: $(LIBSNOW)
