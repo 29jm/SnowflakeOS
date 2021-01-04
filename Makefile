@@ -71,7 +71,6 @@ build: $(PROJECTS)
 
 # Copy headers before building anything
 $(PROJECTS): $(PROJECT_HEADERS) | $(TARGETROOT) $(LIBDIR)
-	$(info [$@] building)
 	@$(MAKE) -C $@ build
 
 # Specify dependencies

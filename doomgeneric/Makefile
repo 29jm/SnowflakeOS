@@ -29,7 +29,8 @@ clean:
 	@rm -f $(OUTPUT).map
 
 $(OUTPUT): $(OBJS) $(LIB_DEPS) | $(TARGETROOT)
-	@echo [Linking $@]
+	$(info [doom] linking)
+	@touch $(CURDIR)
 	$(VB)$(LD) $(LDFLAGS) $(OBJS) -o $(OUTPUT) $(LIBS) -Map=$(OUTPUT).map
 
 $(OBJS): | $(OBJDIR)
@@ -41,7 +42,7 @@ $(TARGETROOT):
 	@mkdir -p $(TARGETROOT)
 
 $(OBJDIR)/%.o: %.c
-	@echo [Compiling $<]
+	$(info [doom] $(notdir $(basename $<)))
 	$(VB)$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/start.o: start.S

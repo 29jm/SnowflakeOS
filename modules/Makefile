@@ -20,13 +20,13 @@ clean:
 	$(info [modules] $@)
 	@rm -f */*.o
 
-$(MODS): $(TARGETROOT)/% : src/%.o src/start.o
+$(MODS): $(TARGETROOT)/% : src/%.o src/start.o $(LIB_DEPS)
+	$(info [modules] $(notdir $(basename $@)))
+	@touch $(CURDIR)
 	@$(LD) src/start.o $< -o $@ $(LDFLAGS) $(LIBS)
 
 %.o: %.c
-	$(info [modules] $(notdir $(basename $@)))
 	@$(CC) -c $< -o $@ $(CFLAGS)
 
 %.o: %.S
-	$(info [modules] $@)
 	@$(AS) $(ASFLAGS) $< -o $@
