@@ -1,10 +1,10 @@
 #pragma once
 
-#include <kernel/multiboot.h>
+#include <kernel/multiboot2.h>
 
 #include <stdint.h>
 
-void init_pmm(multiboot_t* boot);
+void init_pmm(mb2_t* boot);
 uint32_t pmm_used_memory();
 uint32_t pmm_total_memory();
 void pmm_init_region(uintptr_t addr, uint32_t size);

@@ -11,19 +11,19 @@ static fb_t fb;
 
 /* "fb" stands for "framebuffer" throughout the code.
  */
-void init_fb(fb_info_t fb_info) {
-    fb = (fb_t) {
-        .width = fb_info.width,
-        .height = fb_info.height,
-        .pitch = fb_info.pitch,
-        .bpp = fb_info.bpp
-    };
+void init_fb(mb2_t* boot) {
+    mb2_tag_fb_t* fb_info = (mb2_tag_fb_t*) mb2_find_tag(boot, MB2_TAG_FB);
+
+    fb.width = fb_info->width;
+    fb.height = fb_info->height;
+    fb.pitch = fb_info->pitch;
+    fb.bpp = fb_info->bpp;
 
     if (fb.bpp != 32) {
         printke("unsupported bit depth: %d", fb.bpp);
     }
 
-    uintptr_t address = (uintptr_t) fb_info.address;
+    uintptr_t address = (uintptr_t) fb_info->addr;
 
     // Remap our framebuffer
     uint32_t size = fb.height*fb.pitch;

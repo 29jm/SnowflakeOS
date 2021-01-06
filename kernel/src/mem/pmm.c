@@ -1,11 +1,12 @@
+#include <kernel/multiboot2.h>
+#include <kernel/paging.h>
 #include <kernel/pmm.h>
-#include <kernel/paging.h> // PHYS_TO_VIRT
-#include <kernel/multiboot.h>
 #include <kernel/sys.h>
 
-#include <string.h>
-#include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define NTHBIT(n) ((uint32_t) 1 << n)
 
@@ -25,14 +26,18 @@ uint32_t mmap_test(uint32_t bit);
 uint32_t mmap_find_free();
 uint32_t mmap_find_free_frame(uint32_t num);
 
-void init_pmm(multiboot_t* boot) {
-    // Compute where the kernel & GRUB modules ends in physical memory
-    mod_t* modules = (mod_t*) boot->mods_addr;
+void init_pmm(mb2_t* boot) {
+    // Compute where the kernel & GRUB modules end in physical memory
+    mb2_tag_t* tag = boot->tags;
 
-    for (uint32_t i = 0; i < boot->mods_count; i++) {
-        mod_t mod = modules[i];
-        kernel_end = mod.mod_end;
-    }
+    do {
+        if (tag->type == MB2_TAG_MODULE) {
+            mb2_tag_module_t* mod = (mb2_tag_module_t*) tag;
+            kernel_end = max(mod->mod_end, kernel_end);
+        }
+
+        tag = (mb2_tag_t*) ((uintptr_t) tag + align_to(tag->size, 8));
+    } while (tag->type != MB2_TAG_END);
 
     // In the author's case, modules come after the kernel,
     // but there's no guarantee it'll always be true
@@ -46,37 +51,33 @@ void init_pmm(multiboot_t* boot) {
     }
 
     // Prepare our block allocation bitmap
-    mem_size = boot->mem_lower + boot->mem_upper;
-    max_blocks = (mem_size * 1024) / PMM_BLOCK_SIZE; // `mem_size` is in KiB
-    used_blocks = max_blocks;
-    memset(bitmap, 0xFF, max_blocks/8); // Blocks are taken by default
+    memset(bitmap, 0xFF, sizeof(bitmap)); // Blocks are taken by default
 
     // Parse the memory map to mark valid areas as available
     uint64_t available = 0;
     uint64_t unavailable = 0;
 
-    mmap_t* mmap = (mmap_t*) PHYS_TO_VIRT(boot->mmap_addr);
+    mb2_tag_mmap_t* mmap = (mb2_tag_mmap_t*) mb2_find_tag(boot, MB2_TAG_MMAP);
+    mb2_mmap_entry_t* ent = mmap->entries;
 
-    while ((uintptr_t) mmap < (PHYS_TO_VIRT(boot->mmap_addr)+boot->mmap_length)) {
-        if (!mmap->length) {
-            continue;
-        }
-
-        if (mmap->type == 1) {
-            pmm_init_region((uintptr_t) mmap->addr, mmap->length);
-            available += mmap->length;
+    while ((uintptr_t) ent < (uintptr_t) mmap + mmap->header.size) {
+        if (ent->type == MB2_MMAP_AVAIL) {
+            pmm_init_region((uintptr_t) ent->base_addr, ent->length);
+            available += ent->length;
         } else {
-            unavailable += mmap->length;
+            unavailable += ent->length;
         }
 
-        // Casts needed to get around pointer increment magic
-        mmap = (mmap_t*) ((uintptr_t) mmap + mmap->size + sizeof(uintptr_t));
+        ent = (mb2_mmap_entry_t*) ((uintptr_t) ent + mmap->entry_size);
     }
 
     mem_size = available;
+    max_blocks = mem_size / PMM_BLOCK_SIZE;
+    used_blocks = max_blocks;
 
-    // Protect low memory, our glorious kernel and the PMM itself
-    pmm_deinit_region(0, kernel_end + max_blocks/8);
+    // Protect low memory, our glorious kernel and its modules
+    pmm_deinit_region(0, kernel_end);
+    pmm_deinit_region((uintptr_t) boot, boot->total_size);
 
     printk("memory stats: available: \x1B[32m%d MiB\x1B[0m", available >> 20);
     printk("unavailable: \x1B[32m%d KiB\x1B[0m", unavailable >> 10);
@@ -99,11 +100,9 @@ uint32_t pmm_total_memory() {
 /* Mark an area of physical memory as available.
  */
 void pmm_init_region(uintptr_t addr, uint32_t size) {
-    // block number this region starts at
     uint32_t base_block = addr/PMM_BLOCK_SIZE;
-
-    // number of blocks this region represents
-    uint32_t num = divide_up(size, PMM_BLOCK_SIZE);
+    /* A region might be smaller than a block, yet span two: boundaries */
+    uint32_t num = divide_up(size + addr % PMM_BLOCK_SIZE, PMM_BLOCK_SIZE);
 
     while (num-- > 0) {
         mmap_unset(base_block++);
@@ -117,7 +116,7 @@ void pmm_init_region(uintptr_t addr, uint32_t size) {
  */
 void pmm_deinit_region(uintptr_t addr, uint32_t size) {
     uint32_t base_block = addr/PMM_BLOCK_SIZE;
-    uint32_t num = divide_up(size, PMM_BLOCK_SIZE);
+    uint32_t num = divide_up(size + addr % PMM_BLOCK_SIZE, PMM_BLOCK_SIZE);
 
     while (num-- > 0) {
         mmap_set(base_block++);

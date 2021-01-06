@@ -1,10 +1,11 @@
 #include <kernel/paging.h>
 #include <kernel/pmm.h>
-#include <kernel/term.h>
 #include <kernel/proc.h>
-#include <kernel/sys.h>
 #include <kernel/stacktrace.h>
+#include <kernel/sys.h>
+#include <kernel/term.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +17,7 @@ static directory_entry_t* current_page_directory;
 
 extern directory_entry_t kernel_directory[1024];
 
-void init_paging() {
+void init_paging(mb2_t* boot) {
     isr_register_handler(14, &paging_fault_handler);
 
     // Setup the recursive page directory entry
@@ -25,8 +26,9 @@ void init_paging() {
     paging_invalidate_page(0xFFC00000);
 
     // Replace the initial identity mapping, extending it to cover grub modules
-    uint32_t to_map = divide_up(pmm_get_kernel_end(), 0x1000);
-    kernel_directory[0] = 0;
+    uint32_t end = max((uintptr_t) boot + boot->total_size, pmm_get_kernel_end());
+    uint32_t to_map = divide_up(end, 0x1000);
+    memset(kernel_directory, 0, (DIRECTORY_INDEX(KERNEL_BASE_VIRT) - 1) * sizeof(directory_entry_t));
     paging_map_pages(0x00000000, 0x00000000, to_map, PAGE_RW);
     paging_invalidate_page(0x00000000);
     current_page_directory = kernel_directory;

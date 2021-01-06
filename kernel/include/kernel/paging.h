@@ -1,16 +1,17 @@
 #pragma once
 
 #include <kernel/isr.h>
+#include <kernel/multiboot2.h>
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // Page directories are arrays of directory entries
 // Page tables are arrays of table entries
 typedef uint32_t directory_entry_t;
 typedef uint32_t page_t;
 
-void init_paging();
+void init_paging(mb2_t* boot);
 uintptr_t paging_get_kernel_directory();
 page_t* paging_get_page(uintptr_t virt, bool create, uint32_t flags);
 void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags);

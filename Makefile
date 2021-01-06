@@ -93,7 +93,6 @@ clean: $(PROJECT_CLEAN)
 	@rm -f SnowflakeOS.iso
 	@rm -f misc/grub.cfg
 	@rm -f misc/disk.img
-	@rm -f *.log
 
 SnowflakeOS.iso: $(PROJECTS) $(GRUBCFG)
 	$(info [all] writing $@)

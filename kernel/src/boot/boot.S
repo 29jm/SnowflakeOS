@@ -1,33 +1,48 @@
-# Relevant documentation:
-# https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+# Relevant multiboot2 documentation:
+# https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html
 
-.set MAGIC,            0x1BADB002
-.set FLAGS_PAGE_ALIGN, 1 << 0
-.set FLAGS_MEMORY,     1 << 1
-.set FLAGS_GRAPHICS,   1 << 2
+# Multiboot tags
+.set TAG_END,          0
+.set TAG_FRAMEBUFFER,  5
 
-.set FLAGS,            FLAGS_PAGE_ALIGN | FLAGS_MEMORY | FLAGS_GRAPHICS
-.set CHECKSUM,         -(MAGIC + FLAGS)
+# Multiboot flags
+.set TAG_REQUIRED,     0
+.set TAG_OPTIONAL,     1
+
+# Multiboot2 header constants
+.set MAGIC,            0xE85250D6
+.set ARCH,             0
+.set HEADER_LEN,       (multiboot_end - multiboot_start)
+.set CHECKSUM,         -(MAGIC + ARCH + HEADER_LEN)
 
 .set KERNEL_VIRTUAL_BASE, 0xC0000000
 .set KERNEL_PAGE_NUMBER,  (KERNEL_VIRTUAL_BASE >> 22)
 
-.align 4
-
 # Multiboot header
 .section .multiboot
+multiboot_start:
+    # Magic
+    .align 8
     .long MAGIC
-    .long FLAGS
+    .long ARCH
+    .long HEADER_LEN
     .long CHECKSUM
-    .long 0x00000000 /* header_addr stub*/
-    .long 0x00000000 /* load_addr stub*/
-    .long 0x00000000 /* load_end_addr stub*/
-    .long 0x00000000 /* bss_end_addr stub*/
-    .long 0x00000000 /* entry_addr stub*/
-    .long 0    # 0 for linear, 1 for text mode
-    .long 1024 # width
-    .long 768  # height
-    .long 32   # bpp
+
+    # Graphics tag
+    .align 8
+    .short TAG_FRAMEBUFFER
+    .short TAG_REQUIRED
+    .long 20
+    .long 1024
+    .long 768
+    .long 32
+
+    # End tag
+    .align 8
+    .short TAG_END
+    .short TAG_REQUIRED
+    .long 8
+multiboot_end:
 
 # Reserve a stack for the initial thread.
 .section .bootstrap_stack, "aw", @nobits
@@ -36,11 +51,17 @@ stack_bottom:
 stack_top:
 
 .section .data
+
+# Initial mapping: we identity map *a lot* of memory because GRUB seems to like
+# multiboot2 information really high for some reason.
 .global kernel_directory
-.align 0x1000
 kernel_directory:
+    .align 0x1000
     .long 0x00000083 # 4 MiB pages
-    .fill (KERNEL_PAGE_NUMBER - 1), 4, 0
+    .long 0x00400083
+    .long 0x00800083
+    .long 0x00C00083
+    .fill (KERNEL_PAGE_NUMBER - 4), 4, 0
     .long 0x00000083
     .fill (1024 - KERNEL_PAGE_NUMBER - 1), 4, 0
 
@@ -75,7 +96,6 @@ _start_higher_half:
     # Pass the multiboot header adress and magic number,
     # See https://www.gnu.org/software/grub/manual/multiboot/html_node/Machine-state.html
     pushl %eax
-    add $0xC0000000, %ebx
     pushl %ebx
 
     cli # disable until we setup handlers
