@@ -1,6 +1,7 @@
 #include <kernel/pipe.h>
 #include <kernel/sys.h>
 
+#include <ringbuffer.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,49 +9,26 @@
 
 typedef struct pipe_fs_t {
     fs_t fs;
-    uint8_t* buf;
-    uint32_t buf_size;
-    uint32_t content_start;
-    uint32_t content_size;
+    ringbuffer_t* buf;
 } pipe_fs_t;
 
 uint32_t pipe_read(pipe_fs_t* pipe, uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t size) {
     UNUSED(inode); // There's only one "file" in this fs, the pipe itself
     UNUSED(offset);
 
-    for (uint32_t i = 0; i < size; i++) {
-        if (!pipe->content_size) {
-            return i;
-        }
-
-        buf[i] = pipe->buf[pipe->content_start];
-        pipe->content_start = (pipe->content_start + 1) % pipe->buf_size;
-        pipe->content_size--;
-    }
-
-    return size;
+    return ringbuffer_read(pipe->buf, size, buf);
 }
 
 uint32_t pipe_append(pipe_fs_t* pipe, uint32_t inode, uint8_t* data, uint32_t size) {
     UNUSED(inode);
 
-    for (uint32_t i = 0; i < size; i++) {
-        if (pipe->content_size == PIPE_SIZE) {
-            pipe->buf[pipe->content_start] = data[i];
-            pipe->content_start = (pipe->content_start + 1) % pipe->buf_size;
-        } else {
-            pipe->buf[(pipe->content_start + pipe->content_size) % pipe->buf_size] = data[i];
-            pipe->content_size++;
-        }
-    }
-
-    return size;
+    return ringbuffer_write(pipe->buf, size, data);
 }
 
 int32_t pipe_close(pipe_fs_t* fs, uint32_t ino) {
     UNUSED(ino);
 
-    kfree(fs->buf);
+    ringbuffer_free(fs->buf);
     kfree(fs->fs.root);
     kfree(fs);
 
@@ -63,8 +41,7 @@ inode_t* pipe_new() {
     p->fs = zalloc(sizeof(pipe_fs_t));
 
     pipe_fs_t* fs = (pipe_fs_t*) p->fs;
-    fs->buf = zalloc(PIPE_SIZE);
-    fs->buf_size = PIPE_SIZE;
+    fs->buf = ringbuffer_new(PIPE_SIZE);
 
     p->fs->root = (folder_inode_t*) p;
     p->fs->read = (fs_read_t) pipe_read;

@@ -2,21 +2,20 @@
 #include <stdlib.h>
 #include <math.h>
 
-/* Initilize a ringbuffer that was pre-allocated */
-int ringbuffer_init(ringbuffer_t* ref, size_t size) {
+/* Initilizes a ringbuffer that was pre-allocated. Useful when you'd rather use
+ * the stack than allocate.
+ * Obviously, don't call `ringbuffer_free` on those.
+ */
+ringbuffer_t* ringbuffer_init(ringbuffer_t* ref, uint8_t* buf, size_t size) {
+    ref->data = buf;
     ref->size = size;
     ref->r_base = 0;
     ref->data_size = 0;
-    ref->data = malloc(size);
 
-    if (ref->data == NULL) {
-        return -1;
-    }
-
-    return 0;
+    return ref;
 }
 
-/* Allocate and initialize a ringbuffer returns NULL on failure to allocate */
+/* Allocate and initialize a ringbuffer, returns NULL on failure. */
 ringbuffer_t* ringbuffer_new(size_t size) {
     ringbuffer_t* ref = malloc(sizeof(ringbuffer_t));
 
@@ -24,27 +23,31 @@ ringbuffer_t* ringbuffer_new(size_t size) {
         return NULL;
     }
 
-    if (ringbuffer_init(ref, size) == -1) {
-        free(ref);
-        ref = NULL;
+    uint8_t* buf = zalloc(size);
+
+    if (!buf) {
+        return NULL;
     }
 
-    return ref;
+    return ringbuffer_init(ref, buf, size);
 }
 
-/* How much data is available in the buffer
+/* Returns how much data is available in the buffer, in bytes.
  */
 size_t ringbuffer_available(ringbuffer_t* ref) {
     return ref->data_size;
 }
 
+/* Frees a ringbuffer previously allocated by `ringbuffer_new`.
+ */
 void ringbuffer_free(ringbuffer_t* ref) {
     free(ref->data);
     free(ref);
 }
 
-/* Attempt to write n bytes of data into the buffer ref, returns the number of
- * bytes written
+/* Writes `n` bytes into the ringbuffer.
+ * Returns the number of new bytes available. This may not equal `n` because
+ * overwriting replaces data, it doesn't add more.
  */
 size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     size_t w_base = ref->r_base + ref->data_size;
@@ -63,11 +66,9 @@ size_t ringbuffer_write(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     return min(n, ref->size);
 }
 
-/* Read n bytes from the ringbuffer pointed at by ref into block returns n if a
- * full block is read values < n indicate that there is less data than n
- * available and the returned value was read to buffer a return of 0 means no
- * data was available to read also note that buffer is not cleared so any data
- * after the read bytes is untouched.
+/* Read at most n bytes from the ringbuffer into `buffer`.
+ * Returns the total number of bytes read. If only k < n bytes are available,
+ * k bytes are read and k is returned.
  */
 size_t ringbuffer_read(ringbuffer_t* ref, size_t n, uint8_t* buffer) {
     size_t to_read = min(n, ringbuffer_available(ref));
