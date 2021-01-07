@@ -75,7 +75,7 @@ void ui_set_title(ui_app_t app, const char* title) {
  * `snow_get_event`. Or by fake events, whatever.
  */
 void ui_handle_input(ui_app_t app, wm_event_t event) {
-    if (event.type & WM_EVENT_CLICK) {
+    if (event.type == WM_EVENT_CLICK) {
         point_t pos = { event.mouse.position.left, event.mouse.position.top };
 
         if (app.root->on_click) {
@@ -83,7 +83,7 @@ void ui_handle_input(ui_app_t app, wm_event_t event) {
         }
     }
 
-    if (event.type & WM_EVENT_MOUSE_MOVE) {
+    if (event.type == WM_EVENT_MOUSE_MOVE) {
         point_t pos = { event.mouse.position.left, event.mouse.position.top };
 
         if (app.root->on_mouse_move) {

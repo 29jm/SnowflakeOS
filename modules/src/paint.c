@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        if (event.type & WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
+        if (event.type == WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
             running = false;
         }
 

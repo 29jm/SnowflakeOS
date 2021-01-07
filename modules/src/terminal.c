@@ -55,10 +55,10 @@ int main() {
         bool needs_redrawing = false;
 
         // Do we have focus?
-        if (event.type & WM_EVENT_GAINED_FOCUS) {
+        if (event.type == WM_EVENT_GAINED_FOCUS) {
             focused = true;
             needs_redrawing = true;
-        } else if (event.type & WM_EVENT_LOST_FOCUS) {
+        } else if (event.type == WM_EVENT_LOST_FOCUS) {
             focused = false;
             cursor = false;
             needs_redrawing = true;
@@ -74,8 +74,6 @@ int main() {
             if (time != last_time) {
                 last_time = time;
                 cursor = !cursor;
-                event.type |= WM_EVENT_KBD;
-                event.kbd.pressed = true;
                 needs_redrawing = true;
             }
         }
@@ -97,8 +95,9 @@ int main() {
             str_append(text_buf, prompt);
         }
 
-        if (event.type & WM_EVENT_KBD && event.kbd.pressed) {
+        if (event.type == WM_EVENT_KBD && event.kbd.pressed) {
             needs_redrawing = true;
+
             switch (key.keycode) {
             case KBD_ENTER:
             case KBD_KP_ENTER:

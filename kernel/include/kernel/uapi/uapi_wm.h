@@ -2,22 +2,22 @@
 
 #include <stdbool.h>
 
-#define WM_NORMAL     0
+#define WM_NORMAL 0
 #define WM_BACKGROUND 1
 #define WM_FOREGROUND 2
 #define WM_SKIP_INPUT 4
 
-#define WM_CMD_OPEN   0
-#define WM_CMD_CLOSE  1
+#define WM_CMD_OPEN 0
+#define WM_CMD_CLOSE 1
 #define WM_CMD_RENDER 2
-#define WM_CMD_INFO   3
-#define WM_CMD_EVENT  4
+#define WM_CMD_INFO 3
+#define WM_CMD_EVENT 4
 
-#define WM_EVENT_CLICK        1
-#define WM_EVENT_KBD          2
-#define WM_EVENT_GAINED_FOCUS 4
-#define WM_EVENT_LOST_FOCUS   8
-#define WM_EVENT_MOUSE_MOVE   16
+#define WM_EVENT_CLICK 1
+#define WM_EVENT_KBD 2
+#define WM_EVENT_GAINED_FOCUS 3
+#define WM_EVENT_LOST_FOCUS 4
+#define WM_EVENT_MOUSE_MOVE 5
 
 typedef struct {
     int32_t top, left, bottom, right;
@@ -45,9 +45,9 @@ typedef struct {
 } wm_kbd_event_t;
 
 /* This structure is how a window can get its user input.
- * The bits set in `type` indicate which members of the structure are valid,
- * for instance if `type` is `WM_EVENT_CLICK | WM_EVENT_KBD`, both the `mouse`
- * and `kbd` members contain new and valid input.
+ * `type` is one of the `WM_EVENT_*` flags, and describe valid fields:
+ *  - `WM_EVENT_{CLICK,MOUSE_MOVE}` -> `mouse` is valid,
+ *  - `WM_EVENT_KBD` -> `kbd` is valid.
  */
 typedef struct {
     uint32_t type;

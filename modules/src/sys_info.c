@@ -1,8 +1,8 @@
 #include <snow.h>
-
-#include <string.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define BUF_SIZE 30
 
@@ -22,17 +22,15 @@ int main() {
     char mem_usage[BUF_SIZE];
     char mem_total[BUF_SIZE];
 
-    while (1) {
+    while (true) {
         wm_event_t evt = snow_get_event(win);
 
-        if (evt.type & WM_EVENT_CLICK) {
-            printf("sys_info was clicked at %d;%d\n", evt.mouse.position.left, evt.mouse.position.top);
+        if (evt.type == WM_EVENT_CLICK) {
+            printf("sys_info clicked at %d;%d\n", evt.mouse.position.left, evt.mouse.position.top);
         }
 
-        if (evt.type & WM_EVENT_KBD) {
-            if (evt.kbd.keycode == KBD_ESCAPE) {
-                break;
-            }
+        if (evt.type == WM_EVENT_KBD && evt.kbd.keycode == KBD_ESCAPE) {
+            break;
         }
 
         sys_info_t info;
