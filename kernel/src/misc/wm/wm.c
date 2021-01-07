@@ -451,14 +451,14 @@ void wm_draw_mouse(rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
     for (int32_t y = 0; y < new.bottom - new.top - 6; y++) {
-        memset((void*) addr, 127, (y+1)*fb.bpp/8);
+        memset((void*) addr, 127, (y + 1) * fb.bpp/8);
         addr += fb.pitch;
     }
 
     addr += 4*fb.bpp/8;
 
     for (int32_t y = 0; y < 6; y++) {
-        memset((void*) addr, 127, 3*fb.bpp/8);
+        memset((void*) addr, 127, 3 * fb.bpp/8);
         addr += fb.bpp/8;
         addr += fb.pitch;
     }
@@ -474,8 +474,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
     const mouse_t prev = mouse;
     const float sens = 0.7f;
-    const int32_t max_x = fb.width - MOUSE_SIZE;
-    const int32_t max_y = fb.height - MOUSE_SIZE;
+    const int32_t max_x = fb.width - MOUSE_SIZE - 1;
+    const int32_t max_y = fb.height - MOUSE_SIZE - 1;
 
     // Move the cursor
     float dx = (raw_curr.x - raw_prev.x)*sens;
@@ -554,7 +554,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
 
-            ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*)&event);
+            ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
     }
 
@@ -573,7 +573,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
 void wm_kbd_callback(kbd_event_t event) {
     wm_event_t kbd_event;
-    
+
     if (!list_empty(&windows)) {
         list_t* iter;
         wm_window_t* win;

@@ -29,6 +29,7 @@ AllowAllArgumentsOnNextLine: true
 PenaltyBreakAssignment: 100
 PenaltyExcessCharacter: 1
 SpaceBeforeParens: ControlStatementsExceptForEachMacros
+AlignEscapedNewlines: DontAlign
 SpaceBeforeSquareBrackets: false
 SpacesInContainerLiterals: true
 SpaceInEmptyBlock: true
