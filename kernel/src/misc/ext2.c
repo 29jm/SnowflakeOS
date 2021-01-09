@@ -909,10 +909,6 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
         kfree(tmp);
     }
 
-    if (!ret) {
-        printke("invalid inode block");
-    }
-
     return ret;
 }
 

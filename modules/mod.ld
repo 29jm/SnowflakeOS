@@ -1,5 +1,5 @@
 ENTRY(_start)
-OUTPUT_FORMAT(binary)
+/* OUTPUT_FORMAT(binary) */
 
 SECTIONS
 {
@@ -14,11 +14,15 @@ SECTIONS
     .data ALIGN(4):
     {
         *(.data)
-        *(.bss*) /* Make .bss 'PROGBITS' */
     }
 
     .rodata ALIGN(4):
     {
         *(.rodata*)
+    }
+
+    .bss ALIGN(4):
+    {
+        *(.bss)
     }
 }

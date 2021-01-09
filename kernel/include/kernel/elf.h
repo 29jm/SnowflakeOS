@@ -4,9 +4,18 @@
  */
 #pragma once
 
-#include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#define ELF_ERRCLS 0x45
+#define ELF_IVMAGN (ELF_ERRCLS + 1)
+#define ELF_UNSCLS (ELF_ERRCLS + 2)
+#define ELF_UNSORD (ELF_ERRCLS + 3)
+#define ELF_UNSTGT (ELF_ERRCLS + 4)
+#define ELF_UNSVER (ELF_ERRCLS + 5)
+#define ELF_UNSTYP (ELF_ERRCLS + 6)
+#define ELF_RELERR (ELF_ERRCLS + 7)
 
 #define ELF_IDENTN 16
 
@@ -99,3 +108,4 @@ typedef struct __elf_secthdr {
 
 bool elf_check_mag(elf_header_t* header);
 bool elf_check_support(elf_header_t* header);
+uint32_t elf_load(uint8_t* file, uint32_t len, uintptr_t* directory);

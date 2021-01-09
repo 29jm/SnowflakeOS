@@ -1,14 +1,14 @@
-#include <kernel/proc.h>
-#include <kernel/timer.h>
-#include <kernel/paging.h>
-#include <kernel/pmm.h>
-#include <kernel/gdt.h>
+#include <kernel/elf.h>
 #include <kernel/fpu.h>
 #include <kernel/fs.h>
+#include <kernel/gdt.h>
+#include <kernel/paging.h>
 #include <kernel/pipe.h>
-#include <kernel/sys.h>
-
+#include <kernel/pmm.h>
+#include <kernel/proc.h>
 #include <kernel/sched_robin.h>
+#include <kernel/sys.h>
+#include <kernel/timer.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -422,24 +422,46 @@ int32_t proc_exec(const char* path, char** argv) {
     }
 
     uint8_t* data = kmalloc(in->size);
+    printk("exec: reading %s", path);
     uint32_t read = fs_read(in, 0, data, in->size);
 
-    if (read == in->size && in->size) {
-        process_t* p = proc_run_code(data, in->size, argv);
-
-        // Clone file descriptors
-        if (proc_get_current_pid()) {
-            ft_entry_t* ent;
-
-            list_for_each_entry(ent, &current_process->filetable) {
-                ent->refcount++;
-                list_add_front(&p->filetable, ent);
-            }
-        }
-    } else {
-        printke("exec failed while reading the executable");
+    if (read < in->size) {
         return -1;
     }
+
+    uintptr_t pd;
+
+    if (elf_load(data, read, &pd) != 0) { // #define
+        return -1;
+    }
+
+    process_t* p = proc_run_code(data, read, argv);
+
+    // Clone file descriptors
+    if (proc_get_current_pid()) {
+        ft_entry_t* ent;
+
+        list_for_each_entry(ent, &current_process->filetable) {
+            ent->refcount++;
+            list_add_front(&p->filetable, ent);
+        }
+    }
+
+    /* Maybe elf_load should return a process_t directly, it's hard to fill
+     * that structure after the fact.
+     * Anyway the above call should allow for some testing already.
+
+    process_t* p = kmalloc(sizeof(process_t));
+
+    *p = (process_t) {
+        .code_len = ?;
+    };
+
+    // Setup the stack
+
+
+    scheduler->sched_add(scheduler, p);
+    */
 
     return 0;
 }

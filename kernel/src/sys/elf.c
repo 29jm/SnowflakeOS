@@ -1,5 +1,5 @@
-#include <kernel/sys/elf/elf.h>
-#include <kernel/sys/elf/elf_errno.h>
+#include <kernel/elf.h>
+#include <kernel/sys.h>
 
 #include <errno.h>
 
@@ -48,4 +48,10 @@ bool elf_check_support(elf_header_t* header) {
         errno = ELF_UNSTYP;
         return false;
     }
+}
+
+uint32_t elf_load(uint8_t* file, uint32_t len, uintptr_t* directory) {
+    printk("called with a file of %d bytes", len);
+
+    return 0;
 }

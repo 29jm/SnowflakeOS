@@ -81,7 +81,7 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
     init_proc();
 
     proc_exec("/background", NULL);
-    proc_exec("/terminal", NULL);
+    // proc_exec("/terminal", NULL);
 
     proc_enter_usermode();
 }
