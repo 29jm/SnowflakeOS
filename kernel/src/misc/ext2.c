@@ -871,6 +871,10 @@ static uint32_t get_or_create_inode_block(ext2_fs_t* fs, ext2_inode_t* in, uint3
     return ret;
 }
 
+/* Returns the nth data block of an inode, or zero if it does not exist.
+ * Note: returning zero may simply mean that we're reading a sparse file;
+ * such blocks are defined as containing only zeros.
+ */
 static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) {
     // Number of block pointers in an indirect block
     uint32_t p = fs->block_size / sizeof(uint32_t);
@@ -907,9 +911,7 @@ static uint32_t get_inode_block(ext2_fs_t* fs, ext2_inode_t* inode, uint32_t n) 
         read_block(fs, tmp[offset_b], (uint8_t*) tmp);
         ret = tmp[offset_c];
         kfree(tmp);
-    }
-
-    if (!ret) {
+    } else {
         printke("invalid inode block");
     }
 
