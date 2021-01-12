@@ -3,7 +3,6 @@
 #include <kernel/sys.h>
 
 #include <stdbool.h>
-#include <stdint.h>
 
 #define CFG_ADDR 0xCF8
 #define CFG_DATA 0xCFC
@@ -12,24 +11,8 @@
 
 #define HEADER_MULTIFUNC (1 << 7)
 
-typedef struct pci_header_t {
-    uint16_t vendor, device;
-    uint16_t command, status;
-    uint8_t rev, interface, subclass, class;
-    uint8_t cache_line_size, latency, header_type, bist;
-} __attribute__((packed)) pci_header_t;
-
-typedef struct pci_header0_t {
-    pci_header_t header;
-    uint32_t bar[6];
-    uint32_t cardbus_cis_addr;
-    uint16_t subsystem, subsystem_vendor;
-    uint32_t expansion_addr;
-    uint16_t reserved0, capabilities_addr;
-    uint32_t reserved1;
-    uint8_t max_latency, min_grant, int_pin, int_line;
-} __attribute__((packed)) pci_header0_t;
-
+/* These are not useable right now: field must be reordered by groups of 4
+ * bytes, reversed. */
 typedef struct pci_header1_t {
     pci_header_t header;
     uint32_t bar[2];
@@ -67,17 +50,13 @@ typedef struct pci_header2_t {
     uint32_t legacy_base_addr;
 } __attribute__((packed)) pci_header2_t;
 
-typedef struct pci_device_t {
-    uint8_t bus, dev, func;
-} pci_device_t;
-
-uint16_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
+uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
     uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
 
     outportl(CFG_ADDR, addr);
     uint32_t out = inportl(CFG_DATA);
 
-    /* We want the second word */
+    /* In this case, we want the second word */
     if (offset & 2) {
         return out >> 16;
     }
@@ -86,32 +65,56 @@ uint16_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset)
 }
 
 bool pci_bus_has_device(uint8_t bus, uint8_t dev) {
-    return pci_read_config(bus, dev, 0, 0) != 0xFFFF;
+    return pci_read_config_word(bus, dev, 0, 0) != 0xFFFF;
 }
 
 bool pci_device_has_function(uint8_t bus, uint8_t dev, uint8_t func) {
-    return pci_read_config(bus, dev, func, 0) != 0xFFFF;
+    return pci_read_config_word(bus, dev, func, 0) != 0xFFFF;
 }
 
 uint8_t pci_header_type(uint8_t bus, uint8_t dev) {
-    return pci_read_config(bus, dev, 0, 14);
+    return pci_read_config_word(bus, dev, 0, 14) & 0xFFFF;
 }
 
-uint32_t pci_read_header(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size) {
-    for (uint32_t i = 0; i < size; i += 2) {
-        uint16_t word = pci_read_config(bus, dev, func, i);
-        buf[i] = (uint8_t) word;
-        buf[i + 1] = word >> 8;
+void pci_print_device(pci_device_t dev) {
+    uint8_t type = pci_header_type(dev.bus, dev.dev) & ~HEADER_MULTIFUNC;
+    pci_header_t hdr;
+    pci_header0_t hdr0;
+    // pci_header1_t hdr1;
+    // pci_header2_t hdr2;
+
+    /* Print information common to all devices */
+    pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr, sizeof(hdr));
+    printk("%x:%x:%x: device %x:%x, class %02x:%02x:%02x",
+        dev.bus, dev.dev, dev.func, hdr.vendor, hdr.device, hdr.class, hdr.subclass, hdr.interface);
+
+    /* Print device-type-specific information */
+    switch (type) {
+    case 0x00:
+        pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr0, sizeof(hdr0));
+        printk(" - interrupt pin: %d, interrupt line: %d", hdr0.int_pin, hdr0.int_line);
+
+        for (uint32_t i = 0; i < 6; i++) {
+            if (hdr0.bar[i]) {
+                printk("   BAR%d: 0x%p", i, hdr0.bar[i]);
+            }
+        }
+
+        break;
     }
-
-    return size;
 }
 
-/*
-    TODO: delet this
-    31        	30 - 24 	23 - 16 	15 - 11     	10 - 8          	7 - 0
-    Enable Bit 	Reserved 	Bus Number 	Device Number 	Function Number 	Register Offset¹
-*/
+void pci_register_device(pci_device_t dev) {
+    pci_header_t hdr;
+
+    pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr, sizeof(hdr));
+
+    /* IDE controller */
+    if (hdr.class == 0x01 && hdr.subclass == 0x01) {
+
+    }
+}
+
 void pci_enumerate_devices() {
     for (uint32_t bus = 0; bus < 256; bus++) {
         for (uint32_t dev = 0; dev < 32; dev++) {
@@ -128,13 +131,11 @@ void pci_enumerate_devices() {
                         continue;
                     }
 
-                    pci_read_header(bus, dev, func, (void*) &hdr, sizeof(hdr));
-                    printk("%x:%x:%x: device %x:%x, class %02x:%02x",
-                        bus, dev, func, hdr.vendor, hdr.device, hdr.class, hdr.subclass, hdr.interface);
+                    pci_print_device((pci_device_t) {bus, dev, func});
                 }
             } else {
-                pci_read_header(bus, dev, 0, (void*) &hdr, sizeof(hdr));
-                printk("%x:%x:%x: device %x:%x, class %02x:%02x", bus, dev, 0, hdr.vendor, hdr.device, hdr.class, hdr.subclass);
+                pci_read_config(bus, dev, 0, (uint8_t*) &hdr, sizeof(hdr));
+                pci_print_device((pci_device_t) {bus, dev, 0});
             }
 
         }
