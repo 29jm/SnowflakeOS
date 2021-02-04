@@ -6,6 +6,9 @@
 
 #include <stdio.h>
 
+void ps2_wait_ms(uint32_t ms);
+void ps2_enable_port(uint32_t num, bool enable);
+
 // Describes the available PS/2 controllers
 bool controllers[] = { true, true };
 
@@ -38,10 +41,9 @@ void init_ps2() {
         printke("invalid bit set in configuration byte");
     }
 
-    // Disable interrupts and scan code translation
+    /* Disable interrupts and scan code translation, through the configuration
+     * byte */
     config &= ~(PS2_CFG_FIRST_PORT | PS2_CFG_SECOND_PORT | PS2_CFG_TRANSLATION);
-
-    // Update configuration byte
     ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
     ps2_write(PS2_DATA, config);
 
@@ -57,8 +59,8 @@ void init_ps2() {
         return;
     }
 
-    // The last write may have reset our controller:
-    // better reset our configuration byte just in case
+    /* The last write may have reset our controller: better reset our
+     * configuration byte just to be sure */
     ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
     ps2_write(PS2_DATA, config);
 
@@ -92,19 +94,6 @@ void init_ps2() {
         }
     }
 
-    // Enable available ports
-    if (controllers[0]) {
-        ps2_write(PS2_CMD, PS2_ENABLE_FIRST);
-        config |= PS2_CFG_FIRST_PORT;
-        config &= ~PS2_CFG_FIRST_CLOCK;
-    }
-
-    if (controllers[1]) {
-        ps2_write(PS2_CMD, PS2_ENABLE_SECOND);
-        config |= PS2_CFG_SECOND_PORT;
-        config &= ~PS2_CFG_SECOND_CLOCK;
-    }
-
     // Enable interrupts from detected controllers
     ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
     ps2_write(PS2_DATA, config);
@@ -115,29 +104,55 @@ void init_ps2() {
             continue;
         }
 
+        /* Enable the relevant port */
+        ps2_enable_port(i, true);
+
+        /* Perform the reset */
         ps2_write_device(i, PS2_DEV_RESET);
+        ps2_wait_ms(500);
+        ps2_expect_ack();
+        ps2_wait_ms(100);
+
         uint8_t ret = ps2_read(PS2_DATA);
 
-        // If it fails, disable the device's port
-        if (ret != PS2_DEV_ACK || ps2_read(PS2_DATA) != PS2_DEV_RESET_ACK) {
-            printke("failed to reset device %d", i);
+        /* Keyboards ACK, mice (usually) ACK and send 0x00 */
+        if (i == 0 && ret != PS2_DEV_RESET_ACK) {
+            printke("keyboard failed to acknowledge reset, sent %x", ret);
+            goto error;
+        } else if (i == 1) {
+            uint8_t ret2 = ps2_read(PS2_DATA);
 
-            controllers[i] = false;
-            config &= ~(i == 0 ? PS2_CFG_FIRST_PORT : PS2_CFG_SECOND_PORT);
-
-            ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
-            ps2_write(PS2_DATA, config);
+            /* Mice are a complete mess, cut them some slack */
+            if ((ret == PS2_DEV_RESET_ACK && (ret2 == PS2_DEV_ACK || ret2 == 0x00)) ||
+               ((ret == PS2_DEV_ACK || ret == 0x00) && ret == PS2_DEV_RESET_ACK)) {
+                /* Wrong if for readability */
+            } else {
+                printke("mice failed to acknowledge reset, sent %x, %x", ret, ret2);
+                goto error;
+            }
         }
 
-        // For some reason, mice send an additional 0x00 byte
-        if (ps2_can_read()) {
-            ps2_read(0x60);
+        /* Put the keyboard back to sleep so it doesn't disturb the mouse reset */
+        if (i == 0) {
+            ps2_enable_port(i, false);
         }
+
+        continue;
+
+    error:
+        ps2_enable_port(i, false);
+        controllers[i] = false;
+    }
+
+    /* Reenable the keyboard port if it worked in the first place */
+    if (controllers[0]) {
+        ps2_enable_port(0, true);
     }
 
     for (uint32_t i = 0; i < 2; i++) {
         if (controllers[i]) {
             uint32_t type = ps2_identify_device(i);
+            bool driver_called = true;
 
             switch (type) {
                 case PS2_KEYBOARD:
@@ -150,11 +165,49 @@ void init_ps2() {
                 case PS2_MOUSE_FIVE_BUTTONS:
                     printk("mouse");
                     init_mouse(i);
+                    break;
+                default:
+                    driver_called = false;
+                    break;
+            }
+
+            /* Enable interrupts from the port; we write the new config just below */
+            if (driver_called) {
+                config |= i == 0 ? PS2_CFG_FIRST_PORT : PS2_CFG_SECOND_PORT;
+                config &= ~(i == 0 ? PS2_CFG_FIRST_CLOCK : PS2_CFG_SECOND_CLOCK);
             }
         }
     }
 
+    ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
+    ps2_write(PS2_DATA, config);
+
     STI();
+}
+
+/* Enables or disables ports, not port interrupts. Useful to make sure you're
+ * not receiving data from the wrong port when reading from PS2_DATA.
+ */
+void ps2_enable_port(uint32_t num, bool enable) {
+    if (!controllers[num]) {
+        return;
+    }
+
+    if (!enable) {
+        ps2_write(PS2_CMD, num == 0 ? PS2_DISABLE_FIRST : PS2_DISABLE_SECOND);
+    } else {
+        ps2_write(PS2_CMD, num == 0 ? PS2_ENABLE_FIRST : PS2_ENABLE_SECOND);
+    }
+}
+
+/* A totally arbitrary and unreliable way to wait the wrong amount of time.
+ */
+void ps2_wait_ms(uint32_t ms) {
+    uint32_t i = 0;
+
+    while (i++ < 10000 * ms) {
+        asm volatile ("pause");
+    }
 }
 
 /* Asks the device to identify itself, returns an enum value.

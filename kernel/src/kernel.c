@@ -50,8 +50,8 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
     init_irq();
     init_syscall();
 
-    init_ps2();
     init_timer();
+    init_ps2();
 
     // Load GRUB modules as programs
     mb2_tag_t* tag = boot->tags;

@@ -86,6 +86,10 @@ bochs: SnowflakeOS.iso
 	bochs -q -rc .bochsrc_cmds
 	cat serial.log
 
+vbox: SnowflakeOS.iso
+	# VBOX_GUI_DBG_ENABLED=1 VBOX_GUI_DBG_AUTO_SHOW=1 vboxmanage startvm SnowflakeOS
+	vboxmanage startvm SnowflakeOS
+
 clean: $(PROJECT_CLEAN)
 	@rm -rf $(SYSROOTDIR)
 	@rm -rf $(TARGETROOT)

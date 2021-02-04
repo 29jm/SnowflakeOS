@@ -1,6 +1,7 @@
-#include <kernel/irq.h>
-#include <kernel/idt.h>
 #include <kernel/com.h>
+#include <kernel/fpu.h>
+#include <kernel/idt.h>
+#include <kernel/irq.h>
 #include <kernel/sys.h>
 
 #include <string.h>
@@ -53,6 +54,8 @@ void init_irq() {
 void irq_handler(registers_t* regs) {
     uint32_t irq = regs->int_no;
 
+    fpu_kernel_enter();
+
     // Handle spurious interrupts
     if (irq == IRQ7 || irq == IRQ15) {
         uint16_t isr = irq_get_isr();
@@ -75,11 +78,11 @@ void irq_handler(registers_t* regs) {
 
     if (handler) {
         handler(regs);
-    }
-    else {
+    } else {
         printke("unhandled IRQ%d", irq - IRQ0);
     }
 
+    fpu_kernel_exit();
 }
 
 void irq_send_eoi(uint8_t irq) {

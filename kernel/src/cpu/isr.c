@@ -1,9 +1,10 @@
-#include <kernel/isr.h>
+#include <kernel/fpu.h>
 #include <kernel/idt.h>
+#include <kernel/isr.h>
 #include <kernel/sys.h>
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 
 static char* exception_msgs[] = {
     "Division By Zero",
@@ -95,6 +96,8 @@ void init_isr() {
 void isr_handler(registers_t* regs) {
     assert(regs->int_no < 256);
 
+    fpu_kernel_enter();
+
     if (isr_handlers[regs->int_no]) {
         handler_t handler = isr_handlers[regs->int_no];
         handler(regs);
@@ -105,6 +108,8 @@ void isr_handler(registers_t* regs) {
         // TODO: we're better than this
         abort();
     }
+
+    fpu_kernel_exit();
 }
 
 /* Registers a handler to be called when interrupt `num` fires.

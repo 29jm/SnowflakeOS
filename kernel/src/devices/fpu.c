@@ -7,7 +7,7 @@
 #define CR4_OSFXSR (1 << 9)
 
 /* Instructions to read and write FPU context require a 16-bytes aligned buffer */
-static uint8_t aligned_buff[512] __attribute__ ((aligned (16)));
+static uint8_t kernel_fpu[512] __attribute__((aligned(16)));
 
 void init_fpu() {
     uint32_t cr;
@@ -35,12 +35,28 @@ void init_fpu() {
         "fninit" ::"r"(cr));
 }
 
-/* Saves FPU context for `prev` and restores `next`'s.
+/* Whatever process got interrupted last has its fpu state in kernel_fpu.
+ * When this function is called, it is being switched away from, hence we save
+ * kernel_fpu in that process"s structure, and we load the next process's fpu
+ * state into kernel_fpu, which will get picked up by fpu_kernel_exit soon
+ * enough.
  */
 void fpu_switch(process_t* prev, const process_t* next) {
-    asm volatile ("fxsave (%0)" :: "r" (aligned_buff));
-    memcpy(prev->fpu_registers, aligned_buff, 512);
+    memcpy(prev->fpu_registers, kernel_fpu, 512);
+    memcpy(kernel_fpu, next->fpu_registers, 512);
+}
 
-    memcpy(aligned_buff, next->fpu_registers, 512);
-    asm volatile ("fxrstor (%0)" :: "r" (aligned_buff));
+/* Called when execution enters the kernel: the fpu state is saved, then
+ * cleared, so the kernel gets a fresh start.
+ */
+void fpu_kernel_enter() {
+    asm volatile(
+        "fxsave (%0)\n"
+        "fninit\n" :: "r" (kernel_fpu));
+}
+
+/* Restores the process's fpu state upon returning from the kernel.
+ */
+void fpu_kernel_exit() {
+    asm volatile("fxrstor (%0)\n" :: "r" (kernel_fpu));
 }

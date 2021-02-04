@@ -534,7 +534,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
 
-            ringbuffer_write(dragged->events, sizeof(wm_event_t), (uint8_t*)&event);
+            ringbuffer_write(dragged->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
 
         been_dragged = false;
@@ -583,7 +583,7 @@ void wm_kbd_callback(kbd_event_t event) {
             kbd_event.kbd.keycode = event.keycode;
             kbd_event.kbd.pressed = event.pressed;
             kbd_event.kbd.repr = event.repr;
-            ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*)&kbd_event);
+            ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*) &kbd_event);
 
             if (!(win->flags & WM_SKIP_INPUT)) {
                 return;
