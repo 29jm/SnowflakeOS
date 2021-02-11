@@ -37,7 +37,7 @@ void init_fpu() {
 
 /* Whatever process got interrupted last has its fpu state in kernel_fpu.
  * When this function is called, it is being switched away from, hence we save
- * kernel_fpu in that process"s structure, and we load the next process's fpu
+ * kernel_fpu in that process's structure, and we load the next process's fpu
  * state into kernel_fpu, which will get picked up by fpu_kernel_exit soon
  * enough.
  */

@@ -94,10 +94,6 @@ void init_ps2() {
         }
     }
 
-    // Enable interrupts from detected controllers
-    ps2_write(PS2_CMD, PS2_WRITE_CONFIG);
-    ps2_write(PS2_DATA, config);
-
     // Reset devices
     for (uint32_t i = 0; i < 2; i++) {
         if (!controllers[i]) {
@@ -108,6 +104,7 @@ void init_ps2() {
         ps2_enable_port(i, true);
 
         /* Perform the reset */
+        printk("resetting devices %d...", i);
         ps2_write_device(i, PS2_DEV_RESET);
         ps2_wait_ms(500);
         ps2_expect_ack();
@@ -124,7 +121,7 @@ void init_ps2() {
 
             /* Mice are a complete mess, cut them some slack */
             if ((ret == PS2_DEV_RESET_ACK && (ret2 == PS2_DEV_ACK || ret2 == 0x00)) ||
-               ((ret == PS2_DEV_ACK || ret == 0x00) && ret == PS2_DEV_RESET_ACK)) {
+               ((ret == PS2_DEV_ACK || ret == 0x00) && ret2 == PS2_DEV_RESET_ACK)) {
                 /* Wrong if for readability */
             } else {
                 printke("mice failed to acknowledge reset, sent %x, %x", ret, ret2);
@@ -132,8 +129,10 @@ void init_ps2() {
             }
         }
 
-        /* Put the keyboard back to sleep so it doesn't disturb the mouse reset */
+        /* Put the keyboard back to sleep so it doesn't send anything while the
+         * mouse resets, and flush the input, because keyboards are a mess too. */
         if (i == 0) {
+            ps2_read(PS2_DATA);
             ps2_enable_port(i, false);
         }
 
@@ -198,9 +197,13 @@ void ps2_enable_port(uint32_t num, bool enable) {
     } else {
         ps2_write(PS2_CMD, num == 0 ? PS2_ENABLE_FIRST : PS2_ENABLE_SECOND);
     }
+
+    /* Some keyboards actually send a reply, flush it */
+    ps2_read(PS2_DATA);
 }
 
 /* A totally arbitrary and unreliable way to wait the wrong amount of time.
+ * TODO: find a better way, e.g. reading from a port may take some fixed time.
  */
 void ps2_wait_ms(uint32_t ms) {
     uint32_t i = 0;
@@ -214,6 +217,7 @@ void ps2_wait_ms(uint32_t ms) {
  * Useful as some devices's identities are several bytes long.
  */
 uint32_t ps2_identify_device(uint32_t num) {
+    printk("identifying device %d...", num);
     ps2_write_device(num, PS2_DEV_DISABLE_SCAN); // Disables scanning
     ps2_expect_ack();
     ps2_write_device(num, PS2_DEV_IDENTIFY); // Identify
@@ -317,7 +321,7 @@ bool ps2_expect_ack() {
     uint8_t ret = ps2_read(PS2_DATA);
 
     if (ret != PS2_DEV_ACK) {
-        printke("device failed to acknowledge command");
+        printke("device failed to acknowledge command, sent %x", ret);
         return false;
     }
 
