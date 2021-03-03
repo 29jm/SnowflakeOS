@@ -1,2 +1,2 @@
-ldsym global 'kernel/symbols.map'
+ldsym global 'isodir/modules/symbols.map'
 c

@@ -1,10 +1,15 @@
 #include <kernel/fpu.h>
+#include <kernel/isr.h>
+#include <kernel/sys.h>
 
 #include <string.h>
 
 #define CR0_MP (1 << 1)
 #define CR0_EM (1 << 2)
 #define CR4_OSFXSR (1 << 9)
+#define CR4_OSXMMEXCPT (1 << 10)
+
+void fpu_exception_handler(registers_t* regs);
 
 /* Instructions to read and write FPU context require a 16-bytes aligned buffer */
 static uint8_t kernel_fpu[512] __attribute__((aligned(16)));
@@ -25,14 +30,17 @@ void init_fpu() {
 
     asm volatile("mov %0, %%cr0" ::"r"(cr));
 
-    /* Configure CR4: enable the `fxsave` and `fxrstor` instructions. */
+    /* Configure CR4: enable the `fxsave` and `fxrstor` instructions, along
+     * with SSE, and SSE-related exception handling. */
     asm volatile("mov %%cr4, %0" : "=r"(cr));
 
-    cr |= CR4_OSFXSR;
+    cr |= CR4_OSFXSR | CR4_OSXMMEXCPT;
 
     asm volatile(
         "mov %0, %%cr4\n"
         "fninit" ::"r"(cr));
+
+    isr_register_handler(19, fpu_exception_handler);
 }
 
 /* Whatever process got interrupted last has its fpu state in kernel_fpu.
@@ -50,7 +58,7 @@ void fpu_switch(process_t* prev, const process_t* next) {
  * cleared, so the kernel gets a fresh start.
  */
 void fpu_kernel_enter() {
-    asm volatile(
+    asm volatile (
         "fxsave (%0)\n"
         "fninit\n" :: "r" (kernel_fpu));
 }
@@ -58,5 +66,11 @@ void fpu_kernel_enter() {
 /* Restores the process's fpu state upon returning from the kernel.
  */
 void fpu_kernel_exit() {
-    asm volatile("fxrstor (%0)\n" :: "r" (kernel_fpu));
+    asm volatile ("fxrstor (%0)" :: "r" (kernel_fpu));
+}
+
+void fpu_exception_handler(registers_t* regs) {
+    UNUSED(regs);
+
+    printke("an exception occured");
 }

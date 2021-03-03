@@ -30,6 +30,7 @@ extern uint32_t KERNEL_SIZE;
 
 void kernel_main(mb2_t* boot, uint32_t magic) {
     init_serial();
+    init_fpu();
 
     if (magic != MB2_MAGIC) {
         printk("The multiboot magic header is wrong: 0x%X", magic);
@@ -42,7 +43,6 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
     printk("SnowflakeOS 0.7");
     printk("kernel is %d KiB large", ((uint32_t) &KERNEL_SIZE) >> 10);
 
-    init_fpu();
     init_fb(boot);
     init_gdt();
     init_idt();
