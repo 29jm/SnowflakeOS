@@ -2,7 +2,7 @@
 
 ![A picture is worth, like, a few words](https://29jm.github.io/assets/sos-paint.jpg)
 
-A hobby OS to help me learn about kernel stuff, to eventually get into linux kernel developpement. Currently it supports:
+A hobby OS to help me learn about kernel stuff, to eventually get into linux kernel developement. Currently it supports:
 + booting in higher half
 + paging
 + memory management
