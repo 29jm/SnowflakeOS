@@ -123,7 +123,8 @@ $(DISKIMAGE): modules doomgeneric $(ASSETS_IMAGE) $(ASSETS_OTHER)
 	@mkdir -p $(ISODIR)/modules
 	@touch $(DISKIMAGE)
 	@dd if=/dev/zero of=$(DISKIMAGE) bs=1024 count=12000 2> /dev/null
-	@mkdir -p $(TARGETROOT)/{etc,mnt}
+	@mkdir -p $(TARGETROOT)/etc
+	@mkdir -p $(TARGETROOT)/mnt
 	@echo "hello ext2 world" > $(TARGETROOT)/motd
 	@echo "version: 0.7" > $(TARGETROOT)/etc/config
 	@mkfs.ext2 $(DISKIMAGE) -d $(TARGETROOT) > /dev/null 2>&1
