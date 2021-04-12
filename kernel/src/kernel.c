@@ -28,20 +28,22 @@ extern uint32_t KERNEL_BEGIN_PHYS;
 extern uint32_t KERNEL_END_PHYS;
 extern uint32_t KERNEL_SIZE;
 
+char SOS_VER[] = "0.7";
+
 void kernel_main(mb2_t* boot, uint32_t magic) {
     init_serial();
     init_fpu();
 
     if (magic != MB2_MAGIC) {
-        printk("The multiboot magic header is wrong: 0x%X", magic);
+        printk("The multiboot magic header is wrong!: 0x%X", magic);
         abort();
     }
 
     init_pmm(boot);
     init_paging(boot);
 
-    printk("SnowflakeOS 0.7");
-    printk("kernel is %d KiB large", ((uint32_t) &KERNEL_SIZE) >> 10);
+    printk("SnowflakeOS %s", SOS_VER);
+    printk("Kernel size is %d KB.", ((uint32_t) &KERNEL_SIZE) / 1024);
 
     init_fb(boot);
     init_gdt();
@@ -71,7 +73,7 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
                 init_stacktrace(data, size);
             }
 
-            printk("loaded module %s", mod->name);
+            printk("Loaded module %s...", mod->name);
         }
 
         tag = (mb2_tag_t*) ((uintptr_t) tag + align_to(tag->size, 8));
