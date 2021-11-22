@@ -539,7 +539,11 @@ static superblock_t* parse_superblock(ext2_fs_t* fs) {
  */
 static group_descriptor_t* parse_group_descriptors(ext2_fs_t* fs) {
     uint8_t* block = kmalloc(fs->block_size);
-    read_block(fs, 2, block);
+
+    uint32_t sb_block = 1024/fs->block_size;
+    uint32_t bgd_block = sb_block+1;
+
+    read_block(fs, bgd_block, block);
 
     uint32_t size = fs->num_block_groups * sizeof(group_descriptor_t);
     group_descriptor_t* bgd = kmalloc(size);
