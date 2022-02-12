@@ -278,9 +278,8 @@ void interpret_cmd(str_t* text_buf, str_t* input_buf) {
     free(args);
 
     if (ret != 0) {
-        str_append(text_buf, "invalid command: ");
+        str_append(text_buf, "\ninvalid command: ");
         str_append(text_buf, cmd);
-        str_append(text_buf, "\n");
     }
 }
 
