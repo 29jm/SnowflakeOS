@@ -538,18 +538,13 @@ static superblock_t* parse_superblock(ext2_fs_t* fs) {
 /* Returns a kmalloc'ed array of `num_block_groups` block group descriptors.
  */
 static group_descriptor_t* parse_group_descriptors(ext2_fs_t* fs) {
-    uint8_t* block = kmalloc(fs->block_size);
+    uint32_t bgd_block = fs->block_size == 1024 ? 2 : 1;
+    uint32_t bgd_size = align_to(fs->num_block_groups * sizeof(group_descriptor_t), fs->block_size);
+    group_descriptor_t* bgd = kmalloc(bgd_size);
 
-    uint32_t sb_block = 1024/fs->block_size;
-    uint32_t bgd_block = sb_block+1;
-
-    read_block(fs, bgd_block, block);
-
-    uint32_t size = fs->num_block_groups * sizeof(group_descriptor_t);
-    group_descriptor_t* bgd = kmalloc(size);
-
-    memcpy((void*) bgd, (void*) block, size);
-    kfree(block);
+    for (uint32_t i = 0; i < bgd_size / fs->block_size; i++) {
+        read_block(fs, bgd_block + i, (uint8_t*) ((uintptr_t) bgd + i * fs->block_size));
+    }
 
     return bgd;
 }
