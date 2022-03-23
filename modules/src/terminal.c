@@ -36,6 +36,14 @@ bool cursor = true;
 bool running = true;
 bool focused = true;
 
+color_scheme_t clr = {
+    .bg_color = 0x00353535,
+    .tb_color = 0x00222221,
+    .tb_bcolor = 0x00000000,
+    .tb_tcolor = 0x00FFFFFF,
+    .w_bcolor = 0x00555555,
+};
+
 int main() {
     win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
 
@@ -140,17 +148,18 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
 
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, 0x00353535);
+    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr.bg_color);
     // title bar
-    snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
-    snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-    snow_draw_string(win->fb, win->title, 4, 3, 0x00FFFFFF);
+    snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr.tb_color);
+    snow_draw_border(win->fb, 0, 0, win->width, tb_height, clr.tb_bcolor);
+    snow_draw_string(win->fb, win->title, tb_padding, tb_height / 3, clr.tb_tcolor);
     // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
+    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr.w_bcolor);
+
 
     /* Text content */
 
-    uint32_t y = 22; // below title bar
+    uint32_t y = tb_height + 2; // below title bar
 
     // Temporarily concatenate the input and a cursor
     str_append(text_buf, input_buf->buf);

@@ -7,6 +7,8 @@
 #include <kernel/uapi/uapi_wm.h>
 #include <kernel/uapi/uapi_kbd.h>
 
+#include <gui_meta.h>
+
 int32_t syscall(uint32_t eax);
 int32_t syscall1(uint32_t eax, uint32_t ebx);
 int32_t syscall2(uint32_t eax, uint32_t ebx, uint32_t ecx);
@@ -43,7 +45,7 @@ void snow_draw_rgb_masked(fb_t fb, uint8_t* rgb, int x, int y, int w, int h, uin
 // GUI functions
 window_t* snow_open_window(const char* title, int width, int height, uint32_t flags);
 void snow_close_window(window_t* win);
-void snow_draw_window(window_t* win);
+void snow_draw_window(window_t* win, color_scheme_t* clr);
 void snow_render_window(window_t* win);
 void snow_render_window_partial(window_t* win, wm_rect_t clip);
 wm_event_t snow_get_event(window_t* win);

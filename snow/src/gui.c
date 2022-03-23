@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+color_scheme_t def = {
+    .bg_color = 0x00AAAAAA, // bg color
+    .tb_color = 0x00222221, // tb color
+    .tb_bcolor = 0x00000000, // tb border color
+    .tb_tcolor = 0x00FFFFFF, // tb text color
+    .w_bcolor = 0x00555555, // window border
+};
+
 uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
     wm_param_open_t param = (wm_param_open_t) {
         .fb = fb,
@@ -46,15 +54,20 @@ void snow_close_window(window_t* win) {
 /* Draws the given window and its components to the window's buffer then to
  * the screen.
  */
-void snow_draw_window(window_t* win) {
+void snow_draw_window(window_t* win, color_scheme_t* clr) {
+
+    if (clr == NULL) {
+        clr = &def;
+    }
+
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, 0x00AAAAAA);
+    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr->bg_color);
     // title bar
-    snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
-    snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-    snow_draw_string(win->fb, win->title, 4, 3, 0x00FFFFFF);
+    snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->tb_color);
+    snow_draw_border(win->fb, 0, 0, win->width, tb_height, clr->tb_bcolor);
+    snow_draw_string(win->fb, win->title, tb_padding, tb_height / 3, clr->tb_tcolor);
     // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
+    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr->w_bcolor);
 }
 
 /* Draws the window's buffer as-is to the screen.
