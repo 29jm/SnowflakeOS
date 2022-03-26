@@ -11,3 +11,8 @@ typedef struct {
     w_bcolor; // window border color
     bool is_hovered; // enables tb highlight
 } color_scheme_t;
+
+typedef struct position_t {
+    int32_t x;
+    int32_t y;
+} pos_t;

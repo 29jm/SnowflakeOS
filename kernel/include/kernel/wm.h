@@ -9,6 +9,8 @@
 
 #include <kernel/uapi/uapi_wm.h>
 
+#include <gui_meta.h>
+
 #define WM_NOT_DRAWN  ((uint32_t) 1 << 31) // Window has _never_ been called wm_render_window
 
 /* ufb: the window's buffer in userspace. Used by the client for drawing
@@ -19,8 +21,7 @@
 typedef struct _wm_window_t {
     fb_t ufb;
     fb_t kfb;
-    int32_t x;
-    int32_t y;
+    pos_t* pos;
     uint32_t id;
     uint32_t flags;
     ringbuffer_t* events;

@@ -26,6 +26,8 @@ typedef struct {
     fb_t fb;
     uint32_t id;
     uint32_t flags;
+    pos_t* pos;
+    bool is_hovered;
 } window_t;
 
 void snow_get_fb_info(fb_t* fb);

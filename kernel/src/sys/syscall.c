@@ -139,6 +139,26 @@ static void syscall_wm(registers_t* regs) {
                 wm_param_event_t* param = (wm_param_event_t*) regs->ecx;
                 wm_get_event(param->win_id, param->event);
         } break;
+        case WM_CMD_GET_POS: {
+            list_t* item = wm_get_window(regs->ecx);
+            if(item){
+                regs->eax = list_entry(item, wm_window_t);
+            } else {
+                printke("the given window id (%d) is unknown", regs->ecx);
+                regs->eax = -1;
+                break;    
+            }
+        } break;
+        case WM_CMD_IS_HOVERED: {
+            list_t* item = wm_get_window(regs->ecx);
+            if(item){
+                regs->eax = (list_entry(item, wm_window_t))->is_hovered;
+            } else {
+                printke("the given window id (%d) is unknown", regs->ecx);
+                regs->eax = -1;
+                break;    
+            }
+        } break;
         default:
             printke("wrong command: %d", cmd);
             regs->eax = -1;

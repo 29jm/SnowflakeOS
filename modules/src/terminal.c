@@ -39,6 +39,7 @@ bool focused = true;
 color_scheme_t clr = {
     .bg_color = 0x00353535,
     .tb_color = 0x00222221,
+    .tb_highlight = 0x00242423,
     .tb_bcolor = 0x00000000,
     .tb_tcolor = 0x00FFFFFF,
     .w_bcolor = 0x00555555,

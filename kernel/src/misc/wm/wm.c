@@ -10,8 +10,6 @@
 #include <list.h>
 #include <stdlib.h>
 
-#include <gui_meta.h>
-
 #define MOUSE_SIZE 16
 #define WM_EVENT_QUEUE_SIZE 5
 
@@ -217,9 +215,10 @@ void wm_raise_window(wm_window_t* win) {
  * TODO: revamp entirely.
  */
 void wm_assign_position(wm_window_t* win) {
+    win->pos = (pos_t*) kmalloc(sizeof(pos_t));
     if (win->kfb.width == fb.width) {
-        win->x = 0;
-        win->y = 0;
+        win->pos->x = 0;
+        win->pos->y = 0;
 
         return;
     }
@@ -227,8 +226,8 @@ void wm_assign_position(wm_window_t* win) {
     int max_x = fb.width - win->ufb.width;
     int max_y = fb.height - win->ufb.height;
 
-    win->x = rand() % max_x;
-    win->y = rand() % max_y;
+    win->pos->x = rand() % max_x;
+    win->pos->y = rand() % max_y;
 }
 
 /* Makes sure that z-level related flags are respected.
@@ -282,11 +281,11 @@ void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
 
     // Compute offsets; remember that `right` and `bottom` are inclusive
     uintptr_t fb_off = fb.address + clip.top*fb.pitch + clip.left*fb.bpp/8;
-    uintptr_t win_off = wfb->address + (clip.left - win->x)*wfb->bpp/8;
+    uintptr_t win_off = wfb->address + (clip.left - win->pos->x)*wfb->bpp/8;
     uint32_t len = (clip.right - clip.left + 1)*wfb->bpp/8;
 
     for (int32_t y = clip.top; y <= clip.bottom; y++) {
-        memcpy((void*) fb_off, (void*) (win_off + (y - win->y)*wfb->pitch), len);
+        memcpy((void*) fb_off, (void*) (win_off + (y - win->pos->y)*wfb->pitch), len);
         fb_off += fb.pitch;
     }
 }
@@ -489,7 +488,7 @@ void wm_draw_mouse(rect_t new) {
  */
 void wm_mouse_callback(mouse_t raw_curr) {
     static mouse_t raw_prev;
-    static wm_window_t* dragged = NULL;
+    static wm_window_t* dragged = NULL,* hovered = NULL;
     static bool been_dragged = false;
 
     const mouse_t prev = mouse;
@@ -508,6 +507,11 @@ void wm_mouse_callback(mouse_t raw_curr) {
     mouse.y = mouse.y > max_y ? max_y : mouse.y;
     mouse.x = mouse.x < 0 ? 0 : mouse.x;
     mouse.y = mouse.y < 0 ? 0 : mouse.y;
+
+    hovered = wm_window_at(mouse.x, mouse.y);
+    if(hovered){
+        hovered->is_hovered = wm_hovering_tb_at(mouse.x, mouse.y);
+    }
 
     // Raises and drag starts
     if (!raw_prev.left_pressed && raw_curr.left_pressed) {
@@ -528,10 +532,9 @@ void wm_mouse_callback(mouse_t raw_curr) {
                     rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
                 been_dragged = true;
 
-                dragged->is_hovered = wm_hovering_tb_at(mouse.x, mouse.y);
                 if(dragged->is_hovered){
-                    dragged->x += dx;
-                    dragged->y += dy;
+                    dragged->pos->x += dx;
+                    dragged->pos->y += dy;
                 }
 
                 rect_t new_rect = rect_from_window(dragged);

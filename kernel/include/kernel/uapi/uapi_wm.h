@@ -7,17 +7,23 @@
 #define WM_FOREGROUND 2
 #define WM_SKIP_INPUT 4
 
-#define WM_CMD_OPEN 0
-#define WM_CMD_CLOSE 1
-#define WM_CMD_RENDER 2
-#define WM_CMD_INFO 3
-#define WM_CMD_EVENT 4
+enum WM_CMD {
+    WM_CMD_OPEN,
+    WM_CMD_CLOSE,
+    WM_CMD_RENDER,
+    WM_CMD_INFO,
+    WM_CMD_EVENT,
+    WM_CMD_GET_POS,
+    WM_CMD_IS_HOVERED,
+};
 
-#define WM_EVENT_CLICK 1
-#define WM_EVENT_KBD 2
-#define WM_EVENT_GAINED_FOCUS 3
-#define WM_EVENT_LOST_FOCUS 4
-#define WM_EVENT_MOUSE_MOVE 5
+enum WM_EVENT {
+    WM_EVENT_CLICK = 1,
+    WM_EVENT_KBD,
+    WM_EVENT_GAINED_FOCUS,
+    WM_EVENT_LOST_FOCUS,
+    WM_EVENT_MOUSE_MOVE,
+};
 
 typedef struct {
     int32_t top, left, bottom, right;

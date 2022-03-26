@@ -8,7 +8,7 @@ color_scheme_t def = {
     .tb_color = 0x00222221, // tb color
     .tb_bcolor = 0x00000000, // tb border color
     .tb_tcolor = 0x00FFFFFF, // tb text color
-    .tb_highlight = 0x00555553,
+    .tb_highlight = 0x00242423, // tb highlighted color
     .w_bcolor = 0x00555555, // window border
 };
 
@@ -39,6 +39,7 @@ window_t* snow_open_window(const char* title, int width, int height, uint32_t fl
     };
 
     win->id = snow_wm_open_window(&win->fb, flags);
+    win->pos = syscall2(SYS_WM, WM_CMD_GET_POS, win->id);
     win->flags = flags;
 
     return win;
@@ -59,6 +60,9 @@ void snow_draw_window(window_t* win, color_scheme_t* clr) {
     if (clr == NULL) {
         clr = &def;
     }
+
+    // update for this call the hovering status of the window
+    clr->is_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
 
     // background
     snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr->bg_color);
