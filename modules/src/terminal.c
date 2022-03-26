@@ -147,12 +147,7 @@ int main() {
 
 void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
-
-    // background
-    clr.is_hovered = 1;
     snow_draw_window(win, &clr);
-
-    /* Text content */
 
     uint32_t y = tb_height + 4; // below title bar
 
