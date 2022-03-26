@@ -489,8 +489,8 @@ void wm_draw_mouse(rect_t new) {
  */
 void wm_mouse_callback(mouse_t raw_curr) {
     static mouse_t raw_prev;
-    static wm_window_t* win = NULL;
-    static bool lmb_is_down = false;
+    static wm_window_t* dragged = NULL;
+    static bool been_dragged = false;
 
     const mouse_t prev = mouse;
     const float sens = 0.7f;
@@ -498,8 +498,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
     const int32_t max_y = fb.height - MOUSE_SIZE - 1;
 
     // Move the cursor
-    float dx = (raw_curr.x - raw_prev.x) * sens;
-    float dy = (raw_curr.y - raw_prev.y) * sens;
+    float dx = (raw_curr.x - raw_prev.x)*sens;
+    float dy = (raw_curr.y - raw_prev.y)*sens;
 
     mouse.x += dx;
     mouse.y += dy;
@@ -509,55 +509,67 @@ void wm_mouse_callback(mouse_t raw_curr) {
     mouse.x = mouse.x < 0 ? 0 : mouse.x;
     mouse.y = mouse.y < 0 ? 0 : mouse.y;
 
-    // Is the button down?
+    // Raises and drag starts
     if (!raw_prev.left_pressed && raw_curr.left_pressed) {
-        lmb_is_down = true;
-    } else if (!raw_curr.left_pressed) {
-        lmb_is_down = false;
-    }
+        wm_window_t* clicked = wm_window_at(mouse.x, mouse.y);
 
-    // Raise window
-    if (lmb_is_down){
-        if ( (win = wm_window_at(mouse.x, mouse.y)) ) {
-            wm_raise_window(win);
+        if (clicked) {
+            wm_raise_window(clicked);
+            dragged = clicked;
         }
     }
 
-    // Drag window
-    if (lmb_is_down) {
-        // only drag window when hovering title bar and 
-        if ((dx || dy) && wm_hovering_tb_at(mouse.x, mouse.y)) {
-            rect_t rect = rect_from_window(win);
+    // Drags
+    if (raw_prev.left_pressed && raw_curr.left_pressed) {
+        if (dragged && (dx || dy)) {
+            rect_t rect = rect_from_window(dragged);
 
-            win->x += dx;
-            win->y += dy;
+            if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
+                    rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
+                been_dragged = true;
 
-            rect_t new_rect = rect_from_window(win);
+                if(wm_hovering_tb_at(mouse.x, mouse.y)){
+                    dragged->x += dx;
+                    dragged->y += dy;
+                }
 
-            wm_refresh_partial(rect);
-            wm_draw_window(win, new_rect);
+                rect_t new_rect = rect_from_window(dragged);
 
-            rect = wm_mouse_to_rect(mouse);
-            wm_draw_mouse(rect);
+                wm_refresh_partial(rect);
+                wm_draw_window(dragged, new_rect);
+
+                rect = wm_mouse_to_rect(mouse);
+                wm_draw_mouse(rect);
+            }
         }
+    }
+
     // Clicks and drag ends
-    } else if (raw_prev.left_pressed) {
+    if (raw_prev.left_pressed && !raw_curr.left_pressed) {
         wm_event_t event;
-        rect_t r = rect_from_window(win);
 
-        event.type = WM_EVENT_CLICK;
-        event.mouse.position = wm_mouse_to_rect(mouse);
-        event.mouse.position.top -= r.top;
-        event.mouse.position.left -= r.left;
+        if (!been_dragged) {
+            rect_t r = rect_from_window(dragged);
 
-        ringbuffer_write(win->events, sizeof(wm_event_t), (uint8_t*) &event);
+            event.type = WM_EVENT_CLICK;
+            event.mouse.position = wm_mouse_to_rect(mouse);
+            event.mouse.position.top -= r.top;
+            event.mouse.position.left -= r.left;
 
-    } else {
+            ringbuffer_write(dragged->events, sizeof(wm_event_t), (uint8_t*) &event);
+        }
+
+        been_dragged = false;
+        dragged = NULL;
+    }
+
+    // Simple moves
+    if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
         wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
+        wm_event_t event;
 
         if (under_cursor) {
-            wm_event_t event;
-            rect_t r = rect_from_window(win);
+            rect_t r = rect_from_window(under_cursor);
 
             event.type = WM_EVENT_MOUSE_MOVE;
             event.mouse.position = wm_mouse_to_rect(mouse);
@@ -569,7 +581,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
     }
 
     // Redraw the mouse if needed
-    if (dx || dy || win) {
+    if (dx || dy || dragged) {
         rect_t prev_pos = wm_mouse_to_rect(prev);
         rect_t curr_pos = wm_mouse_to_rect(mouse);
 
