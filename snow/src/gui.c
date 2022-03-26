@@ -8,6 +8,7 @@ color_scheme_t def = {
     .tb_color = 0x00222221, // tb color
     .tb_bcolor = 0x00000000, // tb border color
     .tb_tcolor = 0x00FFFFFF, // tb text color
+    .tb_highlight = 0x00555553,
     .w_bcolor = 0x00555555, // window border
 };
 
@@ -55,7 +56,6 @@ void snow_close_window(window_t* win) {
  * the screen.
  */
 void snow_draw_window(window_t* win, color_scheme_t* clr) {
-
     if (clr == NULL) {
         clr = &def;
     }
@@ -63,7 +63,11 @@ void snow_draw_window(window_t* win, color_scheme_t* clr) {
     // background
     snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr->bg_color);
     // title bar
-    snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->tb_color);
+    if(clr->is_hovered){
+        snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->tb_highlight);
+    } else {
+        snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->tb_color);
+    }
     snow_draw_border(win->fb, 0, 0, win->width, tb_height, clr->tb_bcolor);
     snow_draw_string(win->fb, win->title, tb_padding, tb_height / 3, clr->tb_tcolor);
     // border of the whole window

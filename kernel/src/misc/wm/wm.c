@@ -528,7 +528,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
                     rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
                 been_dragged = true;
 
-                if(wm_hovering_tb_at(mouse.x, mouse.y)){
+                dragged->is_hovered = wm_hovering_tb_at(mouse.x, mouse.y);
+                if(dragged->is_hovered){
                     dragged->x += dx;
                     dragged->y += dy;
                 }

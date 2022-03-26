@@ -27,7 +27,7 @@ const uint32_t max_col = twidth / char_width - 1;
 const uint32_t max_line = theight / char_height - 1;
 
 const char* prompt = "snowflakeos $ ";
-const uint32_t margin = 1;
+const uint32_t margin = tb_padding;
 const uint32_t text_color = 0xE0E0E0;
 const float cursor_blink_time = 1;
 
@@ -148,18 +148,12 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
 
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr.bg_color);
-    // title bar
-    snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr.tb_color);
-    snow_draw_border(win->fb, 0, 0, win->width, tb_height, clr.tb_bcolor);
-    snow_draw_string(win->fb, win->title, tb_padding, tb_height / 3, clr.tb_tcolor);
-    // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr.w_bcolor);
-
+    clr.is_hovered = 1;
+    snow_draw_window(win, &clr);
 
     /* Text content */
 
-    uint32_t y = tb_height + 2; // below title bar
+    uint32_t y = tb_height + 4; // below title bar
 
     // Temporarily concatenate the input and a cursor
     str_append(text_buf, input_buf->buf);
