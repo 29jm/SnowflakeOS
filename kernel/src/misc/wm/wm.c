@@ -13,21 +13,6 @@
 #define MOUSE_SIZE 16
 #define WM_EVENT_QUEUE_SIZE 5
 
-void wm_draw_window(wm_window_t* win, rect_t rect);
-void wm_partial_draw_window(wm_window_t* win, rect_t rect);
-void wm_refresh_screen();
-void wm_refresh_partial(rect_t clip);
-void wm_assign_position(wm_window_t* win);
-void wm_assign_z_orders();
-void wm_raise_window(wm_window_t* win);
-list_t* wm_get_window(uint32_t id);
-void wm_print_windows();
-list_t* wm_get_windows_above(wm_window_t* win);
-rect_t wm_mouse_to_rect(mouse_t mouse);
-void wm_draw_mouse(rect_t new);
-void wm_mouse_callback(mouse_t curr);
-void wm_kbd_callback(kbd_event_t event);
-
 /* Windows are ordered by z-index in this list, e.g. the foremost window is in
  * the last position.
  */
@@ -77,7 +62,7 @@ void wm_close_window(uint32_t win_id) {
 
     if (item) {
         wm_window_t* win = list_entry(item, wm_window_t);
-        rect_t rect = rect_from_window(win);
+        wm_rect_t rect = rect_from_window(win);
 
         list_del(item);
         ringbuffer_free(win->events);
@@ -97,9 +82,9 @@ void wm_close_window(uint32_t win_id) {
 /* System call interface to draw a window. `clip` specifies which part to copy
  * from userspace and redraw. If `clip` is NULL, the whole window is redrawn.
  */
-void wm_render_window(uint32_t win_id, rect_t* clip) {
+void wm_render_window(uint32_t win_id, wm_rect_t* clip) {
     list_t* item = wm_get_window(win_id);
-    rect_t rect;
+    wm_rect_t rect;
 
     if (!item) {
         printke("render called by invalid window, id %d", win_id);
@@ -110,7 +95,7 @@ void wm_render_window(uint32_t win_id, rect_t* clip) {
 
     if (!clip) {
         clip = &rect;
-        *clip = (rect_t) {
+        *clip = (wm_rect_t) {
             .top = 0, .left = 0,
             .bottom = win->ufb.height - 1, .right = win->ufb.width - 1
         };
@@ -215,7 +200,7 @@ void wm_raise_window(wm_window_t* win) {
  * TODO: revamp entirely.
  */
 void wm_assign_position(wm_window_t* win) {
-    win->pos = (pos_t*) kmalloc(sizeof(pos_t));
+    win->pos = (point_t*) kmalloc(sizeof(point_t));
     if (win->kfb.width == fb.width) {
         win->pos->x = 0;
         win->pos->y = 0;
@@ -258,9 +243,9 @@ void wm_assign_z_orders() {
 /* Draw the given part of the window to the framebuffer.
  * Note that the given clip is allowed to be partially outside the window.
  */
-void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
+void wm_partial_draw_window(wm_window_t* win, wm_rect_t clip) {
     fb_t* wfb = &win->kfb;
-    rect_t win_rect = rect_from_window(win);
+    wm_rect_t win_rect = rect_from_window(win);
 
     // Clamp the clipping rect to the window rect
     if (clip.top < win_rect.top) {
@@ -293,8 +278,8 @@ void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
 /* Draws the visible parts of the window that are within the given clipping
  * rect.
  */
-void wm_draw_window(wm_window_t* win, rect_t rect) {
-    rect_t win_rect = rect_from_window(win);
+void wm_draw_window(wm_window_t* win, wm_rect_t rect) {
+    wm_rect_t win_rect = rect_from_window(win);
     list_t* clip_windows = wm_get_windows_above(win);
     list_t clip_rects = LIST_HEAD_INIT(clip_rects);
 
@@ -304,14 +289,14 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
     while (!list_empty(clip_windows)) {
         wm_window_t* cw = list_first_entry(clip_windows, wm_window_t);
         list_del(list_first(clip_windows));
-        rect_t clip = rect_from_window(cw);
+        wm_rect_t clip = rect_from_window(cw);
         rect_subtract_clip_rect(&clip_rects, clip);
     }
 
     kfree(clip_windows);
 
     // Draw what's left
-    rect_t* clip;
+    wm_rect_t* clip;
     list_for_each_entry(clip, &clip_rects) {
         if (rect_intersect(*clip, win_rect)) {
             wm_partial_draw_window(win, *clip);
@@ -319,7 +304,7 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
     }
 
     // Redraw the mouse
-    rect_t mouse_rect = wm_mouse_to_rect(mouse);
+    wm_rect_t mouse_rect = wm_mouse_to_rect(mouse);
     wm_draw_mouse(mouse_rect);
 
     rect_clear_clipped(&clip_rects);
@@ -328,13 +313,13 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
 /* Refreshes only a part of the screen.
  * TODO: allow refreshing empty space, filled with black.
  */
-void wm_refresh_partial(rect_t clip) {
+void wm_refresh_partial(wm_rect_t clip) {
     list_t to_refresh = LIST_HEAD_INIT(to_refresh);
     list_add(&to_refresh, rect_new_copy(clip));
 
     wm_window_t* win;
     list_for_each_entry(win, &windows) {
-        rect_t rect = rect_from_window(win);
+        wm_rect_t rect = rect_from_window(win);
 
         if (rect_intersect(rect, clip)) {
             wm_draw_window(win, clip);
@@ -343,7 +328,7 @@ void wm_refresh_partial(rect_t clip) {
     }
 
     // Draw black areas where a refresh was needed but no window was present
-    rect_t* r;
+    wm_rect_t* r;
     list_for_each_entry(r, &to_refresh) {
         uintptr_t off = fb.address + r->top*fb.pitch + r->left*fb.bpp/8;
         uint32_t size = (r->right - r->left + 1)*fb.bpp/8;
@@ -360,7 +345,7 @@ void wm_refresh_partial(rect_t clip) {
 /* Redraws every visible area of the screen.
  */
 void wm_refresh_screen() {
-    rect_t screen_rect = {
+    wm_rect_t screen_rect = {
         .top = 0, .left = 0, .bottom = fb.height, .right = fb.width
     };
 
@@ -383,7 +368,7 @@ void wm_print_windows() {
 /* Returns a list of all windows above `win` that overlap with it.
  */
 list_t* wm_get_windows_above(wm_window_t* win) {
-    rect_t win_rect = rect_from_window(win);
+    wm_rect_t win_rect = rect_from_window(win);
     list_t* list = kmalloc(sizeof(list_t));
     list_t* iter;
     wm_window_t* w;
@@ -392,7 +377,7 @@ list_t* wm_get_windows_above(wm_window_t* win) {
 
     list_for_each(iter, w, &windows) {
         if (after) {
-            rect_t rect = rect_from_window(w);
+            wm_rect_t rect = rect_from_window(w);
 
             if (rect_intersect(win_rect, rect)) {
                 list_add_front(list, w);
@@ -424,8 +409,8 @@ list_t* wm_get_window(uint32_t id) {
 
 /* Mouse handling functions */
 
-rect_t wm_mouse_to_rect(mouse_t mouse) {
-    return (rect_t) {
+wm_rect_t wm_mouse_to_rect(mouse_t mouse) {
+    return (wm_rect_t) {
         .top = mouse.y, .left = mouse.x,
         .bottom = mouse.y+MOUSE_SIZE, .right = mouse.x+MOUSE_SIZE
     };
@@ -438,7 +423,7 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
     wm_window_t* win;
 
     list_for_each_entry_rev(iter, win, &windows) {
-        rect_t r = rect_from_window(win);
+        wm_rect_t r = rect_from_window(win);
 
         if (y >= r.top && y <= r.bottom && x >= r.left && x <= r.right) {
             return win;
@@ -456,7 +441,7 @@ bool wm_hovering_tb_at(int32_t x, int32_t y) {
     wm_window_t* win;
 
     list_for_each_entry_rev(iter, win, &windows) {
-        rect_t r = rect_from_window(win);
+        wm_rect_t r = rect_from_window(win);
 
         if (y >= r.top && y <= r.top + tb_height && x >= r.left && x <= r.right) {
             return true;
@@ -466,7 +451,7 @@ bool wm_hovering_tb_at(int32_t x, int32_t y) {
     return false;
 }
 
-void wm_draw_mouse(rect_t new) {
+void wm_draw_mouse(wm_rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
     for (int32_t y = 0; y < new.bottom - new.top - 6; y++) {
@@ -513,31 +498,40 @@ void wm_mouse_callback(mouse_t raw_curr) {
         hovered->is_hovered = wm_hovering_tb_at(mouse.x, mouse.y);
     }
 
-    // Raises and drag starts
+    // Click, raises and drag starts
     if (!raw_prev.left_pressed && raw_curr.left_pressed) {
         wm_window_t* clicked = wm_window_at(mouse.x, mouse.y);
 
         if (clicked) {
             wm_raise_window(clicked);
             dragged = clicked;
+
+            wm_event_t event;
+            wm_rect_t r = rect_from_window(clicked);
+
+            event.type = WM_EVENT_CLICK;
+            event.mouse.position = wm_mouse_to_rect(mouse);
+            event.mouse.position.top -= r.top;
+            event.mouse.position.left -= r.left;
+
+            ringbuffer_write(hovered->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
     }
 
     // Drags
     if (raw_prev.left_pressed && raw_curr.left_pressed) {
         if (dragged && (dx || dy)) {
-            rect_t rect = rect_from_window(dragged);
+            wm_rect_t rect = rect_from_window(dragged);
 
             if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
                     rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
-                been_dragged = true;
-
+                been_dragged = dragged->is_hovered;
                 if(dragged->is_hovered){
                     dragged->pos->x += dx;
                     dragged->pos->y += dy;
                 }
 
-                rect_t new_rect = rect_from_window(dragged);
+                wm_rect_t new_rect = rect_from_window(dragged);
 
                 wm_refresh_partial(rect);
                 wm_draw_window(dragged, new_rect);
@@ -552,10 +546,10 @@ void wm_mouse_callback(mouse_t raw_curr) {
     if (raw_prev.left_pressed && !raw_curr.left_pressed) {
         wm_event_t event;
 
-        if (!been_dragged) {
-            rect_t r = rect_from_window(dragged);
+        if (!been_dragged && dragged) {
+            wm_rect_t r = rect_from_window(dragged);
 
-            event.type = WM_EVENT_CLICK;
+            event.type = WM_EVENT_RELEASE;
             event.mouse.position = wm_mouse_to_rect(mouse);
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
@@ -570,10 +564,10 @@ void wm_mouse_callback(mouse_t raw_curr) {
     // Simple moves
     if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
         wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
-        wm_event_t event;
 
         if (under_cursor) {
-            rect_t r = rect_from_window(under_cursor);
+            wm_event_t event;
+            wm_rect_t r = rect_from_window(under_cursor);
 
             event.type = WM_EVENT_MOUSE_MOVE;
             event.mouse.position = wm_mouse_to_rect(mouse);
@@ -584,10 +578,27 @@ void wm_mouse_callback(mouse_t raw_curr) {
         }
     }
 
+    // mouse release
+    if (!raw_curr.left_pressed && raw_prev.left_pressed) {
+        wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
+
+        if (under_cursor) {
+            wm_event_t event;
+            wm_rect_t r = rect_from_window(under_cursor);
+
+            event.type = WM_EVENT_RELEASE;
+            event.mouse.position = wm_mouse_to_rect(mouse);
+            event.mouse.position.top -= r.top;
+            event.mouse.position.left -= r.left;
+
+            ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*) &event);
+        }
+    }
+
     // Redraw the mouse if needed
     if (dx || dy || dragged) {
-        rect_t prev_pos = wm_mouse_to_rect(prev);
-        rect_t curr_pos = wm_mouse_to_rect(mouse);
+        wm_rect_t prev_pos = wm_mouse_to_rect(prev);
+        wm_rect_t curr_pos = wm_mouse_to_rect(mouse);
 
         wm_refresh_partial(prev_pos);
         wm_draw_mouse(curr_pos);

@@ -13,6 +13,19 @@ bool point_in_rect(point_t p, rect_t r) {
     return p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
 }
 
+rect_t wm_rect_to_rect(wm_rect_t r) {
+    return (rect_t) {
+        .x = r.left,
+        .y = r.top,
+        .w = r.right - r.left,
+        .h = r.bottom = r.top
+    };
+}
+
+point_t rect_to_point(wm_rect_t r) {
+    return (point_t) {.x = r.left, .y = r.top};
+}
+
 /* Sets the widget to be displayed below the titlebar of an app created with
  * `ui_app_new`. Usually, this will be a container such as a `vbox_t` or `hbox_t`.
  */
@@ -129,4 +142,18 @@ point_t ui_absolute_to_local(widget_t* widget, point_t point) {
     point_t p = ui_to_child_local(widget, point);
 
     return ui_absolute_to_local(widget->parent, p);
+}
+
+color_scheme_t* color_to_scheme(uint32_t color) {
+    color_scheme_t* clr = zalloc(sizeof(color_scheme_t));
+
+    *clr = (color_scheme_t){
+        .base_color = color,
+        .bg_color = color / 3,
+        .border_color = color / 4,
+        .text_color = color - color / 2,
+        .highlight = color + 0x020202,
+    };
+
+    return clr;
 }

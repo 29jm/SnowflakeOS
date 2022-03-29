@@ -142,7 +142,7 @@ static void syscall_wm(registers_t* regs) {
         case WM_CMD_GET_POS: {
             list_t* item = wm_get_window(regs->ecx);
             if(item){
-                regs->eax = list_entry(item, wm_window_t);
+                regs->eax = list_entry(item, wm_window_t)->pos;
             } else {
                 printke("the given window id (%d) is unknown", regs->ecx);
                 regs->eax = -1;

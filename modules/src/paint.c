@@ -1,5 +1,6 @@
 #include <snow.h>
 #include <ui.h>
+#include <kernel/wm.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -57,11 +58,11 @@ int main(int argc, char* argv[]) {
         hbox_add(menu, W(cbutton));
     }
 
-    button_t* button = button_new("Clear");
+    button_t* button = button_new("Clear", NULL);
     button->on_click = on_clear_clicked;
     hbox_add(menu, W(button));
 
-    button_t* save_button = button_new("Save");
+    button_t* save_button = button_new("Save", NULL);
     save_button->on_click = on_save_clicked;
     hbox_add(menu, W(save_button));
 
@@ -89,6 +90,18 @@ int main(int argc, char* argv[]) {
 
         if (event.type == WM_EVENT_KBD && event.kbd.keycode == KBD_ESCAPE) {
             running = false;
+        }
+
+        bool under_canvas = point_in_rect(rect_to_point(event.mouse.position),
+            canvas->widget.bounds);
+
+        // start drawing
+        if (event.type == WM_EVENT_CLICK) {
+                canvas->is_clicking = true;
+        // stop to
+        }
+        if(event.type == WM_EVENT_RELEASE) {
+            canvas->is_clicking = false;
         }
 
         ui_handle_input(paint, event);

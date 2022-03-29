@@ -3,6 +3,7 @@
 #include <snow.h>
 
 #include <kernel/uapi/uapi_wm.h> // For fb_t
+#include <kernel/wm.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -19,14 +20,6 @@
 // Flags for lbox.c
 #define UI_VBOX UI_EXPAND_VERTICAL
 #define UI_HBOX UI_EXPAND_HORIZONTAL
-
-typedef struct {
-    int32_t x, y, w, h;
-} rect_t;
-
-typedef struct {
-    int32_t x, y;
-} point_t;
 
 /* Generic type representing an ui component, like a button, a text field...
  * Contains the properties common to all of those: dimensions, hints on how to
@@ -85,14 +78,11 @@ typedef lbox_t vbox_t;
 typedef struct {
     widget_t widget;
     char* text;
+    bool is_clicked;
+    color_scheme_t* clr;
     void (*on_click)();
 } button_t;
 
-typedef struct {
-    widget_t widget;
-    char* title;
-    uint8_t* icon;
-} titlebar_t;
 
 typedef struct {
     widget_t widget;
@@ -102,7 +92,13 @@ typedef struct {
 
 typedef struct {
     widget_t widget;
-    bool is_drawing;
+    char* title;
+    uint8_t* icon;
+} titlebar_t;
+
+typedef struct {
+    widget_t widget;
+    bool is_clicking;
     bool needs_drawing;
     bool needs_clearing;
     point_t last_pos;
@@ -118,6 +114,8 @@ typedef struct {
 } pixel_buffer_t;
 
 bool point_in_rect(point_t p, rect_t r);
+rect_t wm_rect_to_rect(wm_rect_t r);
+point_t rect_to_point(wm_rect_t r);
 ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon);
 void ui_app_destroy(ui_app_t app);
 void ui_set_root(ui_app_t app, widget_t* widget);
@@ -135,14 +133,15 @@ vbox_t* vbox_new();
 void vbox_add(vbox_t* vbox, widget_t* widget);
 void vbox_clear(vbox_t* vbox);
 
-button_t* button_new(char* text);
+button_t* button_new(char* text, color_scheme_t* clr);
 void button_set_on_click(button_t* button, void (*callback)(button_t*));
 void button_set_text(button_t* button, const char* text);
+void color_button_on_resize(color_button_t* button);
+
+color_scheme_t* color_to_scheme(uint32_t color);
 
 titlebar_t* titlebar_new(const char* title, const uint8_t* icon);
 void titlebar_set_title(titlebar_t* tb, const char* title);
-
-color_button_t* color_button_new(uint32_t color, uint32_t* to_set);
 
 canvas_t* canvas_new();
 

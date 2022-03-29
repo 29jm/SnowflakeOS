@@ -6,6 +6,7 @@
 #include <kernel/uapi/uapi_syscall.h>
 #include <kernel/uapi/uapi_wm.h>
 #include <kernel/uapi/uapi_kbd.h>
+#include <kernel/wm.h>
 
 #include <gui_meta.h>
 
@@ -26,7 +27,7 @@ typedef struct {
     fb_t fb;
     uint32_t id;
     uint32_t flags;
-    pos_t* pos;
+    point_t* pos;
     bool is_hovered;
 } window_t;
 

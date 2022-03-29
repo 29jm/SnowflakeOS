@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <list.h>
 
-/* Allocates the specified `rect_t` on the stack.
+/* Allocates the specified `wm_rect_t` on the stack.
  */
-rect_t* rect_new(uint32_t t, uint32_t l, uint32_t b, uint32_t r) {
-    rect_t* rect = (rect_t*) kmalloc(sizeof(rect_t));
+wm_rect_t* rect_new(uint32_t t, uint32_t l, uint32_t b, uint32_t r) {
+    wm_rect_t* rect = (wm_rect_t*) kmalloc(sizeof(wm_rect_t));
 
-    *rect = (rect_t) {
+    *rect = (wm_rect_t) {
         .top = t, .left = l, .bottom = b, .right = r
     };
 
@@ -18,14 +18,14 @@ rect_t* rect_new(uint32_t t, uint32_t l, uint32_t b, uint32_t r) {
 
 /* Copy a rect on the heap.
  */
-rect_t* rect_new_copy(rect_t r) {
+wm_rect_t* rect_new_copy(wm_rect_t r) {
     return rect_new(r.top, r.left, r.bottom, r.right);
 }
 
 /* Returns a rectangle corresponding to the area spanned by the window.
  */
-rect_t rect_from_window(wm_window_t* win) {
-    return (rect_t) {
+wm_rect_t rect_from_window(wm_window_t* win) {
+    return (wm_rect_t) {
         .top = win->pos->y,
         .left = win->pos->x,
         .bottom = win->pos->y + win->kfb.height - 1,
@@ -36,14 +36,14 @@ rect_t rect_from_window(wm_window_t* win) {
 /* Returns whether two rectangular areas intersect.
  * Note that touching isn't intersecting.
  */
-bool rect_intersect(rect_t a, rect_t b) {
+bool rect_intersect(wm_rect_t a, wm_rect_t b) {
     return a.left <= b.right && a.right >= b.left &&
            a.top <= b.bottom && a.bottom >= b.top;
 }
 
-/* Pretty-prints a `rect_t`.
+/* Pretty-prints a `wm_rect_t`.
  */
-void print_rect(rect_t* r) {
+void print_rect(wm_rect_t* r) {
     printk("top:%d, left:%d, bottom:%d, right:%d",
         r->top, r->left, r->bottom, r->right);
 }
@@ -51,12 +51,12 @@ void print_rect(rect_t* r) {
 /* Removes a rectangle `clip` from the union of `rects` by splitting intersecting
  * rects by `clip`. Frees every discarded rect.
  */
-void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
+void rect_subtract_clip_rect(list_t* rects, wm_rect_t clip) {
     list_t* iter;
     list_t* n;
 
     list_for_each_safe(iter, n, rects) {
-        rect_t* current = list_entry(iter, rect_t);
+        wm_rect_t* current = list_entry(iter, wm_rect_t);
 
         if (rect_intersect(*current, clip)) {
             list_t* splits = rect_split_by(*current, clip);
@@ -75,8 +75,8 @@ void rect_subtract_clip_rect(list_t* rects, rect_t clip) {
 /* Add a clipping rectangle to the area spanned by `rects` by splitting
  * intersecting rects by `clip`.
  */
-void rect_add_clip_rect(list_t* rects, rect_t clip) {
-    rect_t* r = rect_new_copy(clip);
+void rect_add_clip_rect(list_t* rects, wm_rect_t clip) {
+    wm_rect_t* r = rect_new_copy(clip);
 
     rect_subtract_clip_rect(rects, clip);
     list_add_front(rects, r);
@@ -86,7 +86,7 @@ void rect_add_clip_rect(list_t* rects, rect_t clip) {
  */
 void rect_clear_clipped(list_t* rects) {
     while (!list_empty(rects)) {
-        kfree(list_first_entry(rects, rect_t));
+        kfree(list_first_entry(rects, wm_rect_t));
         list_del(list_first(rects));
     }
 }
@@ -96,9 +96,9 @@ void rect_clear_clipped(list_t* rects) {
  * in set-theoric terms. Returns a dynamically allocated list of those
  * dynamically allocated rectangles.
  */
-list_t* rect_split_by(rect_t rect, rect_t split) {
+list_t* rect_split_by(wm_rect_t rect, wm_rect_t split) {
     list_t* list = kmalloc(sizeof(list_t));
-    rect_t* tmp;
+    wm_rect_t* tmp;
 
     *list = LIST_HEAD_INIT(*list);
 

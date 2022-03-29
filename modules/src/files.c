@@ -37,7 +37,7 @@ void fv_refresh(folder_view_t* fv) {
     vbox_clear(fv->vbox);
 
     while (d && (dent = readdir(d)) != NULL) {
-        button_t* btn = button_new(dent->d_name);
+        button_t* btn = button_new(dent->d_name, NULL);
 
         btn->text = strdup(dent->d_name);
         W(btn)->flags |= UI_EXPAND_HORIZONTAL;

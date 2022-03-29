@@ -4,9 +4,8 @@
 
 void canvas_on_click(canvas_t* canvas, point_t p) {
     rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
-    canvas->is_drawing = !canvas->is_drawing;
 
-    if (canvas->is_drawing) {
+    if (canvas->is_clicking) {
         canvas->last_pos = (point_t) { bounds.x + p.x, bounds.y + p.y };
         canvas->new_pos = canvas->last_pos;
     }
@@ -27,7 +26,7 @@ void canvas_on_draw(canvas_t* canvas, fb_t fb) {
         snow_draw_rect(fb, bounds.x, bounds.y, bounds.w, bounds.h, 0xFFFFFF);
     }
 
-    if (canvas->is_drawing && canvas->needs_drawing) {
+    if (canvas->is_clicking && canvas->needs_drawing) {
         canvas->needs_drawing = false;
 
         snow_draw_line(fb, canvas->last_pos.x, canvas->last_pos.y,

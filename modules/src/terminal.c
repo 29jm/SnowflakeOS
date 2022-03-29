@@ -38,11 +38,11 @@ bool focused = true;
 
 color_scheme_t clr = {
     .bg_color = 0x00353535,
-    .tb_color = 0x00222221,
-    .tb_highlight = 0x00242423,
-    .tb_bcolor = 0x00000000,
-    .tb_tcolor = 0x00FFFFFF,
-    .w_bcolor = 0x00555555,
+    .base_color = 0x00222221,
+    .highlight = 0x00242423,
+    .border_color = 0x00000000,
+    .text_color = 0x00FFFFFF,
+    .border_color2 = 0x00555555,
 };
 
 int main() {

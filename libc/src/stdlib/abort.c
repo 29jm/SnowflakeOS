@@ -1,10 +1,4 @@
-#include <stdio.h>
-
-#ifndef _KERNEL_
-
-#include <stdlib.h>
-
-#endif
+#include <abort.h>
 
 __attribute__((__noreturn__))
 void abort()
