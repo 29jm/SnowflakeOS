@@ -98,7 +98,7 @@ typedef struct {
 
 typedef struct {
     widget_t widget;
-    bool is_clicking;
+    bool is_drawing;
     bool needs_drawing;
     bool needs_clearing;
     point_t last_pos;

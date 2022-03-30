@@ -96,12 +96,11 @@ int main(int argc, char* argv[]) {
             canvas->widget.bounds);
 
         // start drawing
-        if (event.type == WM_EVENT_CLICK) {
-                canvas->is_clicking = true;
+        if (event.type == WM_EVENT_CLICK && under_canvas) {
+            canvas->is_drawing = true;
         // stop to
-        }
-        if(event.type == WM_EVENT_RELEASE) {
-            canvas->is_clicking = false;
+        } else if(event.type == WM_EVENT_RELEASE || !under_canvas) {
+            canvas->is_drawing = false;
         }
 
         ui_handle_input(paint, event);
