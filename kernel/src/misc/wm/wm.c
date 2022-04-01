@@ -10,6 +10,8 @@
 #include <list.h>
 #include <stdlib.h>
 
+#include <snow.h>
+
 #define MOUSE_SIZE 16
 #define WM_EVENT_QUEUE_SIZE 5
 
@@ -451,19 +453,14 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
 /* Returns the foresmost window which title bar is being
  * hovered by the mouse (x, y), NULL if none match
  */
-wm_window_t* wm_hovering_tb_at(int32_t x, int32_t y) {
-    list_t* iter;
-    wm_window_t* win;
+bool wm_is_window_beeing_hovered(wm_window_t* win, int32_t x, int32_t y) {
+    wm_rect_t r = rect_from_window(win);
 
-    list_for_each_entry_rev(iter, win, &windows) {
-        wm_rect_t r = rect_from_window(win);
-
-        if (y >= r.top && y <= r.top && x >= r.left && x <= r.right) {
-            return win;
-        }
+    if (y >= r.top && y <= r.top + UI_TB_HEIGHT && x >= r.left && x <= r.right) {
+        return true;
+    } else {
+        return false;
     }
-
-    return NULL;
 }
 
 void wm_draw_mouse(wm_rect_t new) {
@@ -488,7 +485,7 @@ void wm_draw_mouse(wm_rect_t new) {
  */
 void wm_mouse_callback(mouse_t raw_curr) {
     static mouse_t raw_prev;
-    static wm_window_t* clicked = NULL,* dragged = NULL;
+    static wm_window_t* dragging = NULL;
 
     const mouse_t prev = mouse;
     const float sens = 0.7f;
@@ -498,6 +495,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
     // Move the cursor
     float dx = (raw_curr.x - raw_prev.x)*sens;
     float dy = (raw_curr.y - raw_prev.y)*sens;
+
 
     mouse.x += dx;
     mouse.y += dy;
@@ -509,40 +507,45 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
     // Click, raises and drag starts
     if (!raw_prev.left_pressed && raw_curr.left_pressed) {
-        clicked = wm_window_at(mouse.x, mouse.y);
+        dragging = wm_window_at(mouse.x, mouse.y);
 
-        if (clicked) {
-            wm_raise_window(clicked);
+        if (dragging) {
+            wm_raise_window(dragging);
 
             wm_event_t event;
-            wm_rect_t r = rect_from_window(clicked);
+            wm_rect_t r = rect_from_window(dragging);
 
             event.type = WM_EVENT_CLICK;
             event.mouse.position = wm_mouse_to_rect(mouse);
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
 
-            ringbuffer_write(clicked->events, sizeof(wm_event_t), (uint8_t*) &event);
+            ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
     }
 
     // Drags
     if (raw_prev.left_pressed && raw_curr.left_pressed) {
-        dragged = wm_hovering_tb_at(mouse.x, mouse.y);
+        bool hovered = false;
 
-        if (dragged && (dx || dy)) {
-            wm_rect_t rect = rect_from_window(dragged);
+        if(dragging){
+            hovered =
+            wm_is_window_beeing_hovered(dragging, mouse.x, mouse.y);
+        }
+
+        if (hovered && (dx || dy)) {
+            wm_rect_t rect = rect_from_window(dragging);
 
             if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
                     rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
 
-                dragged->pos->x += dx;
-                dragged->pos->y += dy;
+                dragging->pos->x += dx;
+                dragging->pos->y += dy;
 
-                wm_rect_t new_rect = rect_from_window(dragged);
+                wm_rect_t new_rect = rect_from_window(dragging);
 
                 wm_refresh_partial(rect);
-                wm_draw_window(dragged, new_rect);
+                wm_draw_window(dragging, new_rect);
 
                 rect = wm_mouse_to_rect(mouse);
                 wm_draw_mouse(rect);
@@ -552,18 +555,18 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
     // Clicks and drag ends
     if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
-        if (clicked) {
+        if (dragging) {
             wm_event_t event;
-            wm_rect_t r = rect_from_window(clicked);
+            wm_rect_t r = rect_from_window(dragging);
 
             event.type = WM_EVENT_MOUSE_RELEASE;
             event.mouse.position = wm_mouse_to_rect(mouse);
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
 
-            ringbuffer_write(clicked->events, sizeof(wm_event_t), (uint8_t*) &event);
+            ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
-        clicked = NULL;
+        dragging = NULL;
     }
 
     // The mouse's simply moving
