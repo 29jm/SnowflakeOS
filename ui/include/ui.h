@@ -3,7 +3,6 @@
 #include <snow.h>
 
 #include <kernel/uapi/uapi_wm.h> // For fb_t
-#include <kernel/wm.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -21,6 +20,10 @@
 #define UI_VBOX UI_EXPAND_VERTICAL
 #define UI_HBOX UI_EXPAND_HORIZONTAL
 
+typedef struct {
+    int32_t x, y, w, h;
+} rect_t;
+
 /* Generic type representing an ui component, like a button, a text field...
  * Contains the properties common to all of those: dimensions, hints on how to
  * size them, their place in the hierarchy, and callbacks for the operations
@@ -29,6 +32,7 @@
 typedef struct widget_t {
     /* Every widget but the root has a parent container */
     struct widget_t* parent;
+    color_scheme_t* color;
     /* Bounds of the widget, relative to its parent */
     rect_t bounds;
     uint32_t flags;
@@ -37,6 +41,7 @@ typedef struct widget_t {
     /* Callbacks, to be set by widget implementations when relevant */
     void (*on_click)(struct widget_t*, point_t);
     void (*on_mouse_move)(struct widget_t*, point_t);
+    void (*on_mouse_release)(struct widget_t*, point_t);
     void (*on_draw)(struct widget_t*, fb_t);
     void (*on_free)(struct widget_t*);
     void (*on_resize)(struct widget_t*);
@@ -44,6 +49,7 @@ typedef struct widget_t {
 
 typedef void (*widget_clicked_t)(widget_t*, point_t);
 typedef void (*widget_mouse_moved_t)(widget_t*, point_t);
+typedef void (*widget_mouse_release_t)(widget_t*, point_t);
 typedef void (*widget_draw_t)(widget_t*, fb_t);
 typedef void (*widget_resize_t)(widget_t*);
 typedef void (*widget_freed_t)(widget_t*);
@@ -79,7 +85,6 @@ typedef struct {
     widget_t widget;
     char* text;
     bool is_clicked;
-    color_scheme_t* clr;
     void (*on_click)();
 } button_t;
 
@@ -88,6 +93,7 @@ typedef struct {
     widget_t widget;
     uint32_t color;
     uint32_t* to_set;
+    bool is_clicked;
 } color_button_t;
 
 typedef struct {
@@ -114,7 +120,6 @@ typedef struct {
 } pixel_buffer_t;
 
 bool point_in_rect(point_t p, rect_t r);
-rect_t wm_rect_to_rect(wm_rect_t r);
 point_t rect_to_point(wm_rect_t r);
 ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon);
 void ui_app_destroy(ui_app_t app);
@@ -125,6 +130,8 @@ void ui_handle_input(ui_app_t app, wm_event_t event);
 rect_t ui_get_absolute_bounds(widget_t* widget);
 point_t ui_to_child_local(widget_t* widget, point_t point);
 point_t ui_absolute_to_local(widget_t* widget, point_t point);
+
+color_scheme_t* get_widget_color(widget_t* widget);
 
 hbox_t* hbox_new();
 void hbox_add(hbox_t* hbox, widget_t* widget);

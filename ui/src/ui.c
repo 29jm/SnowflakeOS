@@ -13,17 +13,15 @@ bool point_in_rect(point_t p, rect_t r) {
     return p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
 }
 
-rect_t wm_rect_to_rect(wm_rect_t r) {
-    return (rect_t) {
-        .x = r.left,
-        .y = r.top,
-        .w = r.right - r.left,
-        .h = r.bottom = r.top
-    };
-}
-
 point_t rect_to_point(wm_rect_t r) {
     return (point_t) {.x = r.left, .y = r.top};
+}
+
+/* Returns the color scheme of the widget or of the closest parent
+ */
+color_scheme_t* get_widget_color(widget_t* widget) {
+    if (widget->color != NULL) return widget->color;
+    else return get_widget_color(widget->parent);
 }
 
 /* Sets the widget to be displayed below the titlebar of an app created with
@@ -88,20 +86,30 @@ void ui_set_title(ui_app_t app, const char* title) {
  * `snow_get_event`. Or by fake events, whatever.
  */
 void ui_handle_input(ui_app_t app, wm_event_t event) {
-    if (event.type == WM_EVENT_CLICK) {
+    switch (event.type) {
+    case WM_EVENT_CLICK: {
         point_t pos = { event.mouse.position.left, event.mouse.position.top };
 
         if (app.root->on_click) {
             app.root->on_click(app.root, pos);
         }
-    }
-
-    if (event.type == WM_EVENT_MOUSE_MOVE) {
+    } break;
+    case WM_EVENT_MOUSE_MOVE: {
         point_t pos = { event.mouse.position.left, event.mouse.position.top };
 
         if (app.root->on_mouse_move) {
             app.root->on_mouse_move(app.root, pos);
         }
+    } break;
+    case WM_EVENT_MOUSE_RELEASE: {
+        point_t pos = { event.mouse.position.left, event.mouse.position.top };
+
+        if (app.root->on_mouse_release) {
+            app.root->on_mouse_release(app.root, pos);
+        }
+    } break;
+    default:
+        break;
     }
 }
 
@@ -152,7 +160,7 @@ color_scheme_t* color_to_scheme(uint32_t color) {
         .bg_color = color / 3,
         .border_color = color / 4,
         .text_color = color - color / 2,
-        .highlight = color + 0x020202,
+        .highlight = color + 0x030303,
     };
 
     return clr;

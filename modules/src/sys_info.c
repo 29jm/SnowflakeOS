@@ -40,7 +40,7 @@ int main() {
         set_str("Ram used: ", "KiB", info.ram_usage >> 10, mem_usage);
         set_str("Ram total: ", "MiB", info.ram_total >> 20, mem_total);
 
-        snow_draw_window(win, NULL); // Draws the title bar and borders
+        snow_draw_window(win); // Draws the title bar and borders
         snow_draw_string(win->fb, heap_usage, 4, 24, 0x00AA1100);
         snow_draw_string(win->fb, mem_usage, 4, 40, 0x00AA1100);
         snow_draw_string(win->fb, mem_total, 4, 56, 0x00AA1100);

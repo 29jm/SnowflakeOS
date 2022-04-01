@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <ui.h>
 
 typedef struct {
     char* buf;
@@ -27,7 +28,7 @@ const uint32_t max_col = twidth / char_width - 1;
 const uint32_t max_line = theight / char_height - 1;
 
 const char* prompt = "snowflakeos $ ";
-const uint32_t margin = tb_padding;
+const uint32_t margin = UI_TB_PADDING;
 const uint32_t text_color = 0xE0E0E0;
 const float cursor_blink_time = 1;
 
@@ -39,7 +40,7 @@ bool focused = true;
 color_scheme_t clr = {
     .bg_color = 0x00353535,
     .base_color = 0x00222221,
-    .highlight = 0x00242423,
+    .highlight = 0x00030303,
     .border_color = 0x00000000,
     .text_color = 0x00FFFFFF,
     .border_color2 = 0x00555555,
@@ -47,6 +48,7 @@ color_scheme_t clr = {
 
 int main() {
     win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
+    win->color = &clr;
 
     syscall(SYS_MAKETTY);
 
@@ -147,9 +149,9 @@ int main() {
 
 void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
-    snow_draw_window(win, &clr);
+    snow_draw_window(win);
 
-    uint32_t y = tb_height + 4; // below title bar
+    uint32_t y = UI_TB_HEIGHT + 4; // below title bar
 
     // Temporarily concatenate the input and a cursor
     str_append(text_buf, input_buf->buf);

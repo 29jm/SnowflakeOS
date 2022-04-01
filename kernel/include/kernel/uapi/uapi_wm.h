@@ -14,17 +14,21 @@ enum WM_CMD {
     WM_CMD_INFO,
     WM_CMD_EVENT,
     WM_CMD_GET_POS,
-    WM_CMD_IS_HOVERED,
+    WM_CMD_IS_DRAGGED,
 };
 
 enum WM_EVENT {
     WM_EVENT_CLICK = 1,
-    WM_EVENT_RELEASE,
+    WM_EVENT_MOUSE_MOVE,
+    WM_EVENT_MOUSE_RELEASE,
     WM_EVENT_KBD,
     WM_EVENT_GAINED_FOCUS,
     WM_EVENT_LOST_FOCUS,
-    WM_EVENT_MOUSE_MOVE,
 };
+
+typedef struct {
+    int32_t x, y;
+} point_t;
 
 typedef struct {
     int32_t top, left, bottom, right;

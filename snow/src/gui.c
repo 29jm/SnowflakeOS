@@ -1,17 +1,7 @@
 #include <snow.h>
-#include <kernel/wm.h>
 
 #include <stdlib.h>
 #include <string.h>
-
-color_scheme_t def = {
-    .bg_color = 0x00AAAAAA, // bg color
-    .base_color = 0x00222221, // tb color
-    .border_color = 0x00000000, // tb border color
-    .text_color = 0x00FFFFFF, // tb text color
-    .highlight = 0x00242423, // tb highlighted color
-    .border_color2 = 0x00555555, // window border
-};
 
 uint32_t snow_wm_open_window(fb_t* fb, uint32_t flags) {
     wm_param_open_t param = (wm_param_open_t) {
@@ -38,9 +28,9 @@ window_t* snow_open_window(const char* title, int width, int height, uint32_t fl
         .height = height,
         .bpp = bpp,
     };
+    win->color = UI_DEFAULT_COLOR;
 
     win->id = snow_wm_open_window(&win->fb, flags);
-    win->pos = (point_t*) syscall2(SYS_WM, WM_CMD_GET_POS, win->id);
     win->flags = flags;
 
     return win;
@@ -57,24 +47,27 @@ void snow_close_window(window_t* win) {
 /* Draws the given window and its components to the window's buffer then to
  * the screen.
  */
-void snow_draw_window(window_t* win, color_scheme_t* clr) {
-    if (clr == NULL) {
-        clr = &def;
-    }
+void snow_draw_window(window_t* win) {
+    const color_scheme_t* clr = win->color;
 
     // update for this call the hovering status of the window
-    clr->is_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
+    bool is_hovered = syscall2(SYS_WM, WM_CMD_IS_DRAGGED, win->id);
 
     // background
     snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr->bg_color);
     // title bar
-    if(clr->is_hovered){
-        snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->highlight);
+    if (is_hovered) {
+        int64_t hl = clr->base_color + clr->highlight;
+
+        // color overflow
+        if (hl < clr->base_color) hl = 0xffffff;
+
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->base_color + clr->highlight);
     } else {
-        snow_draw_rect(win->fb, 0, 0, win->width, tb_height, clr->base_color);
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->base_color);
     }
-    snow_draw_border(win->fb, 0, 0, win->width, tb_height, clr->border_color);
-    snow_draw_string(win->fb, win->title, tb_padding, tb_height / 3, clr->text_color);
+    snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->border_color);
+    snow_draw_string(win->fb, win->title, UI_TB_PADDING, UI_TB_HEIGHT / 3, clr->text_color);
     // border of the whole window
     snow_draw_border(win->fb, 0, 0, win->width, win->height, clr->border_color2);
 }

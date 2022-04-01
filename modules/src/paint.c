@@ -92,17 +92,6 @@ int main(int argc, char* argv[]) {
             running = false;
         }
 
-        bool under_canvas = point_in_rect(rect_to_point(event.mouse.position),
-            canvas->widget.bounds);
-
-        // start drawing
-        if (event.type == WM_EVENT_CLICK && under_canvas) {
-            canvas->is_drawing = true;
-        // stop to
-        } else if(event.type == WM_EVENT_RELEASE || !under_canvas) {
-            canvas->is_drawing = false;
-        }
-
         ui_handle_input(paint, event);
         ui_draw(paint);
     }

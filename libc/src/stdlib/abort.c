@@ -1,5 +1,3 @@
-#include <abort.h>
-
 __attribute__((__noreturn__))
 void abort()
 {

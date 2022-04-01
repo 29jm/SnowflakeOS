@@ -11,9 +11,9 @@ void titlebar_on_draw(titlebar_t* tb, fb_t fb) {
 
     if (tb->icon) {
         snow_draw_rgb_masked(fb, tb->icon, r.x+2, r.y+2, 16, 16, 0xFFFFFF);
-        snow_draw_string(fb, tb->title, r.x+16+5, r.y+3, 0xFFFFFF);
+        snow_draw_string(fb, tb->title, r.x+16+5, r.y+3, 0xFFFFFF); // TODO: add UI_TB_ICON_PADDING
     } else {
-        snow_draw_string(fb, tb->title, r.x+3, r.y+3, 0xFFFFFF);
+        snow_draw_string(fb, tb->title, r.x + UI_TB_PADDING, r.y + UI_TB_HEIGHT, 0xFFFFFF);
     }
 
     snow_draw_border(fb, r.x, r.y, r.w, r.h, 0x404040);
