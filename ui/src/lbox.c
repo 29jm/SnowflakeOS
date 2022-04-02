@@ -160,8 +160,6 @@ lbox_t* lbox_new(uint32_t direction) {
     lbox->widget.on_mouse_release = (widget_mouse_release_t) lbox_on_mouse_release;
     lbox->direction = direction;
 
-    lbox->widget.color = UI_DEFAULT_COLOR;
-
     return lbox;
 }
 

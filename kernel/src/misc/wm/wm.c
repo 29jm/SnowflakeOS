@@ -10,8 +10,6 @@
 #include <list.h>
 #include <stdlib.h>
 
-#include <snow.h>
-
 #define MOUSE_SIZE 16
 #define WM_EVENT_QUEUE_SIZE 5
 
@@ -22,7 +20,6 @@ void wm_refresh_partial(wm_rect_t clip);
 void wm_assign_position(wm_window_t* win);
 void wm_assign_z_orders();
 void wm_raise_window(wm_window_t* win);
-list_t* wm_get_window(uint32_t id);
 void wm_print_windows();
 list_t* wm_get_windows_above(wm_window_t* win);
 wm_rect_t wm_mouse_to_rect(mouse_t mouse);
@@ -61,6 +58,7 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .kfb = *buff,
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
+        .being_dragged = false,
         .events = ringbuffer_new(WM_EVENT_QUEUE_SIZE * sizeof(wm_event_t))
     };
 
@@ -450,13 +448,14 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
     return NULL;
 }
 
-/* Returns the foresmost window which title bar is being
- * hovered by the mouse (x, y), NULL if none match
+/* Returns true if the given window's title bar is being
+ * hovered by the mouse (x, y), false otherwise
  */
-bool wm_is_window_beeing_hovered(wm_window_t* win, int32_t x, int32_t y) {
+bool wm_is_window_beeing_hovered(wm_window_t* win) {
     wm_rect_t r = rect_from_window(win);
 
-    if (y >= r.top && y <= r.top + UI_TB_HEIGHT && x >= r.left && x <= r.right) {
+    if (mouse.y >= r.top && mouse.y <= r.top + UI_TB_HEIGHT
+        && mouse.x >= r.left && mouse.x <= r.right) {
         return true;
     } else {
         return false;
@@ -496,7 +495,6 @@ void wm_mouse_callback(mouse_t raw_curr) {
     float dx = (raw_curr.x - raw_prev.x)*sens;
     float dy = (raw_curr.y - raw_prev.y)*sens;
 
-
     mouse.x += dx;
     mouse.y += dy;
 
@@ -528,9 +526,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
     if (raw_prev.left_pressed && raw_curr.left_pressed) {
         bool hovered = false;
 
-        if(dragging){
-            hovered =
-            wm_is_window_beeing_hovered(dragging, mouse.x, mouse.y);
+        if (dragging) {
+            hovered = wm_is_window_beeing_hovered(dragging);
         }
 
         if (hovered && (dx || dy)) {
@@ -549,6 +546,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
                 rect = wm_mouse_to_rect(mouse);
                 wm_draw_mouse(rect);
+
+                dragging->being_dragged = true;
             }
         }
     }
@@ -567,6 +566,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
             ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
         dragging = NULL;
+        dragging->being_dragged = false;
     }
 
     // The mouse's simply moving

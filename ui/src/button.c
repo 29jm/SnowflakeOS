@@ -25,14 +25,12 @@ void button_on_draw(button_t* button, fb_t fb) {
 void button_on_click(button_t* button, point_t p) {
     (void) p;
 
-    //rect_t r = ui_get_absolute_bounds((widget_t*) button);
     button->is_clicked = true;
 }
 
 void button_on_release(button_t* button, point_t p) {
     (void) p;
 
-    //rect_t r = ui_get_absolute_bounds((widget_t*) button);
     button->is_clicked = false;
 }
 
@@ -40,13 +38,12 @@ void button_on_free(button_t* button) {
     free(button->text);
 }
 
-button_t* button_new(char* text, color_scheme_t* clr) {
+button_t* button_new(char* text) {
     button_t* button = zalloc(sizeof(button_t));
     uint32_t margin = UI_TB_PADDING;
 
     button->text = strdup(text);
     button->is_clicked = false;
-    button->widget.color = clr;
     button->widget.bounds.w = strlen(text)*8 + 4*margin;
     button->widget.bounds.h = 16 + 2*margin; // 2px margin
     button->widget.on_draw = (widget_draw_t) button_on_draw;

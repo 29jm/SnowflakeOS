@@ -22,6 +22,7 @@ typedef struct _wm_window_t {
     point_t* pos;
     uint32_t id;
     uint32_t flags;
+    bool being_dragged;
     ringbuffer_t* events;
 } wm_window_t;
 
@@ -41,3 +42,7 @@ void rect_add_clip_rect(list_t* rects, wm_rect_t clip);
 void print_rect(wm_rect_t* r);
 bool rect_intersect(wm_rect_t a, wm_rect_t b);
 void rect_clear_clipped(list_t* rects);
+
+/* Declared in here to later use in syscall
+ */
+list_t* wm_get_window(uint32_t id);

@@ -20,8 +20,14 @@ point_t rect_to_point(wm_rect_t r) {
 /* Returns the color scheme of the widget or of the closest parent
  */
 color_scheme_t* get_widget_color(widget_t* widget) {
-    if (widget->color != NULL) return widget->color;
-    else return get_widget_color(widget->parent);
+
+    if (!widget) {
+        return &default_color_scheme;
+    } else if (widget->color != NULL) {
+        return widget->color;
+    } else {
+        return get_widget_color(widget->parent);
+    }
 }
 
 /* Sets the widget to be displayed below the titlebar of an app created with
@@ -150,18 +156,4 @@ point_t ui_absolute_to_local(widget_t* widget, point_t point) {
     point_t p = ui_to_child_local(widget, point);
 
     return ui_absolute_to_local(widget->parent, p);
-}
-
-color_scheme_t* color_to_scheme(uint32_t color) {
-    color_scheme_t* clr = zalloc(sizeof(color_scheme_t));
-
-    *clr = (color_scheme_t){
-        .base_color = color,
-        .bg_color = color / 3,
-        .border_color = color / 4,
-        .text_color = color - color / 2,
-        .highlight = color + 0x030303,
-    };
-
-    return clr;
 }

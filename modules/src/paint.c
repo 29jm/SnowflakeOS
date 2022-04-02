@@ -1,6 +1,5 @@
 #include <snow.h>
 #include <ui.h>
-#include <kernel/wm.h>
 
 #include <stdlib.h>
 #include <stdio.h>

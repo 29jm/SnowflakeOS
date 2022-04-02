@@ -28,7 +28,6 @@ window_t* snow_open_window(const char* title, int width, int height, uint32_t fl
         .height = height,
         .bpp = bpp,
     };
-    win->color = UI_DEFAULT_COLOR;
 
     win->id = snow_wm_open_window(&win->fb, flags);
     win->flags = flags;
@@ -48,28 +47,35 @@ void snow_close_window(window_t* win) {
  * the screen.
  */
 void snow_draw_window(window_t* win) {
-    const color_scheme_t* clr = win->color;
+    // TODO: unify this with `default_color_scheme` from UI
+    static const color_scheme_t clr = {
+        .base_color = 0x757575,
+        .border_color = 0x000000,
+        .border_color2 = 0x121212,
+        .text_color = 0xFFFFFF,
+        .highlight = 0x030303,
+    };
 
     // update for this call the hovering status of the window
     bool is_hovered = syscall2(SYS_WM, WM_CMD_IS_DRAGGED, win->id);
 
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr->bg_color);
+    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr.bg_color);
     // title bar
     if (is_hovered) {
-        int64_t hl = clr->base_color + clr->highlight;
+        uint32_t hl = clr.base_color + clr.highlight;
 
         // color overflow
-        if (hl < clr->base_color) hl = 0xffffff;
+        if (hl < clr.base_color) hl = 0xffffff;
 
-        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->base_color + clr->highlight);
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.base_color + clr.highlight);
     } else {
-        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->base_color);
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.base_color);
     }
-    snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr->border_color);
-    snow_draw_string(win->fb, win->title, UI_TB_PADDING, UI_TB_HEIGHT / 3, clr->text_color);
+    snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.border_color);
+    snow_draw_string(win->fb, win->title, UI_TB_PADDING, UI_TB_HEIGHT / 3, clr.text_color);
     // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr->border_color2);
+    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr.border_color2);
 }
 
 /* Draws the window's buffer as-is to the screen.

@@ -138,17 +138,19 @@ static void syscall_wm(registers_t* regs) {
         case WM_CMD_EVENT: {
                 wm_param_event_t* param = (wm_param_event_t*) regs->ecx;
                 wm_get_event(param->win_id, param->event);
-        } break;
+            } break;
         case WM_CMD_IS_DRAGGED: {
             list_t* item = wm_get_window(regs->ecx);
-            if (item) {
-                regs->eax = (list_entry(item, wm_window_t));
+
+            if (item != NULL) {
+                wm_window_t* win = list_entry(item, wm_window_t);
+                return win->being_dragged;
             } else {
                 printke("the given window id (%d) is unknown", regs->ecx);
-                regs->eax = -1;
+                regs->eax = false;
                 break;    
             }
-        } break;
+            } break;
         default:
             printke("wrong command: %d", cmd);
             regs->eax = -1;

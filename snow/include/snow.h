@@ -17,24 +17,6 @@ int32_t syscall3(uint32_t eax, uint32_t ebx, uint32_t ecx, uint32_t edx);
                     asm ("xchgw %bx, %bx\n"); \
                 } while (false)
 
-// all this stuff needs to be here so then both window_t and ui.h can access it
-#define UI_TB_HEIGHT 30
-#define UI_TB_PADDING 8
-
-typedef struct {
-    int64_t bg_color, // background color
-    base_color, border_color, text_color, highlight, // title bar colors
-    border_color2; // window border color
-} color_scheme_t;
-
-#define UI_DEFAULT_COLOR &(color_scheme_t){\
-    .base_color = 0x757575,\
-    .border_color = 0x000000,\
-    .border_color2 = 0x121212,\
-    .text_color = 0xFFFFFF,\
-    .highlight = 0x030303,\
-}
-
 typedef struct {
     char* title;
     uint32_t width;
@@ -42,7 +24,6 @@ typedef struct {
     fb_t fb;
     uint32_t id;
     uint32_t flags;
-    color_scheme_t* color;
 } window_t;
 
 void snow_get_fb_info(fb_t* fb);

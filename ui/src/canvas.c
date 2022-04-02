@@ -1,21 +1,16 @@
 #include <ui.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 void canvas_on_click(canvas_t* canvas, point_t p) {
     rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
 
-    // start drawing
     canvas->is_drawing = true;
-
     canvas->last_pos = (point_t) { bounds.x + p.x, bounds.y + p.y };
     canvas->new_pos = canvas->last_pos;
 }
 
 void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
     rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
-
-    if (!point_in_rect(p, bounds)) canvas->is_drawing = false;
 
     canvas->needs_drawing = true;
     canvas->last_pos = canvas->new_pos;
@@ -48,7 +43,6 @@ canvas_t* canvas_new() {
     canvas_t* canvas = zalloc(sizeof(canvas_t));
 
     canvas->widget.flags = UI_EXPAND;
-    canvas->widget.color = NULL;
     canvas->widget.on_click = (widget_clicked_t) canvas_on_click;
     canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
     canvas->widget.on_mouse_move = (widget_mouse_moved_t) canvas_on_mouse_move;

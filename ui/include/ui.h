@@ -119,6 +119,14 @@ typedef struct {
     uint32_t height;
 } pixel_buffer_t;
 
+static color_scheme_t default_color_scheme = {
+    .base_color = 0x757575,
+    .border_color = 0x000000,
+    .border_color2 = 0x121212,
+    .text_color = 0xFFFFFF,
+    .highlight = 0x030303,
+};
+
 bool point_in_rect(point_t p, rect_t r);
 point_t rect_to_point(wm_rect_t r);
 ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon);
@@ -140,15 +148,15 @@ vbox_t* vbox_new();
 void vbox_add(vbox_t* vbox, widget_t* widget);
 void vbox_clear(vbox_t* vbox);
 
-button_t* button_new(char* text, color_scheme_t* clr);
+button_t* button_new(char* text);
 void button_set_on_click(button_t* button, void (*callback)(button_t*));
 void button_set_text(button_t* button, const char* text);
-void color_button_on_resize(color_button_t* button);
-
-color_scheme_t* color_to_scheme(uint32_t color);
 
 titlebar_t* titlebar_new(const char* title, const uint8_t* icon);
 void titlebar_set_title(titlebar_t* tb, const char* title);
+
+color_button_t* color_button_new(uint32_t color, uint32_t* to_set);
+void color_button_on_resize(color_button_t* button);
 
 canvas_t* canvas_new();
 
