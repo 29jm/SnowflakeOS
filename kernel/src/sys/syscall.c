@@ -144,13 +144,25 @@ static void syscall_wm(registers_t* regs) {
 
             if (item != NULL) {
                 wm_window_t* win = list_entry(item, wm_window_t);
-                return win->being_dragged;
+                regs->eax = win->being_dragged;
             } else {
                 printke("the given window id (%d) is unknown", regs->ecx);
                 regs->eax = false;
                 break;    
             }
             } break;
+        case WM_CMD_IS_HOVERED: {
+            list_t* item = wm_get_window(regs->ecx);
+
+            if (item != NULL) {
+                wm_window_t* win = list_entry(item, wm_window_t);
+                regs->eax = wm_is_window_being_hovered(win);
+            } else {
+                printke("the given window id (%d) is unknown", regs->ecx);
+                regs->eax = false;
+                break;    
+            }
+        } break;
         default:
             printke("wrong command: %d", cmd);
             regs->eax = -1;

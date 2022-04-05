@@ -26,10 +26,10 @@ wm_rect_t* rect_new_copy(wm_rect_t r) {
  */
 wm_rect_t rect_from_window(wm_window_t* win) {
     return (wm_rect_t) {
-        .top = win->pos->y,
-        .left = win->pos->x,
-        .bottom = win->pos->y + win->kfb.height - 1,
-        .right = win->pos->x + win->kfb.width - 1
+        .top = win->pos.y,
+        .left = win->pos.x,
+        .bottom = win->pos.y + win->kfb.height - 1,
+        .right = win->pos.x + win->kfb.width - 1
     };
 }
 

@@ -37,18 +37,8 @@ bool cursor = true;
 bool running = true;
 bool focused = true;
 
-color_scheme_t clr = {
-    .bg_color = 0x00353535,
-    .base_color = 0x00222221,
-    .highlight = 0x00030303,
-    .border_color = 0x00000000,
-    .text_color = 0x00FFFFFF,
-    .border_color2 = 0x00555555,
-};
-
 int main() {
     win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
-    win->color = &clr;
 
     syscall(SYS_MAKETTY);
 

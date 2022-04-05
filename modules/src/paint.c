@@ -57,11 +57,11 @@ int main(int argc, char* argv[]) {
         hbox_add(menu, W(cbutton));
     }
 
-    button_t* button = button_new("Clear", NULL);
+    button_t* button = button_new("Clear");
     button->on_click = on_clear_clicked;
     hbox_add(menu, W(button));
 
-    button_t* save_button = button_new("Save", NULL);
+    button_t* save_button = button_new("Save");
     save_button->on_click = on_save_clicked;
     hbox_add(menu, W(save_button));
 

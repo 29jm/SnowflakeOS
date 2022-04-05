@@ -22,6 +22,7 @@ void color_button_on_draw(color_button_t* button, fb_t fb) {
 }
 
 void color_button_on_release(color_button_t* button, point_t p) {
+    (void) p;
     button->is_clicked = false;
 }
 
@@ -45,8 +46,8 @@ color_button_t* color_button_new(uint32_t color, uint32_t* to_set) {
     button->widget.on_mouse_release = (widget_mouse_release_t) color_button_on_release;
     button->widget.on_draw = (widget_draw_t) color_button_on_draw;
     button->widget.on_resize = (widget_resize_t) color_button_on_resize;
-    button->widget.bounds.w = 26;
-    button->widget.bounds.h = 26;
+    button->widget.bounds.w = 20;
+    button->widget.bounds.h = 20;
 
     return button;
 }

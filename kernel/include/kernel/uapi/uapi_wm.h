@@ -19,6 +19,7 @@ enum WM_CMD {
     WM_CMD_EVENT,
     WM_CMD_GET_POS,
     WM_CMD_IS_DRAGGED,
+    WM_CMD_IS_HOVERED,
 };
 
 enum WM_EVENT {

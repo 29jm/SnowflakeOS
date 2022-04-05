@@ -19,7 +19,7 @@
 typedef struct _wm_window_t {
     fb_t ufb;
     fb_t kfb;
-    point_t* pos;
+    point_t pos;
     uint32_t id;
     uint32_t flags;
     bool being_dragged;
@@ -42,6 +42,9 @@ void rect_add_clip_rect(list_t* rects, wm_rect_t clip);
 void print_rect(wm_rect_t* r);
 bool rect_intersect(wm_rect_t a, wm_rect_t b);
 void rect_clear_clipped(list_t* rects);
+
+// declare this function here to later use in syscall.c
+bool wm_is_window_being_hovered(wm_window_t* win);
 
 /* Declared in here to later use in syscall
  */

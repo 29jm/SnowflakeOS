@@ -215,10 +215,9 @@ void wm_raise_window(wm_window_t* win) {
  * TODO: revamp entirely.
  */
 void wm_assign_position(wm_window_t* win) {
-    win->pos = (point_t*) kmalloc(sizeof(point_t));
     if (win->kfb.width == fb.width) {
-        win->pos->x = 0;
-        win->pos->y = 0;
+        win->pos.x = 0;
+        win->pos.y = 0;
 
         return;
     }
@@ -226,8 +225,8 @@ void wm_assign_position(wm_window_t* win) {
     int max_x = fb.width - win->ufb.width;
     int max_y = fb.height - win->ufb.height;
 
-    win->pos->x = rand() % max_x;
-    win->pos->y = rand() % max_y;
+    win->pos.x = rand() % max_x;
+    win->pos.y = rand() % max_y;
 }
 
 /* Makes sure that z-level related flags are respected.
@@ -281,11 +280,11 @@ void wm_partial_draw_window(wm_window_t* win, wm_rect_t clip) {
 
     // Compute offsets; remember that `right` and `bottom` are inclusive
     uintptr_t fb_off = fb.address + clip.top*fb.pitch + clip.left*fb.bpp/8;
-    uintptr_t win_off = wfb->address + (clip.left - win->pos->x)*wfb->bpp/8;
+    uintptr_t win_off = wfb->address + (clip.left - win->pos.x)*wfb->bpp/8;
     uint32_t len = (clip.right - clip.left + 1)*wfb->bpp/8;
 
     for (int32_t y = clip.top; y <= clip.bottom; y++) {
-        memcpy((void*) fb_off, (void*) (win_off + (y - win->pos->y)*wfb->pitch), len);
+        memcpy((void*) fb_off, (void*) (win_off + (y - win->pos.y)*wfb->pitch), len);
         fb_off += fb.pitch;
     }
 }
@@ -449,9 +448,9 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
 }
 
 /* Returns true if the given window's title bar is being
- * hovered by the mouse (x, y), false otherwise
+ * hovered by the mouse, false otherwise.
  */
-bool wm_is_window_beeing_hovered(wm_window_t* win) {
+bool wm_is_window_being_hovered(wm_window_t* win) {
     wm_rect_t r = rect_from_window(win);
 
     if (mouse.y >= r.top && mouse.y <= r.top + UI_TB_HEIGHT
@@ -527,7 +526,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
         bool hovered = false;
 
         if (dragging) {
-            hovered = wm_is_window_beeing_hovered(dragging);
+            hovered = wm_is_window_being_hovered(dragging);
         }
 
         if (hovered && (dx || dy)) {
@@ -536,8 +535,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
             if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
                     rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
 
-                dragging->pos->x += dx;
-                dragging->pos->y += dy;
+                dragging->pos.x += dx;
+                dragging->pos.y += dy;
 
                 wm_rect_t new_rect = rect_from_window(dragging);
 
@@ -564,9 +563,9 @@ void wm_mouse_callback(mouse_t raw_curr) {
             event.mouse.position.left -= r.left;
 
             ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
+            dragging->being_dragged = false;
         }
         dragging = NULL;
-        dragging->being_dragged = false;
     }
 
     // The mouse's simply moving

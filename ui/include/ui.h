@@ -86,6 +86,7 @@ typedef struct {
     char* text;
     bool is_clicked;
     void (*on_click)();
+    void (*on_release)();
 } button_t;
 
 

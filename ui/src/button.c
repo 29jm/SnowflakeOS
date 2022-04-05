@@ -24,14 +24,20 @@ void button_on_draw(button_t* button, fb_t fb) {
 
 void button_on_click(button_t* button, point_t p) {
     (void) p;
-
     button->is_clicked = true;
+
+    if (button->on_click) {
+        button->on_click(button);
+    }
 }
 
 void button_on_release(button_t* button, point_t p) {
     (void) p;
-
     button->is_clicked = false;
+
+    if (button->on_release) {
+        button->on_release(button);
+    }
 }
 
 void button_on_free(button_t* button) {
@@ -55,6 +61,11 @@ button_t* button_new(char* text) {
 
 void button_set_on_click(button_t* button, void (*callback)(button_t*)) {
     button->on_click = callback;
+}
+
+
+void button_set_on_release(button_t* button, void (*callback)(button_t*)) {
+    button->on_release = callback;
 }
 
 void button_set_text(button_t* button, const char* text) {

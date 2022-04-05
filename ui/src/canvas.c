@@ -12,15 +12,15 @@ void canvas_on_click(canvas_t* canvas, point_t p) {
 void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
     rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
 
+    // enables drawing state
     canvas->needs_drawing = true;
     canvas->last_pos = canvas->new_pos;
     canvas->new_pos = (point_t) { p.x+bounds.x, p.y+bounds.y };
 }
 
 void canvas_on_mouse_release(canvas_t* canvas, point_t p) {
-    rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
-
-    // start drawing
+    (void) p;
+    // disables drawing state
     canvas->is_drawing = false;
 }
 

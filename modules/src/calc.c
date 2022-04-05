@@ -126,7 +126,7 @@ int main() {
     vbox_t* main_vb = vbox_new();
     ui_set_root(app, (widget_t*) main_vb);
 
-    text_field = button_new("          ", NULL);
+    text_field = button_new("          ");
     text_field->widget.flags |= UI_EXPAND_HORIZONTAL;
     vbox_add(main_vb, (widget_t*) text_field);
 
@@ -141,7 +141,7 @@ int main() {
 
     for (uint32_t i = 0; i < 10; i++) {
         char str[2] = "\0\0";
-        num_btn[i] = button_new(itoa(i, str, 10), NULL);
+        num_btn[i] = button_new(itoa(i, str, 10));
         num_btn[i]->widget.flags |= UI_EXPAND;
         num_btn[i]->on_click = num_clicked;
     }
@@ -182,7 +182,7 @@ int main() {
     for (uint32_t i = 0; i < strlen(ops); i++) {
         char op[2] = "\0\0";
         op[0] = ops[i];
-        button_t* op_btn = button_new(op, NULL);
+        button_t* op_btn = button_new(op);
         op_btn->widget.flags |= UI_EXPAND;
         op_btn->on_click = num_clicked;
         vbox_add(ops_vb, (widget_t*) op_btn);
@@ -200,7 +200,7 @@ int main() {
     for (uint32_t i = 0; i < strlen(actions); i++) {
         char action[2] = "\0\0";
         action[0] = actions[i];
-        button_t* action_btn = button_new(action, NULL);
+        button_t* action_btn = button_new(action);
         action_btn->widget.flags |= UI_EXPAND;
         action_btn->on_click = num_clicked;
         vbox_add(actions_vb, (widget_t*) action_btn);
