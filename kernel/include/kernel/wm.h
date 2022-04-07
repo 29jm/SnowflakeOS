@@ -26,21 +26,23 @@ typedef struct _wm_window_t {
     ringbuffer_t* events;
 } wm_window_t;
 
+typedef wm_rect_t rect_t;
+
 void init_wm();
 
 uint32_t wm_open_window(fb_t* fb, uint32_t flags);
 void wm_close_window(uint32_t win_id);
-void wm_render_window(uint32_t win_id, wm_rect_t* clip);
+void wm_render_window(uint32_t win_id, rect_t* clip);
 void wm_get_event(uint32_t win_id, wm_event_t* event);
 
 // rect-handling functions
-wm_rect_t* rect_new_copy(wm_rect_t r);
-list_t* rect_split_by(wm_rect_t a, wm_rect_t b);
-wm_rect_t rect_from_window(wm_window_t* win);
-void rect_subtract_clip_rect(list_t* rects, wm_rect_t clip);
-void rect_add_clip_rect(list_t* rects, wm_rect_t clip);
-void print_rect(wm_rect_t* r);
-bool rect_intersect(wm_rect_t a, wm_rect_t b);
+rect_t* rect_new_copy(rect_t r);
+list_t* rect_split_by(rect_t a, rect_t b);
+rect_t rect_from_window(wm_window_t* win);
+void rect_subtract_clip_rect(list_t* rects, rect_t clip);
+void rect_add_clip_rect(list_t* rects, rect_t clip);
+void print_rect(rect_t* r);
+bool rect_intersect(rect_t a, rect_t b);
 void rect_clear_clipped(list_t* rects);
 
 // declare this function here to later use in syscall.c

@@ -7,7 +7,6 @@
 void color_button_on_click(color_button_t* button, point_t p) {
     (void) p;
     button->is_clicked = true;
-    *button->to_set = button->color;
 }
 
 void color_button_on_draw(color_button_t* button, fb_t fb) {
@@ -24,6 +23,8 @@ void color_button_on_draw(color_button_t* button, fb_t fb) {
 void color_button_on_release(color_button_t* button, point_t p) {
     (void) p;
     button->is_clicked = false;
+
+    *button->to_set = button->color;
 }
 
 void color_button_on_resize(color_button_t* button) {

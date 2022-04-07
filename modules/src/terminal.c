@@ -25,7 +25,7 @@ const uint32_t theight = 342;
 const uint32_t char_width = 8;
 const uint32_t char_height = 16;
 const uint32_t max_col = twidth / char_width - 1;
-const uint32_t max_line = theight / char_height - 1;
+const uint32_t max_line = theight / char_height - 2;
 
 const char* prompt = "snowflakeos $ ";
 const uint32_t margin = UI_TB_PADDING;

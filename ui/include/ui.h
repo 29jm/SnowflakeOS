@@ -157,7 +157,6 @@ titlebar_t* titlebar_new(const char* title, const uint8_t* icon);
 void titlebar_set_title(titlebar_t* tb, const char* title);
 
 color_button_t* color_button_new(uint32_t color, uint32_t* to_set);
-void color_button_on_resize(color_button_t* button);
 
 canvas_t* canvas_new();
 
