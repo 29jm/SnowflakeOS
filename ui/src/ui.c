@@ -104,7 +104,7 @@ void ui_set_title(ui_app_t app, const char* title) {
  */
 void ui_handle_input(ui_app_t app, wm_event_t event) {
     switch (event.type) {
-    case WM_EVENT_CLICK: {
+    case WM_EVENT_MOUSE_PRESS: {
         point_t pos = { event.mouse.position.left, event.mouse.position.top };
 
         if (app.root->on_click) {

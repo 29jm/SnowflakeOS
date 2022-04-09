@@ -25,10 +25,6 @@ int main() {
     while (true) {
         wm_event_t evt = snow_get_event(win);
 
-        if (evt.type == WM_EVENT_CLICK) {
-            printf("sys_info clicked at %d;%d\n", evt.mouse.position.left, evt.mouse.position.top);
-        }
-
         if (evt.type == WM_EVENT_KBD && evt.kbd.keycode == KBD_ESCAPE) {
             break;
         }
