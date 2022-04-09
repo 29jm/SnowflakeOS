@@ -1,5 +1,6 @@
 #include <snow.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -47,14 +48,48 @@ void snow_close_window(window_t* win) {
  * the screen.
  */
 void snow_draw_window(window_t* win) {
+    // TODO: unify this with `default_color_scheme` from UI
+    static const color_scheme_t clr = {
+        .bg_color = 0x00353535,
+        .base_color = 0x00222221,
+        .border_color = 0x000000,
+        .border_color2 = 0x121212,
+        .text_color = 0xFFFFFF,
+        .highlight = 0x030303,
+    };
+
+    // update for this call the hovering status of the window
+    bool is_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
+
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, 0x00AAAAAA);
+    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr.bg_color);
+
     // title bar
-    snow_draw_rect(win->fb, 0, 0, win->width, 20, 0x00222221);
-    snow_draw_border(win->fb, 0, 0, win->width, 20, 0x00000000);
-    snow_draw_string(win->fb, win->title, 4, 3, 0x00FFFFFF);
+    if (is_hovered) {
+        uint32_t hl = clr.base_color + clr.highlight;
+
+        // color overflow
+        if (hl < clr.base_color) {
+            hl = 0xffffff;
+        }
+
+        uint32_t bd = clr.border_color + clr.highlight;
+
+        // color overflow
+        if (bd < clr.border_color) {
+            bd = 0xffffff;
+        }
+
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, hl);
+        snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, bd);
+    } else {
+        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.base_color);
+        snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.border_color);
+    }
+
+    snow_draw_string(win->fb, win->title, UI_TB_PADDING, UI_TB_HEIGHT / 3, clr.text_color);
     // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, 0x00555555);
+    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr.border_color2);
 }
 
 /* Draws the window's buffer as-is to the screen.

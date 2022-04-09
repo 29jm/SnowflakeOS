@@ -20,7 +20,6 @@ void wm_refresh_partial(rect_t clip);
 void wm_assign_position(wm_window_t* win);
 void wm_assign_z_orders();
 void wm_raise_window(wm_window_t* win);
-list_t* wm_get_window(uint32_t id);
 void wm_print_windows();
 list_t* wm_get_windows_above(wm_window_t* win);
 rect_t wm_mouse_to_rect(mouse_t mouse);
@@ -59,6 +58,7 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .kfb = *buff,
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
+        .being_dragged = false,
         .events = ringbuffer_new(WM_EVENT_QUEUE_SIZE * sizeof(wm_event_t))
     };
 
@@ -216,8 +216,8 @@ void wm_raise_window(wm_window_t* win) {
  */
 void wm_assign_position(wm_window_t* win) {
     if (win->kfb.width == fb.width) {
-        win->x = 0;
-        win->y = 0;
+        win->pos.x = 0;
+        win->pos.y = 0;
 
         return;
     }
@@ -225,8 +225,8 @@ void wm_assign_position(wm_window_t* win) {
     int max_x = fb.width - win->ufb.width;
     int max_y = fb.height - win->ufb.height;
 
-    win->x = rand() % max_x;
-    win->y = rand() % max_y;
+    win->pos.x = rand() % max_x;
+    win->pos.y = rand() % max_y;
 }
 
 /* Makes sure that z-level related flags are respected.
@@ -280,11 +280,11 @@ void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
 
     // Compute offsets; remember that `right` and `bottom` are inclusive
     uintptr_t fb_off = fb.address + clip.top*fb.pitch + clip.left*fb.bpp/8;
-    uintptr_t win_off = wfb->address + (clip.left - win->x)*wfb->bpp/8;
+    uintptr_t win_off = wfb->address + (clip.left - win->pos.x)*wfb->bpp/8;
     uint32_t len = (clip.right - clip.left + 1)*wfb->bpp/8;
 
     for (int32_t y = clip.top; y <= clip.bottom; y++) {
-        memcpy((void*) fb_off, (void*) (win_off + (y - win->y)*wfb->pitch), len);
+        memcpy((void*) fb_off, (void*) (win_off + (y - win->pos.y)*wfb->pitch), len);
         fb_off += fb.pitch;
     }
 }
@@ -447,6 +447,20 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
     return NULL;
 }
 
+/* Returns true if the given window's title bar is being
+ * hovered by the mouse, false otherwise.
+ */
+bool wm_is_window_being_hovered(wm_window_t* win) {
+    rect_t r = rect_from_window(win);
+
+    if (mouse.y >= r.top && mouse.y <= r.top + UI_TB_HEIGHT
+        && mouse.x >= r.left && mouse.x <= r.right) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void wm_draw_mouse(rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
@@ -469,8 +483,7 @@ void wm_draw_mouse(rect_t new) {
  */
 void wm_mouse_callback(mouse_t raw_curr) {
     static mouse_t raw_prev;
-    static wm_window_t* dragged = NULL;
-    static bool been_dragged = false;
+    static wm_window_t* dragging = NULL;
 
     const mouse_t prev = mouse;
     const float sens = 0.7f;
@@ -489,64 +502,78 @@ void wm_mouse_callback(mouse_t raw_curr) {
     mouse.x = mouse.x < 0 ? 0 : mouse.x;
     mouse.y = mouse.y < 0 ? 0 : mouse.y;
 
-    // Raises and drag starts
+    // Click, raises and drag starts
     if (!raw_prev.left_pressed && raw_curr.left_pressed) {
-        wm_window_t* clicked = wm_window_at(mouse.x, mouse.y);
+        dragging = wm_window_at(mouse.x, mouse.y);
 
-        if (clicked) {
-            wm_raise_window(clicked);
-            dragged = clicked;
-        }
-    }
+        if (dragging) {
+            wm_raise_window(dragging);
 
-    // Drags
-    if (raw_prev.left_pressed && raw_curr.left_pressed) {
-        if (dragged && (dx || dy)) {
-            rect_t rect = rect_from_window(dragged);
-
-            if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
-                    rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
-                been_dragged = true;
-
-                dragged->x += dx;
-                dragged->y += dy;
-
-                rect_t new_rect = rect_from_window(dragged);
-
-                wm_refresh_partial(rect);
-                wm_draw_window(dragged, new_rect);
-
-                rect = wm_mouse_to_rect(mouse);
-                wm_draw_mouse(rect);
-            }
-        }
-    }
-
-    // Clicks and drag ends
-    if (raw_prev.left_pressed && !raw_curr.left_pressed) {
-        wm_event_t event;
-
-        if (!been_dragged) {
-            rect_t r = rect_from_window(dragged);
+            wm_event_t event;
+            rect_t r = rect_from_window(dragging);
 
             event.type = WM_EVENT_CLICK;
             event.mouse.position = wm_mouse_to_rect(mouse);
             event.mouse.position.top -= r.top;
             event.mouse.position.left -= r.left;
 
-            ringbuffer_write(dragged->events, sizeof(wm_event_t), (uint8_t*) &event);
+            ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
-
-        been_dragged = false;
-        dragged = NULL;
     }
 
-    // Simple moves
+    // Drags
+    if (raw_prev.left_pressed && raw_curr.left_pressed) {
+        bool hovered = false;
+
+        if (dragging) {
+            hovered = wm_is_window_being_hovered(dragging);
+        }
+
+        if (hovered && (dx || dy)) {
+            rect_t rect = rect_from_window(dragging);
+
+            if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
+                    rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
+
+                dragging->pos.x += dx;
+                dragging->pos.y += dy;
+
+                rect_t new_rect = rect_from_window(dragging);
+
+                wm_refresh_partial(rect);
+                wm_draw_window(dragging, new_rect);
+
+                rect = wm_mouse_to_rect(mouse);
+                wm_draw_mouse(rect);
+
+                dragging->being_dragged = true;
+            }
+        }
+    }
+
+    // Clicks and drag ends
     if (!raw_prev.left_pressed && !raw_curr.left_pressed) {
+        if (dragging) {
+            wm_event_t event;
+            rect_t r = rect_from_window(dragging);
+
+            event.type = WM_EVENT_MOUSE_RELEASE;
+            event.mouse.position = wm_mouse_to_rect(mouse);
+            event.mouse.position.top -= r.top;
+            event.mouse.position.left -= r.left;
+
+            ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
+            dragging->being_dragged = false;
+        }
+        dragging = NULL;
+    }
+
+    // The mouse's simply moving
+    if (dx || dy) {
         wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
-        wm_event_t event;
 
         if (under_cursor) {
+            wm_event_t event;
             rect_t r = rect_from_window(under_cursor);
 
             event.type = WM_EVENT_MOUSE_MOVE;
@@ -556,10 +583,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
             ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*) &event);
         }
-    }
 
-    // Redraw the mouse if needed
-    if (dx || dy || dragged) {
         rect_t prev_pos = wm_mouse_to_rect(prev);
         rect_t curr_pos = wm_mouse_to_rect(mouse);
 

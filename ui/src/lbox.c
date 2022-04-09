@@ -132,6 +132,20 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
     }
 }
 
+void lbox_on_mouse_release(lbox_t* lbox, point_t pos) {
+    widget_t* child;
+
+    list_for_each_entry(child, &lbox->children) {
+        point_t local = ui_to_child_local(child, pos);
+
+        if (point_in_rect(pos, child->bounds)) {
+            if (child->on_mouse_release) {
+                child->on_mouse_release(child, local);
+            }
+        }
+    }
+}
+
 /* Creates an `lbox_t` with the requested direction, `UI_HBOX` or `UI_VBOX`.
  */
 lbox_t* lbox_new(uint32_t direction) {
@@ -143,6 +157,7 @@ lbox_t* lbox_new(uint32_t direction) {
     lbox->widget.on_draw = (widget_draw_t) lbox_on_draw;
     lbox->widget.on_resize = (widget_resize_t) lbox_on_resize;
     lbox->widget.on_mouse_move = (widget_mouse_moved_t) lbox_on_mouse_move;
+    lbox->widget.on_mouse_release = (widget_mouse_release_t) lbox_on_mouse_release;
     lbox->direction = direction;
 
     return lbox;
