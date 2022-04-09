@@ -26,6 +26,10 @@ void color_button_on_release(color_button_t* button, point_t p) {
     *button->to_set = button->color;
 }
 
+void color_button_on_mouse_exited(color_button_t* button) {
+    button->is_clicked = false;
+}
+
 void color_button_on_resize(color_button_t* button) {
     uint32_t s = fmin(button->widget.bounds.w, button->widget.bounds.h);
     button->widget.bounds.w = s;
@@ -44,6 +48,7 @@ color_button_t* color_button_new(uint32_t color, uint32_t* to_set) {
     button->widget.flags = UI_EXPAND_VERTICAL;
     button->widget.on_click = (widget_clicked_t) color_button_on_click;
     button->widget.on_mouse_release = (widget_mouse_release_t) color_button_on_release;
+    button->widget.on_mouse_exit = (widget_mouse_exited_t) color_button_on_mouse_exited;
     button->widget.on_draw = (widget_draw_t) color_button_on_draw;
     button->widget.on_resize = (widget_resize_t) color_button_on_resize;
     button->widget.bounds.w = 20;

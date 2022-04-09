@@ -481,6 +481,7 @@ void wm_draw_mouse(rect_t new) {
  */
 void wm_mouse_callback(mouse_t raw_curr) {
     static mouse_t raw_prev;
+    static wm_window_t* previously_hovered_win = NULL;
     static wm_window_t* clicked_win = NULL;
     static bool win_dragged = false;
     static point_t initial_position;
@@ -573,16 +574,33 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
     // Mouse move: propagate event to the relevant window
     if (dx || dy) {
+        wm_event_t event;
         wm_window_t* under_cursor = wm_window_at(mouse.x, mouse.y);
+        rect_t r = rect_from_window(under_cursor);
+
+        event.mouse.position = wm_mouse_to_rect(mouse);
+        event.mouse.position.top -= r.top;
+        event.mouse.position.left -= r.left;
+
+        /* Take care of mouse enter/exit events */
+        if (under_cursor != previously_hovered_win) {
+            if (previously_hovered_win) {
+                event.type = WM_EVENT_MOUSE_EXIT;
+
+                ringbuffer_write(previously_hovered_win->events, sizeof(wm_event_t), (uint8_t*) &event);
+            }
+
+            if (under_cursor) {
+                event.type = WM_EVENT_MOUSE_ENTER;
+
+                ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*) &event);
+            }
+
+            previously_hovered_win = under_cursor;
+        }
 
         if (under_cursor) {
-            wm_event_t event;
-            rect_t r = rect_from_window(under_cursor);
-
             event.type = WM_EVENT_MOUSE_MOVE;
-            event.mouse.position = wm_mouse_to_rect(mouse);
-            event.mouse.position.top -= r.top;
-            event.mouse.position.left -= r.left;
 
             ringbuffer_write(under_cursor->events, sizeof(wm_event_t), (uint8_t*) &event);
         }

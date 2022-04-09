@@ -56,8 +56,10 @@ typedef struct widget_t {
     void* data;
     /* Callbacks, to be set by widget implementations when relevant */
     void (*on_click)(struct widget_t*, point_t);
-    void (*on_mouse_move)(struct widget_t*, point_t);
     void (*on_mouse_release)(struct widget_t*, point_t);
+    void (*on_mouse_move)(struct widget_t*, point_t);
+    void (*on_mouse_enter)(struct widget_t*, point_t);
+    void (*on_mouse_exit)(struct widget_t*);
     void (*on_draw)(struct widget_t*, fb_t);
     void (*on_free)(struct widget_t*);
     void (*on_resize)(struct widget_t*);
@@ -65,6 +67,8 @@ typedef struct widget_t {
 
 typedef void (*widget_clicked_t)(widget_t*, point_t);
 typedef void (*widget_mouse_moved_t)(widget_t*, point_t);
+typedef void (*widget_mouse_entered_t)(widget_t*, point_t);
+typedef void (*widget_mouse_exited_t)(widget_t*);
 typedef void (*widget_mouse_release_t)(widget_t*, point_t);
 typedef void (*widget_draw_t)(widget_t*, fb_t);
 typedef void (*widget_resize_t)(widget_t*);
@@ -92,6 +96,8 @@ typedef struct {
     widget_t widget;
     list_t children;
     uint32_t direction;
+    // Keeps track of what widget to send mouse exit events to
+    widget_t* child_under_cursor;
 } lbox_t;
 
 typedef lbox_t hbox_t;
@@ -117,6 +123,7 @@ typedef struct {
     widget_t widget;
     char* title;
     uint8_t* icon;
+    bool hovered;
 } titlebar_t;
 
 typedef struct {

@@ -103,26 +103,33 @@ void ui_set_title(ui_app_t app, const char* title) {
  * `snow_get_event`. Or by fake events, whatever.
  */
 void ui_handle_input(ui_app_t app, wm_event_t event) {
+    // Will be valid in all events we care for
+    point_t pos = { event.mouse.position.left, event.mouse.position.top };
+
     switch (event.type) {
     case WM_EVENT_MOUSE_PRESS: {
-        point_t pos = { event.mouse.position.left, event.mouse.position.top };
-
         if (app.root->on_click) {
             app.root->on_click(app.root, pos);
         }
     } break;
+    case WM_EVENT_MOUSE_RELEASE: {
+        if (app.root->on_mouse_release) {
+            app.root->on_mouse_release(app.root, pos);
+        }
+    } break;
     case WM_EVENT_MOUSE_MOVE: {
-        point_t pos = { event.mouse.position.left, event.mouse.position.top };
-
         if (app.root->on_mouse_move) {
             app.root->on_mouse_move(app.root, pos);
         }
     } break;
-    case WM_EVENT_MOUSE_RELEASE: {
-        point_t pos = { event.mouse.position.left, event.mouse.position.top };
-
-        if (app.root->on_mouse_release) {
-            app.root->on_mouse_release(app.root, pos);
+    case WM_EVENT_MOUSE_ENTER: {
+        if (app.root->on_mouse_enter) {
+            app.root->on_mouse_enter(app.root, pos);
+        }
+    } break;
+    case WM_EVENT_MOUSE_EXIT: {
+        if (app.root->on_mouse_exit) {
+            app.root->on_mouse_exit(app.root);
         }
     } break;
     default:

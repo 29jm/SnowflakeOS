@@ -122,10 +122,45 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
         point_t local = ui_to_child_local(child, pos);
 
         if (point_in_rect(pos, child->bounds)) {
+            widget_t* prev_hovered = lbox->child_under_cursor;
+
+            if (child != prev_hovered) {
+                if (prev_hovered && prev_hovered->on_mouse_exit) {
+                    prev_hovered->on_mouse_exit(prev_hovered);
+                }
+
+                if (child->on_mouse_enter) {
+                    child->on_mouse_enter(child, local);
+                }
+
+                lbox->child_under_cursor = child;
+            }
+
             if (child->on_mouse_move) {
                 child->on_mouse_move(child, local);
             }
         }
+    }
+}
+
+void lbox_on_mouse_enter(lbox_t* lbox, point_t pos) {
+    widget_t* child;
+
+    list_for_each_entry(child, &lbox->children) {
+        point_t local = ui_to_child_local(child, pos);
+
+        if (point_in_rect(pos, child->bounds)) {
+            if (child->on_mouse_enter) {
+                child->on_mouse_enter(child, local);
+                lbox->child_under_cursor = child;
+            }
+        }
+    }
+}
+
+void lbox_on_mouse_exit(lbox_t* lbox) {
+    if (lbox->child_under_cursor && lbox->child_under_cursor->on_mouse_exit) {
+        lbox->child_under_cursor->on_mouse_exit(lbox->child_under_cursor);
     }
 }
 
@@ -155,6 +190,8 @@ lbox_t* lbox_new(uint32_t direction) {
     lbox->widget.on_resize = (widget_resize_t) lbox_on_resize;
     lbox->widget.on_mouse_move = (widget_mouse_moved_t) lbox_on_mouse_move;
     lbox->widget.on_mouse_release = (widget_mouse_release_t) lbox_on_mouse_release;
+    lbox->widget.on_mouse_enter = (widget_mouse_entered_t) lbox_on_mouse_enter;
+    lbox->widget.on_mouse_exit = (widget_mouse_exited_t) lbox_on_mouse_exit;
     lbox->direction = direction;
 
     return lbox;

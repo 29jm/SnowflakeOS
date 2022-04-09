@@ -12,7 +12,6 @@ void canvas_on_click(canvas_t* canvas, point_t p) {
 void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
     rect_t bounds = ui_get_absolute_bounds((widget_t*) canvas);
 
-    // enables drawing state
     canvas->needs_drawing = true;
     canvas->last_pos = canvas->new_pos;
     canvas->new_pos = (point_t) { p.x+bounds.x, p.y+bounds.y };
@@ -20,7 +19,10 @@ void canvas_on_mouse_move(canvas_t* canvas, point_t p) {
 
 void canvas_on_mouse_release(canvas_t* canvas, point_t p) {
     (void) p;
-    // disables drawing state
+    canvas->is_drawing = false;
+}
+
+void canvas_on_mouse_exited(canvas_t* canvas) {
     canvas->is_drawing = false;
 }
 
@@ -46,6 +48,7 @@ canvas_t* canvas_new() {
     canvas->widget.on_click = (widget_clicked_t) canvas_on_click;
     canvas->widget.on_draw = (widget_draw_t) canvas_on_draw;
     canvas->widget.on_mouse_move = (widget_mouse_moved_t) canvas_on_mouse_move;
+    canvas->widget.on_mouse_exit = (widget_mouse_exited_t) canvas_on_mouse_exited;
     canvas->widget.on_mouse_release = (widget_mouse_release_t) canvas_on_mouse_release;
     canvas->needs_clearing = true;
 
