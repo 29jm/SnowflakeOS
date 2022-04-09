@@ -139,28 +139,19 @@ static void syscall_wm(registers_t* regs) {
                 wm_param_event_t* param = (wm_param_event_t*) regs->ecx;
                 wm_get_event(param->win_id, param->event);
             } break;
-        case WM_CMD_IS_DRAGGED: {
-            list_t* item = wm_get_window(regs->ecx);
-
-            if (item != NULL) {
-                wm_window_t* win = list_entry(item, wm_window_t);
-                regs->eax = win->being_dragged;
-            } else {
-                printke("the given window id (%d) is unknown", regs->ecx);
-                regs->eax = false;
-                break;    
-            }
-            } break;
         case WM_CMD_IS_HOVERED: {
+            /* TODO: replace by a combination of cursor events and their
+             * handling in the titlebar widget.
+             */
             list_t* item = wm_get_window(regs->ecx);
 
             if (item != NULL) {
                 wm_window_t* win = list_entry(item, wm_window_t);
-                regs->eax = wm_is_window_being_hovered(win);
+                regs->eax = wm_is_titlebar_being_hovered(win);
             } else {
                 printke("the given window id (%d) is unknown", regs->ecx);
                 regs->eax = false;
-                break;    
+                break;
             }
         } break;
         default:

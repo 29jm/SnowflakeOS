@@ -23,9 +23,6 @@ void lbox_on_click(lbox_t* lbox, point_t pos) {
 }
 
 void lbox_on_draw(lbox_t* lbox, fb_t fb) {
-    // rect_t b = ui_get_absolute_bounds((widget_t*) lbox);
-    // snow_draw_rect(fb, b.x, b.y, b.w, b.h, 0x000000);
-
     widget_t* child;
 
     list_for_each_entry(child, &lbox->children) {

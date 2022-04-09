@@ -11,10 +11,9 @@ void color_button_on_click(color_button_t* button, point_t p) {
 
 void color_button_on_draw(color_button_t* button, fb_t fb) {
     rect_t r = ui_get_absolute_bounds((widget_t*) button);
-    color_scheme_t* clr = get_widget_color(&button->widget);
 
     if (button->is_clicked) {
-        snow_draw_rect(fb, r.x, r.y, r.w, r.h, button->color + clr->highlight);
+        snow_draw_rect(fb, r.x, r.y, r.w, r.h, ui_shade_color(button->color, 20));
     } else {
         snow_draw_rect(fb, r.x, r.y, r.w, r.h, button->color);
     }

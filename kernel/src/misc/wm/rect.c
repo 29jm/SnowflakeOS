@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <list.h>
 
-/* Allocates the specified `wm_rect_t` on the stack.
+/* Allocates the specified `rect_t` on the stack.
  */
 rect_t* rect_new(uint32_t t, uint32_t l, uint32_t b, uint32_t r) {
     rect_t* rect = (rect_t*) kmalloc(sizeof(rect_t));
@@ -41,7 +41,7 @@ bool rect_intersect(rect_t a, rect_t b) {
            a.top <= b.bottom && a.bottom >= b.top;
 }
 
-/* Pretty-prints a `wm_rect_t`.
+/* Pretty-prints a `rect_t`.
  */
 void print_rect(rect_t* r) {
     printk("top:%d, left:%d, bottom:%d, right:%d",
@@ -93,7 +93,7 @@ void rect_clear_clipped(list_t* rects) {
 
 /* Splits the original rectangle in more rectangles that cover the area
  *     `original \ split`
- * in set-theorical terms. Returns a dynamically allocated list of those
+ * in set-theoretical terms. Returns a dynamically allocated list of those
  * dynamically allocated rectangles.
  */
 list_t* rect_split_by(rect_t rect, rect_t split) {

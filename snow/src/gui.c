@@ -44,52 +44,36 @@ void snow_close_window(window_t* win) {
     free(win);
 }
 
-/* Draws the given window and its components to the window's buffer then to
- * the screen.
+/* Draws the given window and its components to the window's buffer.
  */
 void snow_draw_window(window_t* win) {
-    // TODO: unify this with `default_color_scheme` from UI
-    static const color_scheme_t clr = {
-        .bg_color = 0x00353535,
-        .base_color = 0x00222221,
-        .border_color = 0x000000,
-        .border_color2 = 0x121212,
-        .text_color = 0xFFFFFF,
-        .highlight = 0x030303,
-    };
+    // TODO: eliminate this whole function: defer the drawing of decorations
+    // to the UI library only.
+    uint32_t bg_color = 0x353535;
+    uint32_t base_color = 0x222221;
+    uint32_t highlight = 0x030303;
+    uint32_t border_color = 0x000000;
+    uint32_t text_color = 0xFFFFFF;
+    uint32_t border_color2 = 0x121212;
 
-    // update for this call the hovering status of the window
-    bool is_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
+    // Figure out if we need to highlight the title bar
+    bool titlebar_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
 
     // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, clr.bg_color);
+    snow_draw_rect(win->fb, 0, 0, win->width, win->height, bg_color);
 
     // title bar
-    if (is_hovered) {
-        uint32_t hl = clr.base_color + clr.highlight;
-
-        // color overflow
-        if (hl < clr.base_color) {
-            hl = 0xffffff;
-        }
-
-        uint32_t bd = clr.border_color + clr.highlight;
-
-        // color overflow
-        if (bd < clr.border_color) {
-            bd = 0xffffff;
-        }
-
-        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, hl);
-        snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, bd);
+    if (titlebar_hovered) {
+        snow_draw_rect(win->fb, 0, 0, win->width, WM_TB_HEIGHT, base_color + highlight);
+        snow_draw_border(win->fb, 0, 0, win->width, WM_TB_HEIGHT, highlight);
     } else {
-        snow_draw_rect(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.base_color);
-        snow_draw_border(win->fb, 0, 0, win->width, UI_TB_HEIGHT, clr.border_color);
+        snow_draw_rect(win->fb, 0, 0, win->width, WM_TB_HEIGHT, base_color);
+        snow_draw_border(win->fb, 0, 0, win->width, WM_TB_HEIGHT, border_color);
     }
 
-    snow_draw_string(win->fb, win->title, UI_TB_PADDING, UI_TB_HEIGHT / 3, clr.text_color);
-    // border of the whole window
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, clr.border_color2);
+    // window title + borders
+    snow_draw_string(win->fb, win->title, 8, WM_TB_HEIGHT / 3, text_color);
+    snow_draw_border(win->fb, 0, 0, win->width, win->height, border_color2);
 }
 
 /* Draws the window's buffer as-is to the screen.

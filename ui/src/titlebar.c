@@ -5,15 +5,18 @@
 #include <stdlib.h>
 
 void titlebar_on_draw(titlebar_t* tb, fb_t fb) {
-    rect_t r = ui_get_absolute_bounds((widget_t*) tb);
+    rect_t r = ui_get_absolute_bounds(W(tb));
+    uint32_t margin = (WM_TB_HEIGHT - 16) / 2;
 
-    snow_draw_rect(fb, r.x, r.y, r.w, r.h, 0x303030);
+    snow_draw_rect(fb, r.x, r.y, r.w, r.h, 0x303030); // TODO: use color scheme
 
     if (tb->icon) {
-        snow_draw_rgb_masked(fb, tb->icon, r.x+2, r.y+2, 16, 16, 0xFFFFFF);
-        snow_draw_string(fb, tb->title, r.x+16+5, r.y+3, 0xFFFFFF); // TODO: add UI_TB_ICON_PADDING
+        snow_draw_rgb_masked(fb, tb->icon,
+            r.x + margin, r.y + margin, 16, 16, 0xFFFFFF);
+        snow_draw_string(fb, tb->title, r.x + 16 + 2*margin, margin, 0xFFFFFF);
     } else {
-        snow_draw_string(fb, tb->title, r.x + UI_TB_PADDING, r.y + UI_TB_HEIGHT, 0xFFFFFF);
+        snow_draw_string(fb, tb->title,
+            r.x + margin, r.y + margin, 0xFFFFFF);
     }
 
     snow_draw_border(fb, r.x, r.y, r.w, r.h, 0x404040);
@@ -31,7 +34,7 @@ titlebar_t* titlebar_new(const char* title, const uint8_t* icon) {
     titlebar_t* tb = zalloc(sizeof(titlebar_t));
 
     tb->widget.flags = UI_EXPAND_HORIZONTAL;
-    tb->widget.bounds.h = 20;
+    tb->widget.bounds.h = WM_TB_HEIGHT;
     tb->widget.on_draw = (widget_draw_t) titlebar_on_draw;
     tb->widget.on_free = (widget_freed_t) titlebar_on_free;
     tb->title = strdup(title);

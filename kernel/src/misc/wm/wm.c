@@ -58,7 +58,6 @@ uint32_t wm_open_window(fb_t* buff, uint32_t flags) {
         .kfb = *buff,
         .id = ++id_count,
         .flags = flags | WM_NOT_DRAWN,
-        .being_dragged = false,
         .events = ringbuffer_new(WM_EVENT_QUEUE_SIZE * sizeof(wm_event_t))
     };
 
@@ -447,13 +446,12 @@ wm_window_t* wm_window_at(int32_t x, int32_t y) {
     return NULL;
 }
 
-/* Returns true if the given window's title bar is being
- * hovered by the mouse, false otherwise.
+/* Returns whether the cursor is over the given window's title bar.
  */
-bool wm_is_window_being_hovered(wm_window_t* win) {
+bool wm_is_titlebar_being_hovered(wm_window_t* win) {
     rect_t r = rect_from_window(win);
 
-    if (mouse.y >= r.top && mouse.y <= r.top + UI_TB_HEIGHT
+    if (mouse.y >= r.top && mouse.y <= r.top + WM_TB_HEIGHT
         && mouse.x >= r.left && mouse.x <= r.right) {
         return true;
     } else {
@@ -526,7 +524,7 @@ void wm_mouse_callback(mouse_t raw_curr) {
         bool hovered = false;
 
         if (dragging) {
-            hovered = wm_is_window_being_hovered(dragging);
+            hovered = wm_is_titlebar_being_hovered(dragging);
         }
 
         if (hovered && (dx || dy)) {
@@ -545,8 +543,6 @@ void wm_mouse_callback(mouse_t raw_curr) {
 
                 rect = wm_mouse_to_rect(mouse);
                 wm_draw_mouse(rect);
-
-                dragging->being_dragged = true;
             }
         }
     }
@@ -563,8 +559,8 @@ void wm_mouse_callback(mouse_t raw_curr) {
             event.mouse.position.left -= r.left;
 
             ringbuffer_write(dragging->events, sizeof(wm_event_t), (uint8_t*) &event);
-            dragging->being_dragged = false;
         }
+
         dragging = NULL;
     }
 

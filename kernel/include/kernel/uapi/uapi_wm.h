@@ -7,9 +7,7 @@
 #define WM_FOREGROUND 2
 #define WM_SKIP_INPUT 4
 
-// UI cross-section metadata
-#define UI_TB_HEIGHT 30
-#define UI_TB_PADDING 8
+#define WM_TB_HEIGHT 30
 
 enum WM_CMD {
     WM_CMD_OPEN,
@@ -85,9 +83,3 @@ typedef struct {
     uint32_t win_id;
     wm_event_t* event;
 } wm_param_event_t;
-
-typedef struct {
-    int64_t bg_color, // background color
-    base_color, border_color, text_color, highlight, // title bar colors
-    border_color2; // window border color
-} color_scheme_t;

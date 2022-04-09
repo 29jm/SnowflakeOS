@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <math.h>
 
 /* Is that point in that rect?
  * Note: see `ui_get_absolute_bounds` and friends if coordinate conversion is
@@ -13,21 +14,31 @@ bool point_in_rect(point_t p, rect_t r) {
     return p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
 }
 
-point_t rect_to_point(wm_rect_t r) {
-    return (point_t) {.x = r.left, .y = r.top};
-}
-
-/* Returns the color scheme of the widget or of the closest parent
+/* Returns the color scheme of the widget or of the closest parent.
  */
-color_scheme_t* get_widget_color(widget_t* widget) {
-
+color_scheme_t* ui_get_color_scheme(widget_t* widget) {
     if (!widget) {
         return &default_color_scheme;
     } else if (widget->color != NULL) {
         return widget->color;
     } else {
-        return get_widget_color(widget->parent);
+        return ui_get_color_scheme(widget->parent);
     }
+}
+
+/* Returns a version of the color `c` that is `percent_shift` lighter.
+ * Note that `percent_shift` can be in the range (-100;100).
+ */
+uint32_t ui_shade_color(uint32_t c, int32_t percent_shift) {
+    uint32_t r = (c & 0xFF0000) >> 16;
+    uint32_t g = (c & 0x00FF00) >> 8;
+    uint32_t b = c & 0x0000FF;
+
+    r = clamp((r * (100 + percent_shift) / 100), 0, 255);
+    g = clamp((g * (100 + percent_shift) / 100), 0, 255);
+    b = clamp((b * (100 + percent_shift) / 100), 0, 255);
+
+    return (r << 16) | (g << 8) | b;
 }
 
 /* Sets the widget to be displayed below the titlebar of an app created with

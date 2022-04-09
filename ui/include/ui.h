@@ -20,9 +20,25 @@
 #define UI_VBOX UI_EXPAND_VERTICAL
 #define UI_HBOX UI_EXPAND_HORIZONTAL
 
+// Recommended paddings and margins
+#define UI_DEFAULT_PADDING 8
+
 typedef struct {
     int32_t x, y, w, h;
 } rect_t;
+
+/* Defines the colors of an application, can (and should) be respected by its
+ * widgets.
+ * A color scheme can be defined per-app by assigning `app.root->color`, or per
+ * widget in the same way. In both cases, child widgets inherit the color
+ * schemes of the closest parent that defines one.
+ * TODO: Investigate most relevant fields to keep and what to add.
+ *       Convert the fields to `uint32_t`.
+ */
+typedef struct {
+    uint64_t bg_color, base_color, border_color;
+    uint64_t text_color, highlight, border_color2;
+} color_scheme_t;
 
 /* Generic type representing an ui component, like a button, a text field...
  * Contains the properties common to all of those: dimensions, hints on how to
@@ -66,7 +82,7 @@ typedef struct {
 
 /* UI widget types: they all 'inherit' the widget structure by having a widget
  * type as first member. This way, pointers to specialized widgets can safely
- * be cast to `widget_ŧ`, allowing for some genericity.
+ * be cast to `widget_t`, allowing for some genericity.
  * A macro is defined to shorten this common cast, `W(object)`. */
 
 /* Linear box, a container that holds widgets in the horizontal or vertical
@@ -129,7 +145,6 @@ static color_scheme_t default_color_scheme = {
 };
 
 bool point_in_rect(point_t p, rect_t r);
-point_t rect_to_point(wm_rect_t r);
 ui_app_t ui_app_new(const char* title, uint32_t width, uint32_t height, const uint8_t* icon);
 void ui_app_destroy(ui_app_t app);
 void ui_set_root(ui_app_t app, widget_t* widget);
@@ -140,7 +155,8 @@ rect_t ui_get_absolute_bounds(widget_t* widget);
 point_t ui_to_child_local(widget_t* widget, point_t point);
 point_t ui_absolute_to_local(widget_t* widget, point_t point);
 
-color_scheme_t* get_widget_color(widget_t* widget);
+color_scheme_t* ui_get_color_scheme(widget_t* widget);
+uint32_t ui_shade_color(uint32_t c, int32_t shade_shift);
 
 hbox_t* hbox_new();
 void hbox_add(hbox_t* hbox, widget_t* widget);

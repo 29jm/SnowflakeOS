@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 
     hbox_t* menu = hbox_new();
     menu->widget.flags &= ~UI_EXPAND_VERTICAL;
-    menu->widget.bounds.h = 20;
+    menu->widget.bounds.h = 32;
     vbox_add(vbox, W(menu));
 
     canvas = canvas_new();
@@ -54,6 +54,8 @@ int main(int argc, char* argv[]) {
 
     for (uint32_t i = 0; i < sizeof(colors)/sizeof(colors[0]); i++) {
         color_button_t* cbutton = color_button_new(colors[i], &canvas->color);
+        W(cbutton)->bounds.h = 32;
+        W(cbutton)->bounds.w = 32;
         hbox_add(menu, W(cbutton));
     }
 

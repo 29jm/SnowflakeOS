@@ -22,10 +22,10 @@ typedef struct _wm_window_t {
     point_t pos;
     uint32_t id;
     uint32_t flags;
-    bool being_dragged;
     ringbuffer_t* events;
 } wm_window_t;
 
+// Rename this for convenience.
 typedef wm_rect_t rect_t;
 
 void init_wm();
@@ -34,6 +34,9 @@ uint32_t wm_open_window(fb_t* fb, uint32_t flags);
 void wm_close_window(uint32_t win_id);
 void wm_render_window(uint32_t win_id, rect_t* clip);
 void wm_get_event(uint32_t win_id, wm_event_t* event);
+
+bool wm_is_titlebar_being_hovered(wm_window_t* win);
+list_t* wm_get_window(uint32_t id);
 
 // rect-handling functions
 rect_t* rect_new_copy(rect_t r);
@@ -44,10 +47,3 @@ void rect_add_clip_rect(list_t* rects, rect_t clip);
 void print_rect(rect_t* r);
 bool rect_intersect(rect_t a, rect_t b);
 void rect_clear_clipped(list_t* rects);
-
-// declare this function here to later use in syscall.c
-bool wm_is_window_being_hovered(wm_window_t* win);
-
-/* Declared in here to later use in syscall
- */
-list_t* wm_get_window(uint32_t id);

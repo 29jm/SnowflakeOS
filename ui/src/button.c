@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 void button_on_draw(button_t* button, fb_t fb) {
-    color_scheme_t* clr = get_widget_color(&button->widget);
+    color_scheme_t* clr = ui_get_color_scheme(&button->widget);
     rect_t r = ui_get_absolute_bounds((widget_t*) button);
 
     if (button->is_clicked) {
@@ -46,12 +46,12 @@ void button_on_free(button_t* button) {
 
 button_t* button_new(char* text) {
     button_t* button = zalloc(sizeof(button_t));
-    uint32_t margin = UI_TB_PADDING;
+    uint32_t margin = UI_DEFAULT_PADDING;
 
     button->text = strdup(text);
     button->is_clicked = false;
     button->widget.bounds.w = strlen(text)*8 + 4*margin;
-    button->widget.bounds.h = 16 + 2*margin; // 2px margin
+    button->widget.bounds.h = 16 + 2*margin;
     button->widget.on_draw = (widget_draw_t) button_on_draw;
     button->widget.on_click = (widget_clicked_t) button_on_click;
     button->widget.on_mouse_release = (widget_mouse_release_t) button_on_release;
