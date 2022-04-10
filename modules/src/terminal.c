@@ -1,4 +1,6 @@
 #include <snow.h>
+#include <ui.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,13 +34,13 @@ const uint32_t margin = UI_DEFAULT_PADDING;
 const uint32_t text_color = 0xE0E0E0;
 const float cursor_blink_time = 1;
 
-window_t* win;
+ui_app_t term;
 bool cursor = true;
 bool running = true;
 bool focused = true;
 
 int main() {
-    win = snow_open_window("Terminal", twidth, theight, WM_NORMAL);
+    term = ui_app_new("Terminal", twidth, theight, NULL);
 
     syscall(SYS_MAKETTY);
 
@@ -51,9 +53,11 @@ int main() {
     redraw(text_buf, input_buf);
 
     while (running) {
-        wm_event_t event = snow_get_event(win);
+        wm_event_t event = snow_get_event(term.win);
         wm_kbd_event_t key = event.kbd;
         bool needs_redrawing = false;
+
+        ui_handle_input(term, event);
 
         // Do we have focus?
         if (event.type == WM_EVENT_GAINED_FOCUS) {
@@ -132,14 +136,16 @@ int main() {
     str_free(text_buf);
     str_free(input_buf);
 
-    snow_close_window(win);
+    ui_app_destroy(term);
 
     return 0;
 }
 
 void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
-    snow_draw_window(win);
+    snow_draw_rect(term.win->fb, 0, 0, term.win->width, term.win->height, 0x353535);
+    snow_draw_border(term.win->fb, 0, 0, term.win->width, term.win->height, 0x121212);
+    ui_draw(term);
 
     uint32_t y = WM_TB_HEIGHT + 4; // below title bar
 
@@ -176,7 +182,7 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
             text_view += max_col;
         }
 
-        snow_draw_string(win->fb, line_buf, margin, y, text_color);
+        snow_draw_string(term.win->fb, line_buf, margin, y, text_color);
 
         y += char_height;
     }
@@ -191,7 +197,7 @@ void redraw(str_t* text_buf, const str_t* input_buf) {
     }
 
     // Update the window
-    snow_render_window(win);
+    snow_render_window(term.win);
 }
 
 str_t* str_new(const char* str) {

@@ -1,24 +1,25 @@
-#include <snow.h>
+#include <ui.h>
 
 #include <string.h>
 #include <stdlib.h>
 
 #define MAX_WIN 30
 
-window_t* make_win() {
-    window_t* win = snow_open_window("Congratulations!", 200, 120, WM_NORMAL);
+ui_app_t make_win() {
+    ui_app_t app = ui_app_new("Congrats!", 200, 120, NULL);
 
-    snow_draw_window(win); // Draws the title bar and borders
-    snow_draw_string(win->fb, "You won a prize!", 45, 55, 0x00AA1100);
-    snow_draw_border(win->fb, 40, 50, strlen("You won a prize!")*8+10, 26, 0x00);
+    button_t* btn = button_new("You won a prize!");
+    btn->widget.flags |= UI_EXPAND;
 
-    snow_render_window(win);
+    ui_set_root(app, W(btn));
 
-    return win;
+    ui_draw(app);
+
+    return app;
 }
 
 int main() {
-    window_t* wins[MAX_WIN];
+    ui_app_t wins[MAX_WIN];
     int c_win = 0;
 
     for (int i = 0; i < MAX_WIN; i++) {
@@ -26,7 +27,7 @@ int main() {
     }
 
     while (MAX_WIN) {
-        snow_close_window(wins[c_win]);
+        ui_app_destroy(wins[c_win]);
         wins[c_win] = make_win();
 
 #if MAX_WIN != 0

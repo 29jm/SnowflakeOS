@@ -44,38 +44,6 @@ void snow_close_window(window_t* win) {
     free(win);
 }
 
-/* Draws the given window and its components to the window's buffer.
- */
-void snow_draw_window(window_t* win) {
-    // TODO: eliminate this whole function: defer the drawing of decorations
-    // to the UI library only.
-    uint32_t bg_color = 0x353535;
-    uint32_t base_color = 0x222221;
-    uint32_t highlight = 0x030303;
-    uint32_t border_color = 0x000000;
-    uint32_t text_color = 0xFFFFFF;
-    uint32_t border_color2 = 0x121212;
-
-    // Figure out if we need to highlight the title bar
-    bool titlebar_hovered = syscall2(SYS_WM, WM_CMD_IS_HOVERED, win->id);
-
-    // background
-    snow_draw_rect(win->fb, 0, 0, win->width, win->height, bg_color);
-
-    // title bar
-    if (titlebar_hovered) {
-        snow_draw_rect(win->fb, 0, 0, win->width, WM_TB_HEIGHT, base_color + highlight);
-        snow_draw_border(win->fb, 0, 0, win->width, WM_TB_HEIGHT, highlight);
-    } else {
-        snow_draw_rect(win->fb, 0, 0, win->width, WM_TB_HEIGHT, base_color);
-        snow_draw_border(win->fb, 0, 0, win->width, WM_TB_HEIGHT, border_color);
-    }
-
-    // window title + borders
-    snow_draw_string(win->fb, win->title, 8, WM_TB_HEIGHT / 3, text_color);
-    snow_draw_border(win->fb, 0, 0, win->width, win->height, border_color2);
-}
-
 /* Draws the window's buffer as-is to the screen.
  */
 void snow_render_window(window_t* win) {

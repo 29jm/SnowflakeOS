@@ -117,13 +117,12 @@ void lbox_on_resize(lbox_t* lbox) {
 
 void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
     widget_t* child;
+    widget_t* prev_hovered = lbox->child_under_cursor;
 
     list_for_each_entry(child, &lbox->children) {
         point_t local = ui_to_child_local(child, pos);
 
         if (point_in_rect(pos, child->bounds)) {
-            widget_t* prev_hovered = lbox->child_under_cursor;
-
             if (child != prev_hovered) {
                 if (prev_hovered && prev_hovered->on_mouse_exit) {
                     prev_hovered->on_mouse_exit(prev_hovered);
@@ -139,7 +138,15 @@ void lbox_on_mouse_move(lbox_t* lbox, point_t pos) {
             if (child->on_mouse_move) {
                 child->on_mouse_move(child, local);
             }
+
+            return;
         }
+    }
+
+    /* Mouse moved into the empty widget-less void: handle it */
+    if (prev_hovered && prev_hovered->on_mouse_exit) {
+        prev_hovered->on_mouse_exit(prev_hovered);
+        lbox->child_under_cursor = NULL;
     }
 }
 

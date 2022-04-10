@@ -7,21 +7,7 @@
 
 #include <sys/stat.h>
 
-#define MAX_WIN 0
 #define BUF_SIZE 4096
-
-window_t* make_win(char* title) {
-    window_t* win = snow_open_window(title, 250, 120, WM_NORMAL);
-    char id_str[5];
-    itoa(win->id, id_str, 10);
-
-    snow_draw_window(win); // Draws the title bar and borders
-    snow_draw_string(win->fb, id_str, 175, 55, 0x00AA1100);
-
-    snow_render_window(win);
-
-    return win;
-}
 
 void tree(char* path, int level) {
     static char p[256] = "\0";
@@ -86,16 +72,6 @@ int main() {
 
     printf("Treeing /:\n");
     tree("/", 0);
-
-    while (true);
-
-    for (int i = 0; i < MAX_WIN; i++) {
-        if (i == 0) {
-            make_win(buf);
-        } else {
-            make_win("doom.exe (not responding)");
-        }
-    }
 
     return 0;
 }
