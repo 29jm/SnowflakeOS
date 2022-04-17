@@ -6,9 +6,14 @@ log() {
 
 download() {
     log "Downloading $2"
-    wget -c "$1"
-    log "Inflating $2"
-    tar xf "$2"
+    
+    # If the file /doesn't/ exist, download it. If it does, just extract it
+    [ ! -f "$2" ] && wget -c "$1" && extract "$2" || extract "$2"
+}
+
+extract() {
+    log "Inflating $1"
+    tar xf "$1"
 }
 
 download_binutils() {
@@ -21,7 +26,7 @@ download_binutils() {
 download_gcc() {
     version="10.1.0"
     gcc="gcc-$version.tar.xz"
-    download "ftp://ftp.gnu.org/gnu/gcc/gcc-$version/$gcc" "$gcc"
+    download "https://ftp.gnu.org/gnu/gcc/gcc-$version/$gcc" "$gcc"
     export gcc_src="$PWD/gcc-$version"
 }
 
@@ -61,8 +66,7 @@ main() {
 
     cd toolchain
 
-    mkdir -p src compiler build
-    mkdir -p build/binutils build/gcc
+    mkdir -p src compiler build/binutils build/gcc
 
     export PREFIX="$PWD/compiler"
     export TARGET="i686-elf"
