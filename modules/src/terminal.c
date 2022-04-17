@@ -27,7 +27,7 @@ const uint32_t theight = 342;
 const uint32_t char_width = 8;
 const uint32_t char_height = 16;
 const uint32_t max_col = twidth / char_width - 1;
-const uint32_t max_line = theight / char_height - 2;
+const uint32_t max_line = theight / char_height - 1;
 
 const char* prompt = "snowflakeos $ ";
 const uint32_t margin = UI_DEFAULT_PADDING;
@@ -41,6 +41,7 @@ bool focused = true;
 
 int main() {
     term = ui_app_new("Terminal", twidth, theight, NULL);
+    titlebar_t* tb = list_entry(((vbox_t*) term.root)->children.next, titlebar_t);
 
     syscall(SYS_MAKETTY);
 
@@ -49,6 +50,7 @@ int main() {
     cursor = true;
 
     uint32_t last_time = 0;
+    bool last_tb_hovered = false;
 
     redraw(text_buf, input_buf);
 
@@ -58,6 +60,12 @@ int main() {
         bool needs_redrawing = false;
 
         ui_handle_input(term, event);
+
+        // Hack to avoid useless redraws
+        if (tb->hovered != last_tb_hovered) {
+            needs_redrawing = true;
+            last_tb_hovered = tb->hovered;
+        }
 
         // Do we have focus?
         if (event.type == WM_EVENT_GAINED_FOCUS) {
@@ -144,8 +152,8 @@ int main() {
 void redraw(str_t* text_buf, const str_t* input_buf) {
     /* Window decorations */
     snow_draw_rect(term.win->fb, 0, 0, term.win->width, term.win->height, 0x353535);
-    snow_draw_border(term.win->fb, 0, 0, term.win->width, term.win->height, 0x121212);
-    ui_draw(term);
+    snow_draw_border(term.win->fb, 0, 0, term.win->width, term.win->height, 0x404040);
+    term.root->on_draw(term.root, term.win->fb);
 
     uint32_t y = WM_TB_HEIGHT + 4; // below title bar
 

@@ -90,7 +90,7 @@ typedef struct {
  * A macro is defined to shorten this common cast, `W(object)`. */
 
 /* Linear box, a container that holds widgets in the horizontal or vertical
- * direction. Prefer using `vbox_ŧ` or `hbox_t` and related functions instead
+ * direction. Prefer using `vbox_t` or `hbox_t` and related functions instead
  * of `lbox_t`, which implements them. */
 typedef struct {
     widget_t widget;
