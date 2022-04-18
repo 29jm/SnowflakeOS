@@ -110,22 +110,22 @@ void init_ps2() {
 
         uint8_t ret = ps2_read(PS2_DATA);
 
-        /* Keyboards ACK, mice (usually) ACK and send 0x00 */
-        if (i == 0 && ret != PS2_DEV_RESET_ACK) {
-            printke("keyboard failed to acknowledge reset, sent %x", ret);
-            goto error;
-        } else if (i == 1) {
-            uint8_t ret2 = ps2_read(PS2_DATA);
+        // /* Keyboards ACK, mice (usually) ACK and send 0x00 */
+        // if (i == 0 && ret != PS2_DEV_RESET_ACK) {
+        //     printke("keyboard failed to acknowledge reset, sent %x", ret);
+        //     goto error;
+        // } else if (i == 1) {
+        //     uint8_t ret2 = ps2_read(PS2_DATA);
 
-            /* Mice are a complete mess, cut them some slack */
-            if ((ret == PS2_DEV_RESET_ACK && (ret2 == PS2_DEV_ACK || ret2 == 0x00)) ||
-               ((ret == PS2_DEV_ACK || ret == 0x00) && ret2 == PS2_DEV_RESET_ACK)) {
-                /* Wrong if for readability */
-            } else {
-                printke("mouse failed to acknowledge reset, sent %x, %x", ret, ret2);
-                goto error;
-            }
-        }
+        //     /* Mice are a complete mess, cut them some slack */
+        //     if ((ret == PS2_DEV_RESET_ACK && (ret2 == PS2_DEV_ACK || ret2 == 0x00)) ||
+        //        ((ret == PS2_DEV_ACK || ret == 0x00) && ret2 == PS2_DEV_RESET_ACK)) {
+        //         /* Wrong if for readability */
+        //     } else {
+        //         printke("mouse failed to acknowledge reset, sent %x, %x", ret, ret2);
+        //         goto error;
+        //     }
+        // }
 
         /* Put the keyboard back to sleep so it doesn't send anything while the
          * mouse resets, and flush the input, because keyboards are a mess too. */
@@ -137,8 +137,8 @@ void init_ps2() {
         continue;
 
     error:
-        ps2_enable_port(i, false);
-        controllers[i] = false;
+        // ps2_enable_port(i, false);
+        // controllers[i] = false;
     }
 
     /* Reenable the keyboard port if it worked in the first place */
