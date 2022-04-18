@@ -54,6 +54,12 @@ int main() {
 
     redraw(text_buf, input_buf);
 
+    sys_info_t info;
+    info.kernel_log = malloc(2048);
+    syscall2(SYS_INFO, SYS_INFO_LOG, (uintptr_t) &info);
+    str_append(text_buf, info.kernel_log);
+    free(info.kernel_log);
+
     while (running) {
         wm_event_t event = snow_get_event(term.win);
         wm_kbd_event_t key = event.kbd;
