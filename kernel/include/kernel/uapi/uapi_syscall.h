@@ -26,7 +26,8 @@
 #define SYS_RENAME 20
 #define SYS_MAKETTY 21
 #define SYS_STAT 22
-#define SYS_MAX 23 // First invalid syscall number
+#define SYS_RESET 23
+#define SYS_MAX 24 // First invalid syscall number
 
 #define SYS_INFO_UPTIME 1
 #define SYS_INFO_MEMORY 2

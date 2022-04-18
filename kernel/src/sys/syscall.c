@@ -7,6 +7,7 @@
 #include <kernel/wm.h>
 #include <kernel/serial.h>
 #include <kernel/pipe.h>
+#include <kernel/ps2.h>
 #include <kernel/sys.h> // for UNUSED macro
 
 #include <stdio.h>
@@ -39,6 +40,7 @@ static void syscall_unlink(registers_t* regs);
 static void syscall_rename(registers_t* regs);
 static void syscall_maketty(registers_t* regs);
 static void syscall_stat(registers_t* regs);
+static void syscall_reset(registers_t* regs);
 
 handler_t syscall_handlers[SYSCALL_NUM] = { 0 };
 
@@ -67,6 +69,7 @@ void init_syscall() {
     syscall_handlers[SYS_RENAME] = syscall_rename;
     syscall_handlers[SYS_MAKETTY] = syscall_maketty;
     syscall_handlers[SYS_STAT] = syscall_stat;
+    syscall_handlers[SYS_RESET] = syscall_reset;
 }
 
 static void syscall_handler(registers_t* regs) {
@@ -296,4 +299,10 @@ static void syscall_stat(registers_t* regs) {
     stat_t* buf = (stat_t*) regs->ecx;
 
     regs->eax = fs_stat(path, buf);
+}
+
+static void syscall_reset(registers_t* regs) {
+    (void) regs;
+
+    ps2_reset_system();
 }

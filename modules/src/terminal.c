@@ -23,7 +23,7 @@ uint32_t count_lines(str_t* str);
 char* scroll_view(char* str);
 
 const uint32_t twidth = 550;
-const uint32_t theight = 342;
+const uint32_t theight = 600;
 const uint32_t char_width = 8;
 const uint32_t char_height = 16;
 const uint32_t max_col = twidth / char_width - 1;
@@ -247,6 +247,15 @@ void str_append(str_t* str, const char* text) {
 void interpret_cmd(str_t* text_buf, str_t* input_buf) {
     if (!strcmp(input_buf->buf, "exit")) {
         running = false;
+        return;
+    }
+
+    if (!strcmp(input_buf->buf, "dmesg")) {
+        sys_info_t info;
+        info.kernel_log = malloc(4096);
+        syscall2(SYS_INFO, SYS_INFO_LOG, (uintptr_t) &info);
+        str_append(text_buf, info.kernel_log);
+        free(info.kernel_log);
         return;
     }
 

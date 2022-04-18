@@ -22,8 +22,8 @@ void init_mouse(uint32_t dev) {
     irq_register_handler(IRQ12, mouse_handle_interrupt);
 
     // Enable features
-    mouse_enable_scroll_wheel();
-    mouse_enable_five_buttons();
+    // mouse_enable_scroll_wheel();
+    // mouse_enable_five_buttons();
 
     // Set mouse parameters
     mouse_set_sample_rate(80);

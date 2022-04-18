@@ -27,6 +27,7 @@
 #define PS2_TEST_FIRST 0xAB
 #define PS2_TEST_SECOND 0xA9
 #define PS2_WRITE_SECOND 0xD4
+#define PS2_RESET_SYSTEM 0xFE
 
 // Controller responses
 #define PS2_SELF_TEST_OK 0x55
@@ -34,6 +35,7 @@
 
 // Device commands
 #define PS2_DEV_RESET 0xFF
+#define PS2_DEV_RESEND 0xFE
 #define PS2_DEV_IDENTIFY 0xF2
 #define PS2_DEV_ENABLE_SCAN 0xF4
 #define PS2_DEV_DISABLE_SCAN 0xF5
@@ -43,7 +45,7 @@
 #define PS2_DEV_RESET_ACK 0xAA
 
 // Number of iteration in our PS/2 IO spin loops
-#define PS2_TIMEOUT 500
+#define PS2_TIMEOUT 10000
 
 typedef enum {
     PS2_MOUSE = 0x00,
@@ -76,3 +78,4 @@ bool ps2_write(uint32_t port, uint8_t b);
 bool ps2_write_device(uint32_t device, uint8_t b);
 bool ps2_expect_ack();
 bool ps2_can_read();
+void ps2_reset_system();

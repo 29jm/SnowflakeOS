@@ -104,11 +104,9 @@ void init_ps2() {
         ps2_enable_port(i, true);
 
         /* Perform the reset */
-        printk("resetting devices %d...", i);
+        printk("resetting device %d...", i);
         ps2_write_device(i, PS2_DEV_RESET);
-        ps2_wait_ms(500);
         ps2_expect_ack();
-        ps2_wait_ms(100);
 
         uint8_t ret = ps2_read(PS2_DATA);
 
@@ -124,7 +122,7 @@ void init_ps2() {
                ((ret == PS2_DEV_ACK || ret == 0x00) && ret2 == PS2_DEV_RESET_ACK)) {
                 /* Wrong if for readability */
             } else {
-                printke("mice failed to acknowledge reset, sent %x, %x", ret, ret2);
+                printke("mouse failed to acknowledge reset, sent %x, %x", ret, ret2);
                 goto error;
             }
         }
@@ -266,7 +264,7 @@ bool ps2_wait_write() {
 bool ps2_wait_read() {
     int timer = PS2_TIMEOUT;
 
-    while (!(inportb(0x64) & 1) && timer-- >= 0) {
+    while (!(inportb(0x64) & 1) && timer-- > 0) {
         asm ("pause");
     }
 
@@ -330,4 +328,10 @@ bool ps2_expect_ack() {
 
 bool ps2_can_read() {
     return inportb(PS2_CMD) & 1;
+}
+
+/* Trigger a CPU reset from the PS/2 controller.
+ */
+void ps2_reset_system() {
+    ps2_write(PS2_CMD, 0xFE);
 }
