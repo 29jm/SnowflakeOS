@@ -335,5 +335,5 @@ bool ps2_can_read() {
 /* Trigger a CPU reset from the PS/2 controller.
  */
 void ps2_reset_system() {
-    ps2_write(PS2_CMD, 0xFE);
+    // ps2_write(PS2_CMD, 0xFE);
 }
