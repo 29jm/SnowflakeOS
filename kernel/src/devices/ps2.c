@@ -106,7 +106,9 @@ void init_ps2() {
         /* Perform the reset */
         printk("resetting device %d...", i);
         ps2_write_device(i, PS2_DEV_RESET);
+        ps2_wait_ms(100);
         ps2_expect_ack();
+        ps2_wait_ms(100);
 
         uint8_t ret = ps2_read(PS2_DATA);
 
