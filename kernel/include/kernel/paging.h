@@ -16,7 +16,7 @@ uintptr_t paging_get_kernel_directory();
 page_t* paging_get_page(uintptr_t virt, bool create, uint32_t flags);
 void paging_map_page(uintptr_t virt, uintptr_t phys, uint32_t flags);
 void paging_unmap_page(uintptr_t virt);
-void paging_map_pages(uintptr_t phys, uintptr_t virt, uint32_t num, uint32_t flags);
+void paging_map_pages(uintptr_t virt, uintptr_t phys, uint32_t num, uint32_t flags);
 void paging_unmap_pages(uintptr_t virt, uint32_t num);
 void paging_switch_directory(uintptr_t dir_phys);
 void paging_invalidate_cache();
@@ -42,9 +42,12 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 #define KERNEL_HEAP_BEGIN KERNEL_END_MAP
 #define KERNEL_HEAP_SIZE 0x1E00000
 
-#define PAGE_PRESENT 1
-#define PAGE_RW      2
-#define PAGE_USER    4
+#define PAGE_PRESENT          (1 << 0)
+#define PAGE_RW               (1 << 1)
+#define PAGE_USER             (1 << 2)
+#define PAGE_WT               (1 << 3)
+#define PAGE_CACHE_DISABLE    (1 << 4)
+
 #define PAGE_LARGE   128
 
 #define PAGE_FRAME   0xFFFFF000

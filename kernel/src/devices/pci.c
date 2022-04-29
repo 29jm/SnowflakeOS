@@ -1,5 +1,6 @@
 #include <kernel/com.h>
 #include <kernel/pci.h>
+#include <kernel/ahci.h>
 #include <kernel/sys.h>
 #include <stdlib.h>
 #include <list.h>
@@ -30,6 +31,23 @@ uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t of
     }
 
     return (uint16_t) out;
+}
+
+uint32_t pci_read_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
+    uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
+
+    outportl(CFG_ADDR, addr);
+    uint32_t out = inportl(CFG_DATA);
+
+    return out;
+}
+
+void pci_write_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t data) {
+    uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
+
+    outportl(CFG_ADDR, addr);
+    outportl(CFG_DATA, data);
+
 }
 
 bool pci_bus_has_device(uint8_t bus, uint8_t dev) {
@@ -68,17 +86,27 @@ void pci_print_device(pci_device_t* dev) {
     }
 }
 
-void pci_print_all_devices(list_t *list) {
+void pci_print_all_devices() {
     pci_device_t* dev;
-    list_for_each_entry(dev, list) {
+    list_for_each_entry(dev, &pci_devices) {
         pci_print_device(dev);
     }
 }
 
 
 pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
+    if(next_dev_id >= PCI_MAX_NUM_DEVS) {
+        printke("Trying to register a PCI device with no spots left");
+        return NULL;
+    }
+
     pci_device_t *device = (pci_device_t *)kmalloc(sizeof(pci_device_t));
-    // TODO: check for device id overflow
+    if(!device){
+        printke("unable to allocate space for a PCI device bus: %d, dev: %d, func: %d", bus, dev, func);
+        return NULL;
+    }
+
+
     device->id = next_dev_id;
     next_dev_id++;
 
@@ -89,8 +117,6 @@ pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
     device->hdr_type = pci_header_type(bus,dev) & ~HEADER_MULTIFUNC;
 
 
-    // TODO: change this, make read config take a header type and populate both headers
-    // then you can also unpack the pci_device struct
     uint32_t size;
     switch (device->hdr_type)
     {
@@ -106,19 +132,22 @@ pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
         size = sizeof(device->hdr) + sizeof(device->header2);
         pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
         break;
-    
     default:
         printke("error with pci header type. Value provided: %d", device->hdr_type);
         return NULL;
     }
 
-    list_add(&pci_devices, device);
+    if(!list_add(&pci_devices, device)) {
+        printke("unable to add pci device to list");
+	kfree(device);
+	return NULL;
+    }
 
     /* AHCI controller */
     if (device->hdr.class == 0x01 &&
         device->hdr.subclass == 0x06 &&
         device->hdr.interface == 0x01) {
-
+            ahci_add_controller(device);
     }
 
     return device;
@@ -139,32 +168,28 @@ void pci_enumerate_devices() {
                         continue;
                     }
 
-                    if(!pci_register_device(bus,dev,func)) {
-                        printke("error registering device");
-                    }
-
+                    if (!pci_register_device(bus, dev, func))
+                        printke("error registering device bus: %d, dev: %d, func: %d", bus, dev, func);
                 }
             } else {
-                if(!pci_register_device(bus, dev,0)) {
-                    printke("error registering device");
-                }
+                if (!pci_register_device(bus, dev, 0))
+                    printke("error registering device bus: %d, dev: %d, func: %d", bus, dev, 0);
             }
-
         }
     }
 }
 
-uint32_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size) {
+void pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size) {
     for(uint32_t i = 0; i < size; i+=2) {
         uint16_t word = pci_read_config_word(bus,dev,func,i);
         buf[i + 0] = (uint8_t)(word & 0x00FF);
         buf[i + 1] = (uint8_t)(word >> 8);
     }
-    return 0;
 }
 
 void init_pci() {
+    printk("Initializing PCI");
     pci_devices = LIST_HEAD_INIT(pci_devices);
     pci_enumerate_devices();
-    pci_print_all_devices(&pci_devices);
+    pci_print_all_devices();
 }
