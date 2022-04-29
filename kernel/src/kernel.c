@@ -8,6 +8,7 @@
 #include <kernel/multiboot2.h>
 #include <kernel/paging.h>
 #include <kernel/pci.h>
+#include <kernel/ahci.h>
 #include <kernel/pmm.h>
 #include <kernel/proc.h>
 #include <kernel/ps2.h>
@@ -49,9 +50,11 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
     init_idt();
     init_isr();
     init_irq();
-    init_pci();
-    init_syscall();
 
+    init_pci();
+    init_ahci();
+
+    init_syscall();
     init_ps2();
     init_timer();
 
