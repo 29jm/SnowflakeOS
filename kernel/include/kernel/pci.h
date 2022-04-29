@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <list.h>
 
 typedef struct pci_header_t {
     uint16_t vendor, device;
@@ -59,13 +60,17 @@ typedef struct pci_header2_t {
 typedef struct pci_device_t {
     uint8_t id;
     uint8_t bus, dev, func;
+    uint8_t hdr_type;
     pci_header_t hdr;
     union {
         pci_header0_t header0;
         pci_header1_t header1;
         pci_header2_t header2;
     };
-} pci_device_t;
+} __attribute__((packed)) pci_device_t;
+
 
 void init_pci();
 uint32_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size);
+void pci_print_device(pci_device_t* dev);
+void pci_print_all_devices(list_t *list);

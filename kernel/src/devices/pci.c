@@ -48,14 +48,15 @@ void pci_print_device(pci_device_t* dev) {
     uint8_t type = dev->hdr.header_type & ~HEADER_MULTIFUNC;
 
     /* Print information common to all devices */
-    printk("id: %d,%x:%x:%x: device %x:%x, class %02x:%02x:%02x",
+    printk("id: %d, location: %x:%x:%x, device %x:%x, class %02x:%02x:%02x",
         dev->id, dev->bus, dev->dev, dev->func, dev->hdr.vendor,
         dev->hdr.device, dev->hdr.class, dev->hdr.subclass, dev->hdr.interface);
 
     /* Print device-type-specific information */
     switch (type) {
     case 0x00:
-        printk(" - interrupt pin: %d, interrupt line: %d", dev->header0.int_pin, dev->header0.int_line);
+        printk(" - interrupt pin: %d, interrupt line: %d, header type: %d", 
+               dev->header0.int_pin, dev->header0.int_line, dev->hdr_type);
 
         for (uint32_t i = 0; i < 6; i++) {
             if (dev->header0.bar[i]) {
@@ -67,6 +68,14 @@ void pci_print_device(pci_device_t* dev) {
     }
 }
 
+void pci_print_all_devices(list_t *list) {
+    pci_device_t* dev;
+    list_for_each_entry(dev, list) {
+        pci_print_device(dev);
+    }
+}
+
+
 pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
     pci_device_t *device = (pci_device_t *)kmalloc(sizeof(pci_device_t));
     // TODO: check for device id overflow
@@ -77,7 +86,31 @@ pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
     device->dev = dev;
     device->func = func;
 
-    pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, sizeof(pci_header_t));
+    device->hdr_type = pci_header_type(bus,dev) & ~HEADER_MULTIFUNC;
+
+
+    // TODO: change this, make read config take a header type and populate both headers
+    // then you can also unpack the pci_device struct
+    uint32_t size;
+    switch (device->hdr_type)
+    {
+    case 0x00:
+        size = sizeof(device->hdr) + sizeof(device->header0);
+        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        break;
+    case 0x01:
+        size = sizeof(device->hdr) + sizeof(device->header1);
+        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        break;
+    case 0x02:
+        size = sizeof(device->hdr) + sizeof(device->header2);
+        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        break;
+    
+    default:
+        printke("error with pci header type. Value provided: %d", device->hdr_type);
+        return NULL;
+    }
 
     list_add(&pci_devices, device);
 
@@ -99,7 +132,6 @@ void pci_enumerate_devices() {
             }
 
             uint8_t header_type = pci_header_type(bus, dev);
-            pci_device_t *pci_dev;
 
             if (header_type & HEADER_MULTIFUNC) {
                 for (uint32_t func = 0; func < 8; func++) {
@@ -107,14 +139,15 @@ void pci_enumerate_devices() {
                         continue;
                     }
 
-                    pci_dev = pci_register_device(bus,dev,func);
+                    if(!pci_register_device(bus,dev,func)) {
+                        printke("error registering device");
+                    }
 
-                    pci_print_device(pci_dev);
                 }
             } else {
-                pci_dev = pci_register_device(bus, dev,0);
-
-                pci_print_device(pci_dev);
+                if(!pci_register_device(bus, dev,0)) {
+                    printke("error registering device");
+                }
             }
 
         }
@@ -133,4 +166,5 @@ uint32_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, u
 void init_pci() {
     pci_devices = LIST_HEAD_INIT(pci_devices);
     pci_enumerate_devices();
+    pci_print_all_devices(&pci_devices);
 }
