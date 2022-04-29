@@ -1,6 +1,8 @@
 #include <kernel/com.h>
 #include <kernel/pci.h>
 #include <kernel/sys.h>
+#include <stdlib.h>
+#include <list.h>
 
 #include <stdbool.h>
 
@@ -11,44 +13,10 @@
 
 #define HEADER_MULTIFUNC (1 << 7)
 
-/* These are not useable right now: field must be reordered by groups of 4
- * bytes, reversed. */
-typedef struct pci_header1_t {
-    pci_header_t header;
-    uint32_t bar[2];
-    uint8_t latency2, sub_bus, sec_bus, prim_bus;
-    uint16_t secondary_status;
-    uint8_t io_limit, io_base;
-    uint16_t memory_limit, memory_base;
-    uint16_t prefetch_limit, prefetch_base;
-    uint32_t prefetch_upper_limit, prefetch_upper_base;
-    uint16_t io_upper_limit, io_upper_base; // TODO use io_limit* prefixes
-    uint8_t reserved[3];
-    uint8_t capabilities_addr;
-    uint32_t expansion;
-    uint16_t bridge_control;
-    uint8_t int_pin, int_line;
-} __attribute__((packed)) pci_header1_t;
 
-typedef struct pci_header2_t {
-    pci_header_t header;
-    uint32_t carbus_addr;
-    uint16_t sec_status;
-    uint8_t reserved, capabilities_offset;
-    uint8_t cardbus_latency, sub_bus, carbus_bus, pci_bus;
-    uint32_t mem_base_addr0;
-    uint32_t mem_limit0;
-    uint32_t mem_base_addr1;
-    uint32_t mem_limit1;
-    uint32_t io_base_addr0;
-    uint32_t io_limit0;
-    uint32_t io_base_addr1;
-    uint32_t io_limit1;
-    uint16_t bridge_control;
-    uint8_t int_pin, int_line;
-    uint16_t sub_vendor, sub_device;
-    uint32_t legacy_base_addr;
-} __attribute__((packed)) pci_header2_t;
+static list_t pci_devices;
+static uint8_t next_dev_id = 0;
+
 
 uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
     uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
@@ -73,30 +41,25 @@ bool pci_device_has_function(uint8_t bus, uint8_t dev, uint8_t func) {
 }
 
 uint8_t pci_header_type(uint8_t bus, uint8_t dev) {
-    return pci_read_config_word(bus, dev, 0, 14) & 0xFFFF;
+    return pci_read_config_word(bus, dev, 0, 14) & 0x00FF;
 }
 
-void pci_print_device(pci_device_t dev) {
-    uint8_t type = pci_header_type(dev.bus, dev.dev) & ~HEADER_MULTIFUNC;
-    pci_header_t hdr;
-    pci_header0_t hdr0;
-    // pci_header1_t hdr1;
-    // pci_header2_t hdr2;
+void pci_print_device(pci_device_t* dev) {
+    uint8_t type = dev->hdr.header_type & ~HEADER_MULTIFUNC;
 
     /* Print information common to all devices */
-    pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr, sizeof(hdr));
-    printk("%x:%x:%x: device %x:%x, class %02x:%02x:%02x",
-        dev.bus, dev.dev, dev.func, hdr.vendor, hdr.device, hdr.class, hdr.subclass, hdr.interface);
+    printk("id: %d,%x:%x:%x: device %x:%x, class %02x:%02x:%02x",
+        dev->id, dev->bus, dev->dev, dev->func, dev->hdr.vendor,
+        dev->hdr.device, dev->hdr.class, dev->hdr.subclass, dev->hdr.interface);
 
     /* Print device-type-specific information */
     switch (type) {
     case 0x00:
-        pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr0, sizeof(hdr0));
-        printk(" - interrupt pin: %d, interrupt line: %d", hdr0.int_pin, hdr0.int_line);
+        printk(" - interrupt pin: %d, interrupt line: %d", dev->header0.int_pin, dev->header0.int_line);
 
         for (uint32_t i = 0; i < 6; i++) {
-            if (hdr0.bar[i]) {
-                printk("   BAR%d: 0x%p", i, hdr0.bar[i]);
+            if (dev->header0.bar[i]) {
+                printk("   BAR%d: 0x%p", i, dev->header0.bar[i]);
             }
         }
 
@@ -104,15 +67,28 @@ void pci_print_device(pci_device_t dev) {
     }
 }
 
-void pci_register_device(pci_device_t dev) {
-    pci_header_t hdr;
+pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
+    pci_device_t *device = (pci_device_t *)kmalloc(sizeof(pci_device_t));
+    // TODO: check for device id overflow
+    device->id = next_dev_id;
+    next_dev_id++;
 
-    pci_read_config(dev.bus, dev.dev, dev.func, (uint8_t*) &hdr, sizeof(hdr));
+    device->bus = bus;
+    device->dev = dev;
+    device->func = func;
 
-    /* IDE controller */
-    if (hdr.class == 0x01 && hdr.subclass == 0x01) {
+    pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, sizeof(pci_header_t));
+
+    list_add(&pci_devices, device);
+
+    /* AHCI controller */
+    if (device->hdr.class == 0x01 &&
+        device->hdr.subclass == 0x06 &&
+        device->hdr.interface == 0x01) {
 
     }
+
+    return device;
 }
 
 void pci_enumerate_devices() {
@@ -123,7 +99,7 @@ void pci_enumerate_devices() {
             }
 
             uint8_t header_type = pci_header_type(bus, dev);
-            pci_header_t hdr;
+            pci_device_t *pci_dev;
 
             if (header_type & HEADER_MULTIFUNC) {
                 for (uint32_t func = 0; func < 8; func++) {
@@ -131,17 +107,30 @@ void pci_enumerate_devices() {
                         continue;
                     }
 
-                    pci_print_device((pci_device_t) {bus, dev, func});
+                    pci_dev = pci_register_device(bus,dev,func);
+
+                    pci_print_device(pci_dev);
                 }
             } else {
-                pci_read_config(bus, dev, 0, (uint8_t*) &hdr, sizeof(hdr));
-                pci_print_device((pci_device_t) {bus, dev, 0});
+                pci_dev = pci_register_device(bus, dev,0);
+
+                pci_print_device(pci_dev);
             }
 
         }
     }
 }
 
+uint32_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size) {
+    for(uint32_t i = 0; i < size; i+=2) {
+        uint16_t word = pci_read_config_word(bus,dev,func,i);
+        buf[i + 0] = (uint8_t)(word & 0x00FF);
+        buf[i + 1] = (uint8_t)(word >> 8);
+    }
+    return 0;
+}
+
 void init_pci() {
+    pci_devices = LIST_HEAD_INIT(pci_devices);
     pci_enumerate_devices();
 }
