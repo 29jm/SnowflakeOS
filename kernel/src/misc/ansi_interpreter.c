@@ -92,7 +92,10 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
                 for (uint32_t i = 0; i < ctx->current_arg; i++) {
                     switch (ctx->args[i]) {
                         case 0:
-                            term_set_blink(0); break;
+                            term_set_bg_color(TERM_COLOR_BLACK);
+                            term_set_fg_color(TERM_COLOR_WHITE);
+                            term_set_blink(0);
+                            break;
                         case 1: // Make foreground things bright
                             term_set_color(term_get_color() | (1 << 3));
                             break;
@@ -102,6 +105,8 @@ int ansi_interpret_char(ansi_interpreter_context* ctx, char c) {
                         case 4: break;
                         case 5:
                             term_set_blink(1); break;
+                        case 25:
+                            term_set_blink(0); break;
                         case 30:
                             term_set_fg_color(TERM_COLOR_BLACK); break;
                         case 31:
