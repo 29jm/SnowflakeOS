@@ -132,6 +132,8 @@ pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
 
     if(!list_add(&pci_devices, device)) {
         printke("unable to add pci device");
+	kfree(device);
+	return NULL;
     }
 
     /* AHCI controller */
