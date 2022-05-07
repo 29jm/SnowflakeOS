@@ -10,32 +10,46 @@
 
 
 static list_t ahci_controllers;
-static uint8_t next_dev_id = 0;
+static uint32_t next_dev_id = 0;
 static bool list_inited = false;
 
 void init_ahci() {
     printk("initalizing ahci");
-    ahci_print_all_controllers();
+    ahci_controller_t* c;
+    list_for_each_entry(c,&ahci_controllers) {
+        init_controller(c);
+    }
 }
 
-void ahci_add_controller(pci_device_t* pci_dev) {
+bool ahci_add_controller(pci_device_t* pci_dev) {
     if(!list_inited) {
         ahci_controllers = LIST_HEAD_INIT(ahci_controllers);
         list_inited = true;
     }
 
+    if(next_dev_id >= AHCI_MAX_CONTROLLERS_NUM) {
+        printke("trying to add an ahci controller with no spots left");
+        return false;
+    }
+
     ahci_controller_t* controller = (ahci_controller_t*)kmalloc(sizeof(ahci_controller_t));
+    if(!controller){
+        printke("unable to allocate memory for ahci controller with pci id: %d", pci_dev->id);
+        return false;
+    }
+
     controller->id = next_dev_id;
     next_dev_id++;
     controller->pci_dev = pci_dev;
-    init_controller(controller);
     if(!list_add(&ahci_controllers, (void*)controller)) {
-        printke("unable to add ahci controller");
+        printke("unable to add ahci controller to list");
 	kfree(controller);
     }
+
+    return true;
 }
 
-void init_controller(ahci_controller_t* controller) {
+static void controller_get_bar_size(ahci_controller_t* controller) {
     // get BAR size
     uint32_t bar5, size;
     bar5 = controller->pci_dev->header0.bar[5];
@@ -58,8 +72,12 @@ void init_controller(ahci_controller_t* controller) {
         controller->pci_dev->func, HDR0_BAR5, bar5);
 
     bar5 &= ~MM_BAR_INFO_MASK; // mask off the information bits
-    controller->base_address = (void*) bar5;
+    controller->base_address = (void*)bar5;
     controller->address_size = size;
+}
+
+void init_controller(ahci_controller_t* controller) {
+    controller_get_bar_size(controller);
 
     ///// map base address into virtual memory - mark as do not cache because phys addr is hardware
     uint32_t num_pages = controller->address_size / 0x1000;
@@ -74,15 +92,16 @@ void init_controller(ahci_controller_t* controller) {
     paging_map_pages((uintptr_t) virt, (uintptr_t) controller->base_address, num_pages, PAGE_CACHE_DISABLE);
 
     controller->base_address_virt = virt;
-    controller->ghc = controller->base_address_virt;
-
-    // mark that ahci mode is enabled / notify the controller we are going to use it
-    controller->ghc->ghc |= AHCI_ENABLE;
 
 
+    printk("ahci controller detected:");
+    ahci_print_controller(controller);
+
+
+    HBA_ghc_t* ghc = (HBA_ghc_t*)controller->base_address_virt;
     // check devices on available ports
     for(int i = 0; i < AHCI_MAX_PORTS; i++){
-        if(!((controller->ghc->ports_implemented >> i) & 0x01))
+        if(!((ghc->ports_implemented >> i) & 0x01))
             continue;
 
         // check port device status and type
@@ -93,16 +112,16 @@ void init_controller(ahci_controller_t* controller) {
             uint32_t device_type = port->sig;
             switch(device_type) {
             case SATA_SIG_ATA:
-                sata_add_device(controller, i, SATA_DEV_SATA);
+                sata_add_device(controller, i, SATA_DEV_SATA); // regular sata device
                 break;
             case SATA_SIG_ATAPI:
-                sata_add_device(controller, i, SATA_DEV_SATAPI);
+                sata_add_device(controller, i, SATA_DEV_SATAPI); // sata packet interface device
                 break;
             case SATA_SIG_SEMB:
-                sata_add_device(controller, i, SATA_DEV_SEMB);
+                sata_add_device(controller, i, SATA_DEV_SEMB); // some sort of bridge
                 break;
             case SATA_SIG_PM:
-                sata_add_device(controller, i, SATA_DEV_PM);
+                sata_add_device(controller, i, SATA_DEV_PM); // sata port multiplier
                 break;
             default:
                 printk("couldn't determine sata device type, provided type was: 0x%x", device_type);
@@ -111,17 +130,25 @@ void init_controller(ahci_controller_t* controller) {
         }
     }
 
+    //// prepare controller for use
+    // reset controller
+    ghc->ghc |= (1<<0);
+
+    // enable interrupts
+    ghc->ghc |= (1<<1);
+
+    // mark that ahci mode is enabled / notify the controller we are going to use it
+    ghc->ghc |= AHCI_ENABLE;
+
 }
 
 void ahci_print_controller(ahci_controller_t* controller) {
-    printk("ahci controller with id: %d, pci id: %d, BAR: 0x%x, BAR virt: 0x%x, "
-           "BAR size: 0x%x, version: 0x%x, capabilities: 0x%x",
+    HBA_ghc_t* ghc = (HBA_ghc_t*)controller->base_address_virt;
+
+    printk("ahci controller with id: %d, pci id: %d, \n\tBAR: 0x%x\n\tBAR virt: 0x%x\n"
+           "\tBAR size: 0x%x\n\tversion: 0x%x\n\tcapabilities: 0x%x\n\t%d control slots per port",
         controller->id, controller->pci_dev->id, controller->base_address, controller->base_address_virt,
-        controller->address_size, controller->ghc->version, controller->ghc->cap1);
-
-    printk(" - %d control slots per port", (controller->ghc->cap1 >> 8) & 0b1111);
-
-
+        controller->address_size, ghc->version, ghc->cap1, (ghc->cap1 >> 8) & 0b1111);
 }
 
 void ahci_print_all_controllers() {

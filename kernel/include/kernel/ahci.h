@@ -2,10 +2,15 @@
 
 #include <kernel/pci.h>
 
+#define AHCI_MAX_CONTROLLERS_NUM 256
+
 #define HBA_PORT_CMD_ST  (1 << 0)   // start processing the command list
 #define HBA_PORT_CMD_FRE (1 << 4)   // can post received FIS to fb pointer area
 #define HBA_PORT_CMD_FR  (1 << 14)  // indicates FIS engine is running
 #define HBA_PORT_CMD_CR  (1 << 15)  // indicates the command list engine is running
+
+#define HBA_PORT_IS_TFES (1 << 30)  // was there an error in the received fis
+
 
 #define HBA_CMDLIST_SIZE 0x400 // 1kb
 #define FIS_REC_SIZE 0x100 // 256b
@@ -15,10 +20,6 @@
 #define AHCI_PORTS_START_OFFSET 0x100
 #define AHCI_PORT_SIZE sizeof(HBA_port_t)
 
-#define	SATA_SIG_ATA	0x00000101	// SATA drive
-#define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive
-#define	SATA_SIG_SEMB	0xC33C0101	// Enclosure management bridge
-#define	SATA_SIG_PM	0x96690101	// Port multiplier
 
 
 // Generic host control
@@ -97,11 +98,10 @@ typedef struct ahci_controller_t {
     void* base_address;
     void* base_address_virt;
     uint32_t address_size;
-    HBA_ghc_t* ghc;
 } ahci_controller_t;
 
 void init_ahci();
-void ahci_add_controller(pci_device_t* pci_dev);
+bool ahci_add_controller(pci_device_t* pci_dev);
 void init_controller(ahci_controller_t* controller);
 
 void ahci_print_controller(ahci_controller_t* controller);

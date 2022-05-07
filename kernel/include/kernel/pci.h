@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <list.h>
 
+#define PCI_MAX_NUM_DEVS 256
+
 #define HDR0_BAR0 0x10
 #define HDR0_BAR1 0x14
 #define HDR0_BAR2 0x18
@@ -81,7 +83,7 @@ typedef volatile struct pci_device_t {
 
 
 void init_pci();
-uint32_t pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size);
+void pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size);
 
 uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
 uint32_t pci_read_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
