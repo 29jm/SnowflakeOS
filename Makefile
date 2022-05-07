@@ -79,7 +79,14 @@ modules: libc snow ui
 doomgeneric: libc snow ui
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
+	qemu-system-x86_64 -display gtk \
+	                   -drive file=SnowflakeOS.iso,id=disk,if=none \
+	                   -drive file=drive.img,id=test,if=none \
+			   -device ahci,id=ahci \
+			   -device ide-hd,drive=disk,bus=ahci.0,model=HOSTDEVICE,serial=10101010101 \
+			   -device ide-hd,drive=test,bus=ahci.1,model=TESTDRIVE,serial=6969696969696 \
+			   -monitor stdio \
+			   -s -no-reboot -no-shutdown -serial file:serial.log
 	cat serial.log
 
 efiqemu: SnowflakeOS.iso
