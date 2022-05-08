@@ -31,19 +31,29 @@ extern uint32_t KERNEL_SIZE;
 void kernel_main(mb2_t* boot, uint32_t magic) {
     init_serial();
     init_fpu();
-
-    if (magic != MB2_MAGIC) {
-        printk("The multiboot magic header is wrong: 0x%X", magic);
-        abort();
-    }
-
     init_pmm(boot);
     init_paging(boot);
 
-    printk("SnowflakeOS 0.7");
-    printk("kernel is %d KiB large", ((uint32_t) &KERNEL_SIZE) >> 10);
+    if (magic != MB2_MAGIC) {
+        printke("invalid magic number from GRUB (%p), ignoring...", magic);
+    }
 
-    init_fb(boot);
+    /* Text mode also requires commenting out the graphics tag in boot.S */
+    bool no_graphics = false;
+
+    init_term();
+
+    if (no_graphics) {
+        printk("starting in text mode...");
+    } else {
+        printk("starting in graphical mode...");
+        init_fb(boot);
+        init_wm();
+    }
+
+    printk("SnowflakeOS 0.75 ");
+    printk("kernel is %d KiB", ((uint32_t) &KERNEL_SIZE) >> 10);
+
     init_gdt();
     init_idt();
     init_isr();
@@ -53,7 +63,7 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
     init_timer();
     init_ps2();
 
-    // Load GRUB modules as programs
+    /* Load GRUB modules: the disk image, and symbol file for stacktraces */
     mb2_tag_t* tag = boot->tags;
 
     while (tag->type != MB2_TAG_END) {
@@ -77,7 +87,6 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
         tag = (mb2_tag_t*) ((uintptr_t) tag + align_to(tag->size, 8));
     }
 
-    init_wm();
     init_proc();
 
     proc_exec("/background", NULL);

@@ -82,6 +82,10 @@ qemu: SnowflakeOS.iso
 	qemu-system-x86_64 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log
 	cat serial.log
 
+efiqemu: SnowflakeOS.iso
+	qemu-system-x86_64 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log --bios /usr/share/edk2-ovmf/x64/OVMF.fd
+	cat serial.log
+
 bochs: SnowflakeOS.iso
 	bochs -q -rc .bochsrc_cmds
 	cat serial.log

@@ -91,6 +91,7 @@ void sched_robin_exit(sched_t* sched, process_t* process) {
     proc_node_t* p = sc->processes;
 
     if (sc->processes == sc->processes->next) {
+        printke("exiting from the last process");
         abort();
     }
 

@@ -13,6 +13,7 @@ extern int32_t syscall1(uint32_t eax, uint32_t ebx);
 int putchar(int c) {
 #ifdef _KERNEL_
     serial_write(c);
+    term_putchar(c);
 #else
     syscall1(SYS_PUTCHAR, c);
 #endif

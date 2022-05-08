@@ -1,9 +1,7 @@
 #include <stdio.h>
 
 #ifndef _KERNEL_
-
 #include <stdlib.h>
-
 #endif
 
 __attribute__((__noreturn__))
