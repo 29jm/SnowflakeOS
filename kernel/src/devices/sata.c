@@ -60,11 +60,17 @@ bool sata_setup_memory(sata_device_t* dev) {
     port->cmd &= ~HBA_PORT_CMD_FRE; // indicate to not post to FIS received area
 
     // wait for the FIS and command list engine to complete
+    uint32_t spin = 0;
     while (1) {
+        spin++;
         if (port->cmd & HBA_PORT_CMD_FR)
             continue;
         if (port->cmd & HBA_PORT_CMD_CR)
             continue;
+        if(spin > 10000) {
+            printk("Port appears to be stuck during device memory setup (waiting for the engines to complete) for sata dev: %d", dev->id);
+            return false;
+        }
         break;
     }
 
@@ -131,7 +137,14 @@ bool sata_setup_memory(sata_device_t* dev) {
     tbl->prdt_entry[0].dbc = SATA_BLOCK_SIZE;
 
     //// allow port to start running again
-    while (port->cmd & HBA_PORT_CMD_CR); // make sure port isn't running, not sure why this is needed we already indicated the port shouldn't start
+    spin = 0;
+    while (port->cmd & HBA_PORT_CMD_CR) { // make sure port isn't running, not sure why this is needed we already indicated the port shouldn't start
+        spin++;
+        if(spin > 10000) {
+            printk("Port appears to be stuck during device memory setup (starting the port again) for sata dev: %d", dev->id);
+            return false;
+        }
+    }
 
     port->cmd |= HBA_PORT_CMD_FRE; // indicate it can post to FIS
     port->cmd |= HBA_PORT_CMD_ST;  // indicate to start processing command list
