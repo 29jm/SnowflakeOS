@@ -172,7 +172,7 @@ bool sata_identify_device(sata_device_t* dev) {
     cmd.command = ATA_CMD_IDENTIFY_DEV;
 
     // move command to 
-    memcpy(tbl,&cmd,sizeof(cmd));
+    memcpy((void*)tbl,(const void*)&cmd,sizeof(cmd));
 
     // issue command
     port->ci = 0x01;
@@ -246,7 +246,7 @@ bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_n
     cmd.lba5 = (block_num_h >> 8) & 0xFF;
 
     // move command to table
-    memcpy(tbl,&cmd,sizeof(cmd));
+    memcpy((void*)tbl,(const void*)&cmd,sizeof(cmd));
 
     // issue command
     port->ci = 0x01;
@@ -297,7 +297,7 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     memcpy(dev->data_base_virt, buf, SATA_BLOCK_SIZE);
 
     // move command to table
-    memcpy(tbl,&cmd,sizeof(cmd));
+    memcpy((void*)tbl,(const void*)&cmd,sizeof(cmd));
 
     // issue command
     port->ci = 0x01;
