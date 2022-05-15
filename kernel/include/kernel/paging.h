@@ -25,7 +25,7 @@ void paging_fault_handler(registers_t* regs);
 void* paging_alloc_pages(uint32_t virt, uint32_t num);
 void paging_free_pages(uintptr_t virt, uint32_t num);
 uintptr_t paging_virt_to_phys(uintptr_t virt);
-
+bool paging_disable_page_cache(void* virt);
 #define KERNEL_BASE_VIRT 0xC0000000
 
 /* The kernel is mapped in higher half using a 4 MiB page.
@@ -47,6 +47,7 @@ uintptr_t paging_virt_to_phys(uintptr_t virt);
 #define PAGE_USER             (1 << 2)
 #define PAGE_WT               (1 << 3)
 #define PAGE_CACHE_DISABLE    (1 << 4)
+#define PAGE_SIZE 0x1000
 
 #define PAGE_LARGE   128
 
