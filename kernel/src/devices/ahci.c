@@ -1,13 +1,12 @@
 #include <kernel/ahci.h>
-
+#include <kernel/paging.h>
 #include <kernel/pci.h>
+#include <kernel/sata.h>
 #include <kernel/sys.h>
+
 #include <list.h>
 #include <stdlib.h>
-#include <kernel/paging.h>
 #include <string.h>
-#include <kernel/sata.h>
-
 
 static list_t ahci_controllers;
 static uint32_t next_dev_id = 0;
@@ -16,24 +15,24 @@ static bool list_inited = false;
 void init_ahci() {
     printk("initalizing ahci");
     ahci_controller_t* c;
-    list_for_each_entry(c,&ahci_controllers) {
+    list_for_each_entry(c, &ahci_controllers) {
         init_controller(c);
     }
 }
 
 bool ahci_add_controller(pci_device_t* pci_dev) {
-    if(!list_inited) {
+    if (!list_inited) {
         ahci_controllers = LIST_HEAD_INIT(ahci_controllers);
         list_inited = true;
     }
 
-    if(next_dev_id >= AHCI_MAX_CONTROLLERS_NUM) {
+    if (next_dev_id >= AHCI_MAX_CONTROLLERS_NUM) {
         printke("trying to add an ahci controller with no spots left");
         return false;
     }
 
-    ahci_controller_t* controller = (ahci_controller_t*)kmalloc(sizeof(ahci_controller_t));
-    if(!controller){
+    ahci_controller_t* controller = (ahci_controller_t*) kmalloc(sizeof(ahci_controller_t));
+    if (!controller) {
         printke("unable to allocate memory for ahci controller with pci id: %d", pci_dev->id);
         return false;
     }
@@ -41,9 +40,9 @@ bool ahci_add_controller(pci_device_t* pci_dev) {
     controller->id = next_dev_id;
     next_dev_id++;
     controller->pci_dev = pci_dev;
-    if(!list_add(&ahci_controllers, (void*)controller)) {
+    if (!list_add(&ahci_controllers, (void*) controller)) {
         printke("unable to add ahci controller to list");
-	kfree(controller);
+        kfree(controller);
     }
 
     return true;
@@ -72,7 +71,7 @@ static void controller_get_bar_size(ahci_controller_t* controller) {
         controller->pci_dev->func, HDR0_BAR5, bar5);
 
     bar5 &= ~MM_BAR_INFO_MASK; // mask off the information bits
-    controller->base_address = (void*)bar5;
+    controller->base_address = (void*) bar5;
     controller->address_size = size;
 }
 
@@ -93,24 +92,22 @@ void init_controller(ahci_controller_t* controller) {
 
     controller->base_address_virt = virt;
 
-
     printk("ahci controller detected:");
     ahci_print_controller(controller);
 
-
-    HBA_ghc_t* ghc = (HBA_ghc_t*)controller->base_address_virt;
+    HBA_ghc_t* ghc = (HBA_ghc_t*) controller->base_address_virt;
     // check devices on available ports
-    for(int i = 0; i < AHCI_MAX_PORTS; i++){
-        if(!((ghc->ports_implemented >> i) & 0x01))
+    for (int i = 0; i < AHCI_MAX_PORTS; i++) {
+        if (!((ghc->ports_implemented >> i) & 0x01))
             continue;
 
         // check port device status and type
-        HBA_port_t *port = (HBA_port_t*)(controller->base_address_virt + AHCI_PORTS_START_OFFSET + i*AHCI_PORT_SIZE);
-            
-        if((port->ssts & 0xF) == 0x03) { // device present and connection established
+        HBA_port_t* port = (HBA_port_t*) (controller->base_address_virt + AHCI_PORTS_START_OFFSET + i * AHCI_PORT_SIZE);
+
+        if ((port->ssts & 0xF) == 0x03) { // device present and connection established
 
             uint32_t device_type = port->sig;
-            switch(device_type) {
+            switch (device_type) {
             case SATA_SIG_ATA:
                 sata_add_device(controller, i, SATA_DEV_SATA); // regular sata device
                 break;
@@ -132,18 +129,17 @@ void init_controller(ahci_controller_t* controller) {
 
     //// prepare controller for use
     // reset controller
-    ghc->ghc |= (1<<0);
+    ghc->ghc |= (1 << 0);
 
     // enable interrupts
-    ghc->ghc |= (1<<1);
+    ghc->ghc |= (1 << 1);
 
     // mark that ahci mode is enabled / notify the controller we are going to use it
     ghc->ghc |= AHCI_ENABLE;
-
 }
 
 void ahci_print_controller(ahci_controller_t* controller) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*)controller->base_address_virt;
+    HBA_ghc_t* ghc = (HBA_ghc_t*) controller->base_address_virt;
 
     printk("ahci controller with id: %d, pci id: %d, \n\tBAR: 0x%x\n\tBAR virt: 0x%x\n"
            "\tBAR size: 0x%x\n\tversion: 0x%x\n\tcapabilities: 0x%x\n\t%d control slots per port",
