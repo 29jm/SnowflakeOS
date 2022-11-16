@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <list.h>
+#include <stdint.h>
 
 #define PCI_MAX_NUM_DEVS 256
 

@@ -1,11 +1,11 @@
+#include <kernel/ahci.h>
 #include <kernel/com.h>
 #include <kernel/pci.h>
-#include <kernel/ahci.h>
 #include <kernel/sys.h>
-#include <stdlib.h>
-#include <list.h>
 
+#include <list.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define CFG_ADDR 0xCF8
 #define CFG_DATA 0xCFC
@@ -14,10 +14,8 @@
 
 #define HEADER_MULTIFUNC (1 << 7)
 
-
 static list_t pci_devices;
 static uint8_t next_dev_id = 0;
-
 
 uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
     uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
@@ -66,15 +64,14 @@ void pci_print_device(pci_device_t* dev) {
     uint8_t type = dev->hdr.header_type & ~HEADER_MULTIFUNC;
 
     /* Print information common to all devices */
-    printk("id: %d, location: %x:%x:%x, device %x:%x, class %02x:%02x:%02x",
-        dev->id, dev->bus, dev->dev, dev->func, dev->hdr.vendor,
-        dev->hdr.device, dev->hdr.class, dev->hdr.subclass, dev->hdr.interface);
+    printk("id: %d, location: %x:%x:%x, device %x:%x, class %02x:%02x:%02x", dev->id, dev->bus, dev->dev,
+        dev->func, dev->hdr.vendor, dev->hdr.device, dev->hdr.class, dev->hdr.subclass, dev->hdr.interface);
 
     /* Print device-type-specific information */
     switch (type) {
     case 0x00:
-        printk(" - interrupt pin: %d, interrupt line: %d, header type: %d", 
-               dev->header0.int_pin, dev->header0.int_line, dev->hdr_type);
+        printk(" - interrupt pin: %d, interrupt line: %d, header type: %d", dev->header0.int_pin,
+            dev->header0.int_line, dev->hdr_type);
 
         for (uint32_t i = 0; i < 6; i++) {
             if (dev->header0.bar[i]) {
@@ -93,19 +90,17 @@ void pci_print_all_devices() {
     }
 }
 
-
-pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
-    if(next_dev_id >= PCI_MAX_NUM_DEVS) {
+pci_device_t* pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
+    if (next_dev_id >= PCI_MAX_NUM_DEVS) {
         printke("Trying to register a PCI device with no spots left");
         return NULL;
     }
 
-    pci_device_t *device = (pci_device_t *)kmalloc(sizeof(pci_device_t));
-    if(!device){
+    pci_device_t* device = (pci_device_t*) kmalloc(sizeof(pci_device_t));
+    if (!device) {
         printke("unable to allocate space for a PCI device bus: %d, dev: %d, func: %d", bus, dev, func);
         return NULL;
     }
-
 
     device->id = next_dev_id;
     next_dev_id++;
@@ -114,40 +109,36 @@ pci_device_t * pci_register_device(uint32_t bus, uint32_t dev, uint32_t func) {
     device->dev = dev;
     device->func = func;
 
-    device->hdr_type = pci_header_type(bus,dev) & ~HEADER_MULTIFUNC;
-
+    device->hdr_type = pci_header_type(bus, dev) & ~HEADER_MULTIFUNC;
 
     uint32_t size;
-    switch (device->hdr_type)
-    {
+    switch (device->hdr_type) {
     case 0x00:
         size = sizeof(device->hdr) + sizeof(device->header0);
-        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        pci_read_config(bus, dev, func, (uint8_t*) &device->hdr, size);
         break;
     case 0x01:
         size = sizeof(device->hdr) + sizeof(device->header1);
-        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        pci_read_config(bus, dev, func, (uint8_t*) &device->hdr, size);
         break;
     case 0x02:
         size = sizeof(device->hdr) + sizeof(device->header2);
-        pci_read_config(bus, dev, func, (uint8_t*)&device->hdr, size);
+        pci_read_config(bus, dev, func, (uint8_t*) &device->hdr, size);
         break;
     default:
         printke("error with pci header type. Value provided: %d", device->hdr_type);
         return NULL;
     }
 
-    if(!list_add(&pci_devices, device)) {
+    if (!list_add(&pci_devices, device)) {
         printke("unable to add pci device to list");
-	kfree(device);
-	return NULL;
+        kfree(device);
+        return NULL;
     }
 
     /* AHCI controller */
-    if (device->hdr.class == 0x01 &&
-        device->hdr.subclass == 0x06 &&
-        device->hdr.interface == 0x01) {
-            ahci_add_controller(device);
+    if (device->hdr.class == 0x01 && device->hdr.subclass == 0x06 && device->hdr.interface == 0x01) {
+        ahci_add_controller(device);
     }
 
     return device;
@@ -180,10 +171,10 @@ void pci_enumerate_devices() {
 }
 
 void pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size) {
-    for(uint32_t i = 0; i < size; i+=2) {
-        uint16_t word = pci_read_config_word(bus,dev,func,i);
-        buf[i + 0] = (uint8_t)(word & 0x00FF);
-        buf[i + 1] = (uint8_t)(word >> 8);
+    for (uint32_t i = 0; i < size; i += 2) {
+        uint16_t word = pci_read_config_word(bus, dev, func, i);
+        buf[i + 0] = (uint8_t) (word & 0x00FF);
+        buf[i + 1] = (uint8_t) (word >> 8);
     }
 }
 

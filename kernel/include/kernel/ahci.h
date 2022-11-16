@@ -4,27 +4,24 @@
 
 #define AHCI_MAX_CONTROLLERS_NUM 256
 
-#define HBA_PORT_CMD_ST  (1 << 0)   // start processing the command list
-#define HBA_PORT_CMD_FRE (1 << 4)   // can post received FIS to fb pointer area
-#define HBA_PORT_CMD_FR  (1 << 14)  // indicates FIS engine is running
-#define HBA_PORT_CMD_CR  (1 << 15)  // indicates the command list engine is running
+#define HBA_PORT_CMD_ST (1 << 0)  // start processing the command list
+#define HBA_PORT_CMD_FRE (1 << 4) // can post received FIS to fb pointer area
+#define HBA_PORT_CMD_FR (1 << 14) // indicates FIS engine is running
+#define HBA_PORT_CMD_CR (1 << 15) // indicates the command list engine is running
 
-#define HBA_PORT_IS_TFES (1 << 30)  // was there an error in the received fis
-
+#define HBA_PORT_IS_TFES (1 << 30) // was there an error in the received fis
 
 #define HBA_CMDLIST_SIZE 0x400 // 1kb
-#define FIS_REC_SIZE 0x100 // 256b
+#define FIS_REC_SIZE 0x100     // 256b
 
-#define AHCI_ENABLE    (1<<31)
+#define AHCI_ENABLE (1 << 31)
 #define AHCI_MAX_PORTS 32
 #define AHCI_PORTS_START_OFFSET 0x100
 #define AHCI_PORT_SIZE sizeof(HBA_port_t)
 
-
-
 // Generic host control
 typedef volatile struct HBA_ghc_t {
-    uint32_t cap1;     // 0x00, Host capability
+    uint32_t cap1;              // 0x00, Host capability
     uint32_t ghc;               // 0x04, Global host control
     uint32_t int_status;        // 0x08, Interrupt status
     uint32_t ports_implemented; // 0x0C, Port implemented
@@ -33,7 +30,7 @@ typedef volatile struct HBA_ghc_t {
     uint32_t ccc_pts;           // 0x18, Command completion coalescing ports
     uint32_t em_loc;            // 0x1C, Enclosure management location
     uint32_t em_ctl;            // 0x20, Enclosure management control
-    uint32_t cap2;     // 0x24, Host capabilities extended
+    uint32_t cap2;              // 0x24, Host capabilities extended
     uint32_t bohc;              // 0x28, BIOS/OS handoff control and status
 } __attribute__((packed)) HBA_ghc_t;
 
@@ -57,40 +54,40 @@ typedef volatile struct HBA_port_t {
     uint32_t fbs;       // 0x40, FIS-based switch control
     uint32_t rsv1[11];  // 0x44 ~ 0x6F, Reserved
     uint32_t vendor[4]; // 0x70 ~ 0x7F, vendor specific
-}__attribute__((packed)) HBA_port_t;
+} __attribute__((packed)) HBA_port_t;
 
 typedef volatile struct HBA_cmd_hdr_t {
-    uint8_t cfl :  5;    // Command FIS length in DWORDS, 2 ~ 16
-    uint8_t a :    1;    // ATAPI
-    uint8_t w :    1;    // Write, 1: H2D, 0: D2H
-    uint8_t p :    1;    // Prefetchable
-    uint8_t r :    1;    // Reset
-    uint8_t b :    1;    // BIST
-    uint8_t c :    1;    // Clear busy upon R_OK
-    uint8_t rsv0 : 1;    // Reserved
-    uint8_t pmp :  4;    // Port multiplier port
-    uint16_t prdtl;      // Physical region descriptor table length in entries, 0 indicates don't process cmd
+    uint8_t cfl : 5;  // Command FIS length in DWORDS, 2 ~ 16
+    uint8_t a : 1;    // ATAPI
+    uint8_t w : 1;    // Write, 1: H2D, 0: D2H
+    uint8_t p : 1;    // Prefetchable
+    uint8_t r : 1;    // Reset
+    uint8_t b : 1;    // BIST
+    uint8_t c : 1;    // Clear busy upon R_OK
+    uint8_t rsv0 : 1; // Reserved
+    uint8_t pmp : 4;  // Port multiplier port
+    uint16_t prdtl; // Physical region descriptor table length in entries, 0 indicates don't process cmd
     volatile uint32_t prdbc; // Physical region descriptor byte count transferred
-    uint32_t ctba;       // Command table descriptor base address
-    uint32_t ctbau;      // Command table descriptor base address upper 32 bits
-    uint32_t rsv1[4];    // Reserved
-}__attribute__((packed)) HBA_cmd_hdr_t;
+    uint32_t ctba;           // Command table descriptor base address
+    uint32_t ctbau;          // Command table descriptor base address upper 32 bits
+    uint32_t rsv1[4];        // Reserved
+} __attribute__((packed)) HBA_cmd_hdr_t;
 
 typedef volatile struct HBA_prdt_entry_t {
-    uint32_t dba;      // Data base address
-    uint32_t dbau;     // Data base address upper 32 bits
-    uint32_t rsv0;     // Reserved
-    uint32_t dbc: 22;  // Byte count, 4M max
-    uint32_t rsv1: 9;  // Reserved
-    uint32_t i: 1;     // Interrupt on completion
-}__attribute__((packed)) HBA_prdt_entry_t; // size is 0x10
+    uint32_t dba;                           // Data base address
+    uint32_t dbau;                          // Data base address upper 32 bits
+    uint32_t rsv0;                          // Reserved
+    uint32_t dbc : 22;                      // Byte count, 4M max
+    uint32_t rsv1 : 9;                      // Reserved
+    uint32_t i : 1;                         // Interrupt on completion
+} __attribute__((packed)) HBA_prdt_entry_t; // size is 0x10
 
-typedef volatile struct HBA_cmd_table_t { // must be 128 byte aligned
-    uint8_t cfis[64]; // Command FIS
-    uint8_t acmd[16]; // ATAPI command, 12 or 16 bytes
-    uint8_t rsv[48]; // Reserved
-    HBA_prdt_entry_t prdt_entry[1]; // Physical region descriptor table entries, 0 ~ 65535
-}__attribute__((packed)) HBA_cmd_table_t; // size is 0x80 + sizeof(HBA_pdtr_entry) = 0x90 total
+typedef volatile struct HBA_cmd_table_t {  // must be 128 byte aligned
+    uint8_t cfis[64];                      // Command FIS
+    uint8_t acmd[16];                      // ATAPI command, 12 or 16 bytes
+    uint8_t rsv[48];                       // Reserved
+    HBA_prdt_entry_t prdt_entry[1];        // Physical region descriptor table entries, 0 ~ 65535
+} __attribute__((packed)) HBA_cmd_table_t; // size is 0x80 + sizeof(HBA_pdtr_entry) = 0x90 total
 
 typedef struct ahci_controller_t {
     uint8_t id;
