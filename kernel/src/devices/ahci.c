@@ -16,6 +16,9 @@ static bool list_inited = false;
 static void ahci_get_bar_size(ahci_controller_t* c);
 static void ahci_map_uncacheable(ahci_controller_t* c);
 static void ahci_reset_controller(ahci_controller_t* c);
+static void ahci_controller_enable_int(ahci_controller_t* c);
+static void ahci_controller_disable_int(ahci_controller_t* c);
+static void ahci_controller_handle_int(ahci_controller_t *c, uint32_t is);
 static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int port_num);
 static void int_handler(registers_t* regs);
 
@@ -24,6 +27,10 @@ void init_ahci() {
     ahci_controller_t* c;
     list_for_each_entry(c, &ahci_controllers) {
         init_controller(c);
+    }
+    // only enable interrupts after all controllers have been initalized
+    list_for_each_entry(c, &ahci_controllers) {
+        ahci_controller_enable_int(c);
     }
 }
 
@@ -106,21 +113,20 @@ static void ahci_map_uncacheable(ahci_controller_t* c) {
 }
 
 void init_controller(ahci_controller_t* c) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    HBA_ghc_t* ghc;
     int int_no = c->pci_dev->header0.int_line;
 
     ahci_get_bar_size(c);
     ahci_enable_pci_int_mem_access(c);
     ahci_map_uncacheable(c);
 
+    ghc = (HBA_ghc_t*) c->base_address_virt;
+
     printk("ahci controller detected:");
     ahci_print_controller(c);
 
     ahci_reset_controller(c);
     irq_register_handler(IRQ_TO_INT(int_no), int_handler);
-
-    // enable interrupts
-    ghc->ghc |= (1 << 1);
 
     // check devices on available ports
     for (int i = 0; i < AHCI_MAX_PORTS; i++) {
@@ -135,7 +141,7 @@ void init_controller(ahci_controller_t* c) {
             ahci_reset_port(port->port);
 
             // enable interrupts for the port
-            p->ie |= 0x1;
+            port->port->ie |= 0x1;
 
             uint32_t device_type = p->sig;
             switch (device_type) {
@@ -244,6 +250,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     tbl->prdt_entry[0].dba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
     tbl->prdt_entry[0].dbau = 0;
     tbl->prdt_entry[0].dbc = SATA_BLOCK_SIZE;
+    tbl->prdt_entry[0].i = 1;
 
     ahci_start_port(p);
 
@@ -275,6 +282,16 @@ static void ahci_reset_controller(ahci_controller_t* c) {
     ghc->ghc |= AHCI_ENABLE;
 }
 
+static void ahci_controller_enable_int(ahci_controller_t* c) {
+    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    ghc->ghc |= (1 << 1);
+}
+
+static void ahci_controller_disable_int(ahci_controller_t* c) {
+    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    ghc->ghc &= ~(1 << 1);
+}
+
 bool ahci_reset_port(HBA_port_t* p) {
     int spin;
 
@@ -298,7 +315,7 @@ bool ahci_reset_port(HBA_port_t* p) {
         }
     }
 
-    p->serr = ~0;
+    ahci_port_clear_err(p);
 
     ahci_start_port(p);
 
@@ -345,7 +362,26 @@ void ahci_port_clear_err(HBA_port_t* p) {
 }
 
 static void int_handler(registers_t* regs) {
-    printk("\n\ninterrupt fired for AHCI\n\n\n");
+    ahci_controller_t* c;
+    list_for_each_entry(c, &ahci_controllers) {
+        HBA_ghc_t *ghc = (HBA_ghc_t *)c->base_address_virt;
+        uint32_t is = ghc->int_status;
+        ghc->int_status |= is;
+        if (!is)
+            return;
+
+        printk("interrupt fired for ahci controller: %d, ports: 0x%x", c->id, is);
+        ahci_controller_handle_int(c, is);
+    }
+}
+
+static void ahci_controller_handle_int(ahci_controller_t *c, uint32_t is) {
+    for (int i = 0; i < AHCI_MAX_PORTS; i++) {
+        if (((is >> i) & 0x01)) {
+            HBA_port_t *p = AHCI_GET_PORT(c,i);
+            p->is |= p->is;
+        }
+    }
 }
 
 void ahci_print_controller(ahci_controller_t* c) {
