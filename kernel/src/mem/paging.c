@@ -199,3 +199,13 @@ uintptr_t paging_virt_to_phys(uintptr_t virt) {
 
     return (((uintptr_t)*p) & PAGE_FRAME) + (virt & 0xFFF);
 }
+
+bool paging_disable_page_cache(void* virt) {
+    page_t* page = paging_get_page((uintptr_t) virt, false, 0);
+    if (page)
+        *page |= PAGE_CACHE_DISABLE;
+    else
+        return false;
+
+    return true;
+}
