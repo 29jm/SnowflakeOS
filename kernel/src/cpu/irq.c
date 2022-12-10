@@ -97,7 +97,7 @@ void irq_send_eoi(uint8_t irq) {
  */
 void irq_register_handler(uint8_t irq, handler_t handler) {
     if (irq < IRQ0 || irq > IRQ15) {
-        printke("tried to register a handler for an invalid IRQ");
+        printke("tried to register a handler for an invalid IRQ: %d", irq);
         return;
     }
 
