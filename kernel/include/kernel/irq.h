@@ -62,3 +62,6 @@ void irq15();
 #define IRQ13 45
 #define IRQ14 46
 #define IRQ15 47
+
+#define INT_TO_IRQ(num) (num - IRQ0)
+#define IRQ_TO_INT(num) (num + IRQ0)
