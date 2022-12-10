@@ -5,9 +5,9 @@
 #define AHCI_MAX_CONTROLLERS_NUM 256
 
 #define HBA_PORT_CMD_ST (1 << 0)  // start processing the command list
+#define HBA_PORT_CMD_CR (1 << 15) // indicates the command list engine is running
 #define HBA_PORT_CMD_FRE (1 << 4) // can post received FIS to fb pointer area
 #define HBA_PORT_CMD_FR (1 << 14) // indicates FIS engine is running
-#define HBA_PORT_CMD_CR (1 << 15) // indicates the command list engine is running
 
 #define HBA_PORT_IS_TFES (1 << 30) // was there an error in the received fis
 
@@ -18,6 +18,9 @@
 #define AHCI_MAX_PORTS 32
 #define AHCI_PORTS_START_OFFSET 0x100
 #define AHCI_PORT_SIZE sizeof(HBA_port_t)
+
+#define AHCI_GET_PORT(c_ptr, p_num) \
+    ((HBA_port_t*) (c_ptr->base_address_virt + AHCI_PORTS_START_OFFSET + p_num * AHCI_PORT_SIZE))
 
 // Generic host control
 typedef volatile struct HBA_ghc_t {
@@ -97,9 +100,24 @@ typedef struct ahci_controller_t {
     uint32_t address_size;
 } ahci_controller_t;
 
+typedef struct ahci_port_t {
+    HBA_port_t* port;
+    ahci_controller_t* c;
+    uint32_t port_num;
+    void* cmdlist_base_virt;
+    void* fis_rec_virt;
+    void* cmd_table_virt;
+    void* data_base_virt;
+} ahci_port_t;
+
 void init_ahci();
 bool ahci_add_controller(pci_device_t* pci_dev);
 void init_controller(ahci_controller_t* controller);
+
+bool ahci_reset_port(HBA_port_t* port);
+void ahci_start_port(HBA_port_t* port);
+bool ahci_stop_port(HBA_port_t* port);
+void ahci_port_clear_err(HBA_port_t* p);
 
 void ahci_print_controller(ahci_controller_t* controller);
 void ahci_print_all_controllers();

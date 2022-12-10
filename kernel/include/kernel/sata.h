@@ -47,6 +47,8 @@ enum {
     SATA_DEV_PM,
 };
 
+extern char* sata_types[];
+
 typedef volatile struct FIS_reg_h2d_t {
     uint8_t fis_type;   // FIS_TYPE_REG_H2D
     uint8_t pmport : 4; // Port multiplier
@@ -93,18 +95,13 @@ typedef volatile struct FIS_reg_d2h_t {
 
 typedef struct sata_device_t {
     uint8_t id;
+    ahci_port_t* port;
     char model_name[40];
     uint32_t capacity_in_sectors;
-    ahci_controller_t* controller;
-    uint8_t port_num;
     uint32_t type;
-    void* cmdlist_base_virt;
-    void* fis_rec_virt;
-    HBA_cmd_table_t* cmd_table_virt;
-    void* data_base_virt;
 } sata_device_t;
 
-bool sata_add_device(ahci_controller_t* c, uint32_t port, uint32_t type);
+bool sata_add_device(ahci_port_t* port, uint32_t type);
 bool sata_setup_memory(sata_device_t* dev);
 void sata_send_command(sata_device_t* dev);
 bool sata_identify_device(sata_device_t* dev);
