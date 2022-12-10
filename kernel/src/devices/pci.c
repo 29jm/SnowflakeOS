@@ -39,13 +39,22 @@ uint32_t pci_read_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t of
 
     return out;
 }
+void pci_write_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint16_t data) {
+    uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
+
+    uint32_t tmp = pci_read_config_long(bus, dev, func, offset);
+    tmp &= 0xFFFF0000;
+    tmp |= data;
+
+    outportl(CFG_ADDR, addr);
+    outportl(CFG_DATA, tmp);
+}
 
 void pci_write_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t data) {
     uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
 
     outportl(CFG_ADDR, addr);
     outportl(CFG_DATA, data);
-
 }
 
 bool pci_bus_has_device(uint8_t bus, uint8_t dev) {
