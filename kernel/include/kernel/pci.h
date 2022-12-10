@@ -81,12 +81,12 @@ typedef volatile struct pci_device_t {
     };
 } __attribute__((packed)) pci_device_t;
 
-
 void init_pci();
 void pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint32_t size);
 
 uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
 uint32_t pci_read_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
+void pci_write_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint16_t data);
 void pci_write_config_long(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset, uint32_t data);
 void pci_print_device(pci_device_t* dev);
 void pci_print_all_devices();
