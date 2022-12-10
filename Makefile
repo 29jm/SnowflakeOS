@@ -79,7 +79,8 @@ modules: libc snow ui
 doomgeneric: libc snow ui
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64 -display gtk \
+	qemu-system-x86_64  \
+			   -display gtk \
 	                   -drive file=SnowflakeOS.iso,id=disk,if=none \
 	                   -drive file=drive.img,id=test,if=none \
 			   -device ahci,id=ahci \
