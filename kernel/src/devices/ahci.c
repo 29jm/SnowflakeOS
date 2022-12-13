@@ -18,7 +18,7 @@ static void ahci_map_uncacheable(ahci_controller_t* c);
 static void ahci_reset_controller(ahci_controller_t* c);
 static void ahci_controller_enable_int(ahci_controller_t* c);
 static void ahci_controller_disable_int(ahci_controller_t* c);
-static void ahci_controller_handle_int(ahci_controller_t *c, uint32_t is);
+static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is);
 static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int port_num);
 static void int_handler(registers_t* regs);
 
@@ -107,7 +107,7 @@ static void ahci_map_uncacheable(ahci_controller_t* c) {
     paging_unmap_pages((uintptr_t) virt, num_pages);
 
     // disable caching this page because it is mmio
-    paging_map_pages((uintptr_t) virt, (uintptr_t) c->base_address, num_pages, PAGE_CACHE_DISABLE);
+    paging_map_pages((uintptr_t) virt, (uintptr_t) c->base_address, num_pages, PAGE_CACHE_DISABLE | PAGE_RW);
 
     c->base_address_virt = virt;
 }
@@ -364,7 +364,7 @@ void ahci_port_clear_err(HBA_port_t* p) {
 static void int_handler(registers_t* regs) {
     ahci_controller_t* c;
     list_for_each_entry(c, &ahci_controllers) {
-        HBA_ghc_t *ghc = (HBA_ghc_t *)c->base_address_virt;
+        HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
         uint32_t is = ghc->int_status;
         ghc->int_status |= is;
         if (!is)
@@ -375,10 +375,10 @@ static void int_handler(registers_t* regs) {
     }
 }
 
-static void ahci_controller_handle_int(ahci_controller_t *c, uint32_t is) {
+static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is) {
     for (int i = 0; i < AHCI_MAX_PORTS; i++) {
         if (((is >> i) & 0x01)) {
-            HBA_port_t *p = AHCI_GET_PORT(c,i);
+            HBA_port_t* p = AHCI_GET_PORT(c, i);
             p->is |= p->is;
         }
     }
