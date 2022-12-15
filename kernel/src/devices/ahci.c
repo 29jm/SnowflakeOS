@@ -65,7 +65,7 @@ bool ahci_add_controller(pci_device_t* pci_dev) {
 static void ahci_get_bar_size(ahci_controller_t* c) {
     // get BAR size
     uint32_t bar5, size;
-    bar5 = c->pci_dev->header0.bar[5];
+    bar5 = c->pci_dev->header0.bar[5] & ~MM_BAR_INFO_MASK;
 
     // write all 1s to indicate get address size
     pci_write_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func, HDR0_BAR5, 0xFFFFFFFF);
