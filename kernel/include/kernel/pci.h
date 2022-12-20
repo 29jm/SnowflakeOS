@@ -15,14 +15,14 @@
 #define MM_BAR_INFO_MASK 0x0000000F
 #define IO_BAR_INFO_MASK 0x00000003
 
-typedef volatile struct pci_header_t {
+typedef struct pci_header_t {
     uint16_t vendor, device;
     uint16_t command, status;
     uint8_t rev, interface, subclass, class;
     uint8_t cache_line_size, latency, header_type, bist;
 } __attribute__((packed)) pci_header_t;
 
-typedef volatile struct pci_header0_t {
+typedef struct pci_header0_t {
     uint32_t bar[6];
     uint32_t cardbus_cis_addr;
     uint16_t subsystem_vendor, subsystem;
@@ -34,7 +34,7 @@ typedef volatile struct pci_header0_t {
 
 /* These are not useable right now: field must be reordered by groups of 4
  * bytes, reversed. */
-typedef volatile struct pci_header1_t {
+typedef struct pci_header1_t {
     uint32_t bar[2];
     uint8_t latency2, sub_bus, sec_bus, prim_bus;
     uint16_t secondary_status;
@@ -50,7 +50,7 @@ typedef volatile struct pci_header1_t {
     uint8_t int_pin, int_line;
 } __attribute__((packed)) pci_header1_t;
 
-typedef volatile struct pci_header2_t {
+typedef struct pci_header2_t {
     uint32_t carbus_addr;
     uint16_t sec_status;
     uint8_t reserved, capabilities_offset;
@@ -69,7 +69,7 @@ typedef volatile struct pci_header2_t {
     uint32_t legacy_base_addr;
 } __attribute__((packed)) pci_header2_t;
 
-typedef volatile struct pci_device_t {
+typedef struct pci_device_t {
     uint8_t id;
     uint8_t bus, dev, func;
     uint8_t hdr_type;

@@ -5,6 +5,7 @@
 
 #include <list.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #define CFG_ADDR 0xCF8
@@ -15,7 +16,7 @@
 #define HEADER_MULTIFUNC (1 << 7)
 
 static list_t pci_devices;
-static uint8_t next_dev_id = 0;
+static uint32_t next_dev_id = 0;
 
 uint16_t pci_read_config_word(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset) {
     uint32_t addr = (offset & ~3) | func << 8 | dev << 11 | bus << 16 | CFG_ENABLE;
