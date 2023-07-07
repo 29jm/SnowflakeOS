@@ -16,21 +16,23 @@ static bool list_inited = false;
 static void ahci_get_bar_size(ahci_controller_t* c);
 static void ahci_map_uncacheable(ahci_controller_t* c);
 static void ahci_reset_controller(ahci_controller_t* c);
-static void ahci_controller_enable_int(ahci_controller_t* c);
-static void ahci_controller_disable_int(ahci_controller_t* c);
+static void ahci_controller_enable_int(ahci_controller_t* c, bool enable);
 static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is);
 static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int port_num);
 static void int_handler(registers_t* regs);
 
 void init_ahci() {
-    printk("initalizing ahci");
     ahci_controller_t* c;
+
+    printk("initalizing ahci");
+
     list_for_each_entry(c, &ahci_controllers) {
         init_controller(c);
     }
-    // only enable interrupts after all controllers have been initalized
+
+    // Only enable interrupts after all controllers have been initalized
     list_for_each_entry(c, &ahci_controllers) {
-        ahci_controller_enable_int(c);
+        ahci_controller_enable_int(c, true);
     }
 }
 
@@ -282,14 +284,14 @@ static void ahci_reset_controller(ahci_controller_t* c) {
     ghc->ghc |= AHCI_ENABLE;
 }
 
-static void ahci_controller_enable_int(ahci_controller_t* c) {
+static void ahci_controller_enable_int(ahci_controller_t* c, bool enable) {
     HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
-    ghc->ghc |= (1 << 1);
-}
 
-static void ahci_controller_disable_int(ahci_controller_t* c) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
-    ghc->ghc &= ~(1 << 1);
+    if (enable) {
+        ghc->ghc |= (1 << 1);
+    } else {
+        ghc->ghc &= ~(1 << 1);
+    }
 }
 
 bool ahci_reset_port(HBA_port_t* p) {
@@ -363,6 +365,9 @@ void ahci_port_clear_err(HBA_port_t* p) {
 
 static void int_handler(registers_t* regs) {
     ahci_controller_t* c;
+
+    UNUSED(regs);
+
     list_for_each_entry(c, &ahci_controllers) {
         HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
         uint32_t is = ghc->int_status;
