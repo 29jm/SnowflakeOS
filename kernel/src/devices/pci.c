@@ -101,6 +101,7 @@ void pci_print_device(pci_device_t* dev) {
 
 void pci_print_all_devices() {
     pci_device_t* dev;
+
     list_for_each_entry(dev, &pci_devices) {
         pci_print_device(dev);
     }
@@ -195,8 +196,9 @@ void pci_read_config(uint8_t bus, uint8_t dev, uint8_t func, uint8_t* buf, uint3
 }
 
 void init_pci() {
-    printk("Initializing PCI");
+    printk("initializing PCI");
     pci_devices = LIST_HEAD_INIT(pci_devices);
     pci_enumerate_devices();
-    pci_print_all_devices();
+
+    // pci_print_all_devices();
 }

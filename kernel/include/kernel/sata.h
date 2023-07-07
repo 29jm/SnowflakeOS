@@ -11,9 +11,9 @@
 #define SATA_SIG_SEMB 0xC33C0101  // Enclosure management bridge
 #define SATA_SIG_PM 0x96690101    // Port multiplier
 
-#define SATA_DEV_MODEL_OFFSET 27 * 2
-#define SATA_DEV_LBA_CAP_OFFSET 60 * 2
-#define SATA_DEV_LBA_BS_OFFSET 117 * 2
+#define SATA_DEV_MODEL_OFFSET (27 * 2)
+#define SATA_DEV_LBA_CAP_OFFSET (60 * 2)
+#define SATA_DEV_LBA_BS_OFFSET (117 * 2)
 
 enum {
     FIS_TYPE_REG_H2D = 0x27,   // Register FIS - host to device
