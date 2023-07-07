@@ -6,6 +6,8 @@
 #include <list.h>
 #include <stdlib.h>
 
+#define SPIN_WAIT 10000
+
 static list_t sata_devs;
 static uint32_t next_dev_id = 0;
 static bool list_inited = false;
@@ -14,8 +16,7 @@ char* sata_types[] = {
     [SATA_DEV_SATA] = "SATA ATA",
     [SATA_DEV_SATAPI] = "SATA ATAPI",
     [SATA_DEV_SEMB] = "SATA SEMB",
-    [SATA_DEV_PM] = "SATA PM",
-
+    [SATA_DEV_PM] = "SATA PM"
 };
 
 bool sata_add_device(ahci_port_t* port, uint32_t type) {
@@ -48,16 +49,17 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
 
     sata_identify_device(dev);
 
-    // uncomment below to do a read of the first sector of each drive
+    // Uncomment below to do a read of the first sector of each drive
     // uint8_t* buf = kmalloc(SATA_BLOCK_SIZE);
-    // memset(buf,0,SATA_BLOCK_SIZE);
-    // sata_read_device(dev,0,0,buf);
+    // memset(buf, 0, SATA_BLOCK_SIZE);
+    // sata_read_device(dev, 0, 0, buf);
     // printk("read from sata device %d: %s", dev->id,buf);
+    // kfree(buf);
 
     return true;
 }
 
-// send identify device command
+// Send identify device command
 bool sata_identify_device(sata_device_t* dev) {
     HBA_port_t* port = dev->port->port;
 
@@ -70,17 +72,18 @@ bool sata_identify_device(sata_device_t* dev) {
     cmd.c = 1;
     cmd.command = ATA_CMD_IDENTIFY_DEV;
 
-    // move command to
+    // Move command to
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
 
-    // issue command
+    // Issue command
     port->ci = 0x01;
 
-    // wait for port to return that the command has finished without error
+    // Wait for port to return that the command has finished without error
     uint32_t spin = 0;
     while (port->ci != 0x0) {
         spin++;
-        if (spin > 10000) {
+
+        if (spin > SPIN_WAIT) {
             printk("Port appears to be stuck during device identification for sata dev: %d", dev->id);
             return false;
         }
@@ -94,14 +97,15 @@ bool sata_identify_device(sata_device_t* dev) {
     char* dest = dev->model_name;
     char* src = dev->port->data_base_virt + SATA_DEV_MODEL_OFFSET;
 
-    // copy name to device struct, swap bits due to sata endianess
+    // Copy name to device struct, swap bits due to sata endianess
     for (unsigned int i = 0; i < sizeof(dev->model_name); i += 2) {
         dest[i] = src[i + 1];
         dest[i + 1] = src[i];
 
-        if (src[i] < 0x21 || src[i] > 0x7E) // not a printable character
+        if (src[i] < 0x21 || src[i] > 0x7E) // Not a printable character
             dest[i + 1] = 0;
-        if (src[i + 1] < 0x21 || src[i + 1] > 0x7E) // not a printable character
+
+        if (src[i + 1] < 0x21 || src[i + 1] > 0x7E) // Not a printable character
             dest[i] = 0;
     }
 
@@ -113,14 +117,14 @@ bool sata_identify_device(sata_device_t* dev) {
 
     dev->capacity_in_sectors = capacity;
 
-    printk("Identified SATA Device of type %s with name: %s and capacity: 0x%x blocks",
+    printk("identified SATA device: type %s named \"%s\", capacity: 0x%x blocks",
         sata_types[dev->type], dev->model_name, dev->capacity_in_sectors);
 
     return true;
 }
 
 bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
-    //// send read command
+    //// Send read command
     HBA_port_t* port = dev->port->port;
 
     HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->cmdlist_base_virt;
@@ -142,17 +146,18 @@ bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_n
     cmd.lba4 = (block_num_h >> 0) & 0xFF;
     cmd.lba5 = (block_num_h >> 8) & 0xFF;
 
-    // move command to table
+    // Move command to table
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
 
-    // issue command
+    // Issue command
     port->ci = 0x01;
 
-    // wait for port to return that the command has finished
+    // Wait for port to return that the command has finished
     uint32_t spin = 0;
     while (port->ci != 0x0) {
         spin++;
-        if (spin > 10000) {
+
+        if (spin > SPIN_WAIT) {
             printk("Port appears to be stuck during read for sata dev: %d", dev->id);
             return false;
         }
@@ -169,7 +174,7 @@ bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_n
 }
 
 bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
-    //// send read command
+    //// Send read command
     HBA_port_t* port = dev->port->port;
 
     HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->cmdlist_base_virt;
@@ -193,13 +198,13 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
 
     memcpy(dev->port->data_base_virt, buf, SATA_BLOCK_SIZE);
 
-    // move command to table
+    // Move command to table
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
 
-    // issue command
+    // Issue command
     port->ci = 0x01;
 
-    // wait for port to return that the command has finished
+    // Wait for port to return that the command has finished
     uint32_t spin = 0;
     while (port->ci != 0x0) {
         spin++;
