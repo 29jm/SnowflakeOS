@@ -14,6 +14,7 @@
 			"isodir": true,
 			"sysroot": true,
 			"toolchain": true
-		}
+		},
+		"editor.rulers": [100]
 	}
 }

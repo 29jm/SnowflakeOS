@@ -20,9 +20,9 @@
 #define AHCI_PORT_SIZE sizeof(HBA_port_t)
 
 #define AHCI_GET_PORT(c_ptr, p_num) \
-    ((HBA_port_t*) (c_ptr->base_address_virt + AHCI_PORTS_START_OFFSET + p_num * AHCI_PORT_SIZE))
+    ((HBA_port_t*) (c_ptr->abar_virt + AHCI_PORTS_START_OFFSET + p_num * AHCI_PORT_SIZE))
 
-// Generic host control
+// Generic Host Control - Content of the ABAR
 typedef volatile struct HBA_ghc_t {
     uint32_t cap1;              // 0x00, Host capability
     uint32_t ghc;               // 0x04, Global host control
@@ -88,21 +88,21 @@ typedef volatile struct HBA_prdt_entry_t {
 typedef volatile struct HBA_cmd_table_t {  // must be 128 byte aligned
     uint8_t cfis[64];                      // Command FIS
     uint8_t acmd[16];                      // ATAPI command, 12 or 16 bytes
-    uint8_t rsv[48];                       // Reserved
+    uint8_t reserved[48];                  // Reserved
     HBA_prdt_entry_t prdt_entry[1];        // Physical region descriptor table entries, 0 ~ 65535
 } __attribute__((packed)) HBA_cmd_table_t; // size is 0x80 + sizeof(HBA_pdtr_entry) = 0x90 total
 
 typedef struct ahci_controller_t {
     uint8_t id;
     pci_device_t* pci_dev;
-    void* base_address;
-    void* base_address_virt;
-    uint32_t address_size;
+    void* abar_phys;       // AHCI Base Address Register, from BAR5 of PCI header
+    void* abar_virt;       // Mapping into virtual memory of the above
+    uint32_t address_size; // Size of the ABAR = sizeof(HBA_ghc_t) + num_ports*sizeof(HBA_port_t)
 } ahci_controller_t;
 
 typedef struct ahci_port_t {
     HBA_port_t* port;
-    ahci_controller_t* c;
+    ahci_controller_t* ahci_controller;
     uint32_t port_num;
     void* cmdlist_base_virt;
     void* fis_rec_virt;

@@ -5,6 +5,10 @@
 
 #define PCI_MAX_NUM_DEVS 256
 
+#define PCI_DEV_GENERAL        0x00
+#define PCI_DEV_PCI_TO_PCI     0x01
+#define PCI_DEV_PCI_TO_CARDBUS 0x02
+
 #define HDR0_BAR0 0x10
 #define HDR0_BAR1 0x14
 #define HDR0_BAR2 0x18
@@ -42,7 +46,7 @@ typedef struct pci_header1_t {
     uint16_t memory_limit, memory_base;
     uint16_t prefetch_limit, prefetch_base;
     uint32_t prefetch_upper_limit, prefetch_upper_base;
-    uint16_t io_upper_limit, io_upper_base; // TODO use io_limit* prefixes
+    uint16_t io_limit_upper, io_limit_base;
     uint8_t reserved[3];
     uint8_t capabilities_addr;
     uint32_t expansion;

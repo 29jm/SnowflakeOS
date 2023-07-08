@@ -11,27 +11,27 @@
 
 static list_t ahci_controllers;
 static uint32_t next_dev_id = 0;
-static bool list_inited = false;
+static bool list_initialized = false;
 
-static void ahci_get_bar_size(ahci_controller_t* c);
-static void ahci_map_uncacheable(ahci_controller_t* c);
+static void ahci_get_abar(ahci_controller_t* c);
+static void ahci_map_abar(ahci_controller_t* c);
 static void ahci_reset_controller(ahci_controller_t* c);
 static void ahci_controller_enable_int(ahci_controller_t* c, bool enable);
 static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is);
 static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int port_num);
-static void int_handler(registers_t* regs);
+static void ahci_interrupt_handler(registers_t* regs);
 
 #define SPIN_WAIT 1000000
 
 void init_ahci() {
     ahci_controller_t* c;
 
-    printk("initalizing AHCI");
-
-    if (list_empty(&ahci_controllers)) {
+    if (!list_initialized || list_empty(&ahci_controllers)) {
         printk("no AHCI controllers detected");
         return;
     }
+
+    printk("initalizing AHCI controllers");
 
     list_for_each_entry(c, &ahci_controllers) {
         init_controller(c);
@@ -43,10 +43,13 @@ void init_ahci() {
     }
 }
 
+/* Places each AHCI controller identified on the PCI bus into a list of AHCI
+ * controllers.
+ */
 bool ahci_add_controller(pci_device_t* pci_dev) {
-    if (!list_inited) {
+    if (!list_initialized) {
         ahci_controllers = LIST_HEAD_INIT(ahci_controllers);
-        list_inited = true;
+        list_initialized = true;
     }
 
     if (next_dev_id >= AHCI_MAX_CONTROLLERS_NUM) {
@@ -54,16 +57,19 @@ bool ahci_add_controller(pci_device_t* pci_dev) {
         return false;
     }
 
-    ahci_controller_t* controller = kmalloc(sizeof(ahci_controller_t));
-
-    if (!controller) {
-        printke("unable to allocate memory for ahci controller with pci id: %d",
-            pci_dev->id);
+    if (pci_dev->hdr_type != PCI_DEV_GENERAL) {
+        printke("unsupported PCI header type for an AHCI controller");
         return false;
     }
 
-    controller->id = next_dev_id;
-    next_dev_id++;
+    ahci_controller_t* controller = kmalloc(sizeof(ahci_controller_t));
+
+    if (!controller) {
+        printke("unable to allocate memory for ahci controller with PCI id: %d", pci_dev->id);
+        return false;
+    }
+
+    controller->id = next_dev_id++;
     controller->pci_dev = pci_dev;
 
     if (!list_add(&ahci_controllers, (void*) controller)) {
@@ -74,34 +80,44 @@ bool ahci_add_controller(pci_device_t* pci_dev) {
     return true;
 }
 
-static void ahci_get_bar_size(ahci_controller_t* c) {
-    // Get BAR size
+/* Gets characteristics of the AHCI Base Address Register (ABAR), its address
+ * and size.
+ * Fills the 'abar_phys' and 'address_size' fields of the given controller
+ * with the address in its BAR5 and the size of the address space covered by
+ * BAR5 respectively.
+ */
+static void ahci_get_abar(ahci_controller_t* c) {
     uint32_t bar5, size;
+
+    // Base address
     bar5 = c->pci_dev->header0.bar[5] & ~MM_BAR_INFO_MASK;
 
-    // Write all 1s to indicate get address size
+    // Write all 1s to BAR5, see what sticks, that'll be the max address
     pci_write_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func,
         HDR0_BAR5, 0xFFFFFFFF);
 
-    // Read back the value
-    size = pci_read_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func,
-        HDR0_BAR5);
-
-    // Calculation to get size
+    // Read BAR5 back and compute its size
+    // See: https://wiki.osdev.org/PCI#Address_and_size_of_the_BAR
+    size = pci_read_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func, HDR0_BAR5);
     size &= ~MM_BAR_INFO_MASK; // Mask information bits
     size = ~size;              // Invert
-    size += 1;
+    size += 1;                 // Add one
 
-    // Reset bar
-    pci_write_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func,
-        HDR0_BAR5, bar5);
+    // Restore BAR5 to its initial value
+    pci_write_config_long(c->pci_dev->bus, c->pci_dev->dev, c->pci_dev->func, HDR0_BAR5, bar5);
 
-    bar5 &= ~MM_BAR_INFO_MASK; // Mask off the information bits
-    c->base_address = (void*) bar5;
+    // Store BAR5's address and size in the passed structure
+    bar5 &= ~MM_BAR_INFO_MASK;
+    c->abar_phys = (void*) bar5;
     c->address_size = size;
 }
 
-void ahci_enable_pci_int_mem_access(ahci_controller_t* controller) {
+/* Enables interrupts from the given AHCI controller and makes it respond to
+ * memory/IO space accesses.
+ * Does so by writing to the command register of its PCI device.
+ * See: https://wiki.osdev.org/PCI#Command_Register
+ */
+void ahci_enable_pci_interrupts(ahci_controller_t* controller) {
     pci_device_t* p = controller->pci_dev;
     uint16_t cmd = pci_read_config_word(p->bus, p->dev, p->func, 4);
     cmd |= 0b00000111;     // IO Space, Memory Space, Bus Master enable
@@ -110,48 +126,42 @@ void ahci_enable_pci_int_mem_access(ahci_controller_t* controller) {
     pci_write_config_word(p->bus, p->dev, p->func, 4, cmd);
 }
 
-/* Map base address into virtual memory, and mark as do not cache as the physical
- * address is in hardware.
+/* Maps the ABAR into virtual memory, fills 'abar_virt' of the given
+ * AHCI controller.
  */
-static void ahci_map_uncacheable(ahci_controller_t* c) {
-    uint32_t num_pages = c->address_size / PAGE_SIZE;
+static void ahci_map_abar(ahci_controller_t* c) {
+    uint32_t num_pages = divide_up(c->address_size, PAGE_SIZE);
 
-    if (c->address_size % PAGE_SIZE != 0) {
-        // Grab the remaining bottom page if the required memory isn't paged aligned
-        num_pages++;
-    }
-
-    // NOTE: not sure how best to implement getting free virtual
-    // memory in kernel space that can be mapped to hardware
+    // Get a virtual address where to map the ABAR
     void* virt = kamalloc(num_pages * PAGE_SIZE, PAGE_SIZE);
-    paging_unmap_pages((uintptr_t) virt, num_pages);
 
-    // Disable caching this page because it is mmio
-    paging_map_pages((uintptr_t) virt, (uintptr_t) c->base_address, num_pages,
+    // Disable page caching, as reads and writes talk to the hardware
+    paging_unmap_pages((uintptr_t) virt, num_pages);
+    paging_map_pages((uintptr_t) virt, (uintptr_t) c->abar_phys, num_pages,
         PAGE_CACHE_DISABLE | PAGE_RW);
 
-    c->base_address_virt = virt;
+    c->abar_virt = virt;
 }
 
 void init_controller(ahci_controller_t* c) {
     HBA_ghc_t* ghc;
     int int_no = c->pci_dev->header0.int_line;
 
-    ahci_get_bar_size(c);
-    ahci_enable_pci_int_mem_access(c);
-    ahci_map_uncacheable(c);
+    ahci_get_abar(c);
+    irq_register_handler(IRQ_TO_INT(int_no), ahci_interrupt_handler);
+    ahci_enable_pci_interrupts(c);
+    ahci_map_abar(c);
 
-    ghc = (HBA_ghc_t*) c->base_address_virt;
+    ghc = (HBA_ghc_t*) c->abar_virt;
 
     ahci_print_controller(c);
-
     ahci_reset_controller(c);
-    irq_register_handler(IRQ_TO_INT(int_no), int_handler);
 
     // Check devices on available ports
     for (int i = 0; i < AHCI_MAX_PORTS; i++) {
-        if (!((ghc->ports_implemented >> i) & 0x01))
+        if (!((ghc->ports_implemented >> i) & 0x01)) {
             continue;
+        }
 
         // Check port device status and type
         HBA_port_t* p = AHCI_GET_PORT(c, i);
@@ -185,8 +195,14 @@ void init_controller(ahci_controller_t* c) {
     }
 }
 
-// At this point in time we will only allow one command at a time, no adding multiple
-// commands to the command list, and only r/w one sector at a time.
+/* Allocates memory for the data structures of a port:
+ * - Command List  - Contains one command header, pointing to the Command Table
+ * - FIS Received  - Sent by the device when it has responded
+ * - Command Table - Contains one PRDT, that points to the Data Base
+ * - Data Base     - the DMA buffer itself, for read/write ops
+ *
+ * Note: Can only process one command at a time with the current design.
+ */
 static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     HBA_port_t* p = AHCI_GET_PORT(c, n);
     uint32_t size, cmdlist_phys_base;
@@ -195,21 +211,19 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     HBA_cmd_table_t* tbl;
     ahci_port_t* ahci_port;
 
-    if (!ahci_stop_port(p))
+    if (!ahci_stop_port(p)) {
+        printk("failed to stop command processing for port %d", n);
         return NULL;
+    }
 
-    //// Map out area for command list and FIS receive and data base address
-    // Align on page so that there is no discontinuity in physical memory - size can't exceed one
-    // page, cmdlist must be 1k aligned, and fis must be 256b aligned, cmdtbl must be 126b aligned
-    //
-    // In memory it looks like:
-    //    COMMAND_LIST      (addr: BASE)
-    //    FIS_RECEIVE       (addr: BASE+CMDLIST_SIZE)
-    //    one COMMAND_TABLE (addr: FIS_REC+FIS_REC_SIZE)
-    //    DATA_BASE         (addr: COMMAND_TABLE+CMD_TABLE_SIZE)
-    //
-    //    DATA_BASE size is one sata block
-    //
+    // Allocate an area for all port data structures, with the limitation of only one command table
+    // with one PRDT of 512 bytes.
+    // The memory layout is as follows:
+    //    Command List    (addr: base, page aligned)
+    //    FIS Received    (addr: Command List+CMDLIST_SIZE, 256B aligned)
+    //    Command Table   (addr: FIS Received+FIS_REC_SIZE, 128B aligned)
+    //    Data Base       (addr: Command Table+CMD_TABLE_SIZE)
+
     size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t) + SATA_BLOCK_SIZE;
 
     // If its greater than a page, we have an issue
@@ -223,61 +237,52 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
         printke("error allocating virt mem for ahci dev: %d port %d, cmdlist base", c->id, n);
         return NULL;
     }
+
     // Mark page as cache disable
     if (!paging_disable_page_cache(cmdlist_base)) {
         printke("error disabling page cache for ahci dev: %d port %d, cmdlist base", c->id, n);
         return NULL;
     }
 
-    // Set command list base
+    // Set the port's Command List address
     cmdlist_phys_base = (uint32_t) paging_virt_to_phys((uintptr_t) cmdlist_base);
-    if (!cmdlist_phys_base) {
-        printke("error getting physical memory location for ahci dev: %d port %d, cmdlist base", c->id, n);
-        return NULL;
-    }
+
     p->clb = cmdlist_phys_base;
     p->clbu = 0;
 
-    // Set fis received base
+    // Set the port's FIS Received address
     p->fb = cmdlist_phys_base + HBA_CMDLIST_SIZE;
     p->fbu = 0;
 
-    // Check alignments
-    if (cmdlist_phys_base & 0b1111111111) { // 1k align
+    // Check alignments - TODO: do we have guarantees?
+    if (cmdlist_phys_base % 1024 != 0) { // 1k align
         printke("Issue setting up ahci dev: %d port %d, cmdlist not aligned", c->id, n);
         return NULL;
     }
-    if ((cmdlist_phys_base + HBA_CMDLIST_SIZE) & 0b11111111) { // 256 align
-        printke("Issue setting up ahci dev: %d port %d, fis receive not aligned", c->id, n);
-        return NULL;
-    }
-    if ((cmdlist_phys_base + HBA_CMDLIST_SIZE + FIS_REC_SIZE) & 0b1111111) { // 128 align
-        printke("Issue setting up ahci dev: %d port %d, cmdtbl not aligned", c->id, n);
-        return NULL;
-    }
 
-    //// Zero out memory space and then appropriately fill the data structures
+    // Zero out every port data structure we just allocated
     memset(cmdlist_base, 0, size);
 
-    // Cmd hdr
+    // Configure one command header in the Command List
     hdr = (HBA_cmd_hdr_t*) cmdlist_base;
     hdr->prdtl = 1;
     hdr->ctba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
     hdr->ctbau = 0;
 
-    // Prd
-    tbl = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
+    // Configure one PRDT to point to our Data Base buffer
+    tbl = (HBA_cmd_table_t*) cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
     tbl->prdt_entry[0].dba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
     tbl->prdt_entry[0].dbau = 0;
     tbl->prdt_entry[0].dbc = SATA_BLOCK_SIZE;
     tbl->prdt_entry[0].i = 1;
 
+    // Enable port operations - none are defined at this point
     ahci_start_port(p);
 
-    // Create port structure and return it
+    // Create an AHCI port structure and return it
     ahci_port = kmalloc(sizeof(ahci_port_t));
     ahci_port->port = p;
-    ahci_port->c = c;
+    ahci_port->ahci_controller = c;
     ahci_port->port_num = n;
     ahci_port->cmdlist_base_virt = cmdlist_base;
     ahci_port->fis_rec_virt = cmdlist_base + (HBA_CMDLIST_SIZE);
@@ -288,7 +293,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
 }
 
 static void ahci_reset_controller(ahci_controller_t* c) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    HBA_ghc_t* ghc = (HBA_ghc_t*) c->abar_virt;
     uint32_t spin = 0;
 
     ghc->ghc |= AHCI_ENABLE;
@@ -309,7 +314,7 @@ static void ahci_reset_controller(ahci_controller_t* c) {
 }
 
 static void ahci_controller_enable_int(ahci_controller_t* c, bool enable) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    HBA_ghc_t* ghc = (HBA_ghc_t*) c->abar_virt;
 
     if (enable) {
         ghc->ghc |= (1 << 1);
@@ -392,15 +397,14 @@ void ahci_port_clear_err(HBA_port_t* p) {
     p->serr = 0x07ff0fff; // all 1s but ignoring reserved bits
 }
 
-static void int_handler(registers_t* regs) {
+static void ahci_interrupt_handler(registers_t* regs) {
     ahci_controller_t* c;
 
     UNUSED(regs);
 
     list_for_each_entry(c, &ahci_controllers) {
-        HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+        HBA_ghc_t* ghc = (HBA_ghc_t*) c->abar_virt;
         uint32_t is = ghc->int_status;
-        ghc->int_status |= is;
 
         if (!is) {
             return;
@@ -421,11 +425,11 @@ static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is) {
 }
 
 void ahci_print_controller(ahci_controller_t* c) {
-    HBA_ghc_t* ghc = (HBA_ghc_t*) c->base_address_virt;
+    HBA_ghc_t* ghc = (HBA_ghc_t*) c->abar_virt;
 
     printk("AHCI controller with id: %d, pci id: %d", c->id, c->pci_dev->id);
-    printk("- BAR: 0x%x", c->base_address);
-    printk("- BAR virt: 0x%x", c->base_address_virt);
+    printk("- BAR: 0x%x", c->abar_phys);
+    printk("- BAR virt: 0x%x", c->abar_virt);
     printk("- BAR size: 0x%x", c->address_size);
     printk("- version: 0x%x", ghc->version);
     printk("- capabilities: 0x%x, %d control slots per port",

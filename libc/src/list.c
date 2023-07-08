@@ -32,6 +32,7 @@ void __list_add(list_t* new, list_t* prev, list_t* next) {
 }
 
 /* Appends an element to the given list.
+ * Returns the original list upon success, NULL otherwise.
  */
 list_t* list_add(list_t* list, void* data) {
     list_t* new = list_node_new(data);
@@ -46,6 +47,7 @@ list_t* list_add(list_t* list, void* data) {
 }
 
 /* Preprends an element to the given list.
+ * Returns the original list upon success, NULL otherwise.
  */
 list_t* list_add_front(list_t* list, void* data) {
     list_t* new = list_node_new(data);

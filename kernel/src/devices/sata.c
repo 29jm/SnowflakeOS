@@ -10,7 +10,7 @@
 
 static list_t sata_devs;
 static uint32_t next_dev_id = 0;
-static bool list_inited = false;
+static bool dev_list_initialized = false;
 
 char* sata_types[] = {
     [SATA_DEV_SATA] = "SATA ATA",
@@ -20,9 +20,9 @@ char* sata_types[] = {
 };
 
 bool sata_add_device(ahci_port_t* port, uint32_t type) {
-    if (!list_inited) {
+    if (!dev_list_initialized) {
         sata_devs = LIST_HEAD_INIT(sata_devs);
-        list_inited = true;
+        dev_list_initialized = true;
     }
 
     if (next_dev_id >= SATA_MAX_DEVS) {
@@ -33,12 +33,11 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
     sata_device_t* dev = (sata_device_t*) kmalloc(sizeof(sata_device_t));
     if (!dev) {
         printke("error allocating space for sata device on ahci controller: %d, port: %d",
-            port->c->id, port->port_num);
+            port->ahci_controller->id, port->port_num);
         return false;
     }
 
-    dev->id = next_dev_id;
-    next_dev_id++;
+    dev->id = next_dev_id++;
     dev->port = port;
     dev->type = type;
 
