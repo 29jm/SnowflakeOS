@@ -45,10 +45,18 @@ static uint32_t divide_up(uint32_t n, uint32_t d) {
  * position numbers to aid in debugging efforts.
  */
 inline void dbg_buffer_dump(void* buff, size_t len) {
-    uint8_t* b = (uint8_t*) buff;
+    const uint32_t bytes_per_line = 16;
+    uint8_t* b = buff;
+    uint8_t* end = (uint8_t*) buff + len;
 
-    for (size_t i = 0; i < len; i += 4) {
-        printf("%d: %02x %02x %02x %02x\n", i, b[i], b[i + 1], b[i + 2], b[i + 3]);
+    for (size_t i = 0; i < len / bytes_per_line; i++) {
+        printf("%p: ", buff + i*bytes_per_line);
+
+        for (size_t j = 0; j < bytes_per_line && buff < end; j++) {
+            printf("%02X ", *(b++));
+        }
+
+        printf("\n");
     }
 
     printf("\n");

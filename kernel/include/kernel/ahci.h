@@ -92,6 +92,50 @@ typedef volatile struct HBA_cmd_table_t {  // must be 128 byte aligned
     HBA_prdt_entry_t prdt_entry[1];        // Physical region descriptor table entries, 0 ~ 65535
 } __attribute__((packed)) HBA_cmd_table_t; // size is 0x80 + sizeof(HBA_pdtr_entry) = 0x90 total
 
+typedef volatile struct FIS_reg_h2d_t {
+    uint8_t fis_type;   // FIS_TYPE_REG_H2D
+    uint8_t pmport : 4; // Port multiplier
+    uint8_t rsv0 : 3;   // Reserved
+    uint8_t c : 1;      // 1: Command, 0: Control
+    uint8_t command;    // Command register
+    uint8_t featurel;   // Feature register, 7:0
+    uint8_t lba0;       // LBA low register, 7:0
+    uint8_t lba1;       // LBA mid register, 15:8
+    uint8_t lba2;       // LBA high register, 23:16
+    uint8_t device;     // Device register
+    uint8_t lba3;       // LBA register, 31:24
+    uint8_t lba4;       // LBA register, 39:32
+    uint8_t lba5;       // LBA register, 47:40
+    uint8_t featureh;   // Feature register, 15:8
+    uint8_t countl;     // Count register, 7:0
+    uint8_t counth;     // Count register, 15:8
+    uint8_t icc;        // Isochronous command completion
+    uint8_t control;    // Control register
+    uint8_t rsv1[4];    // Reserved
+} __attribute__((packed)) FIS_reg_h2d_t;
+
+typedef volatile struct FIS_reg_d2h_t {
+    uint8_t fis_type;   // FIS_TYPE_REG_D2H
+    uint8_t pmport : 4; // Port multiplier
+    uint8_t rsv0 : 2;   // Reserved
+    uint8_t i : 1;      // Interrupt bit
+    uint8_t rsv1 : 1;   // Reserved
+    uint8_t status;     // Status register
+    uint8_t error;      // Error register
+    uint8_t lba0;       // LBA low register, 7:0
+    uint8_t lba1;       // LBA mid register, 15:8
+    uint8_t lba2;       // LBA high register, 23:16
+    uint8_t device;     // Device register
+    uint8_t lba3;       // LBA register, 31:24
+    uint8_t lba4;       // LBA register, 39:32
+    uint8_t lba5;       // LBA register, 47:40
+    uint8_t rsv2;       // Reserved
+    uint8_t countl;     // Count register, 7:0
+    uint8_t counth;     // Count register, 15:8
+    uint8_t rsv3[2];    // Reserved
+    uint8_t rsv4[4];    // Reserved
+} __attribute__((packed)) FIS_reg_d2h_t;
+
 typedef struct ahci_controller_t {
     uint8_t id;
     pci_device_t* pci_dev;
@@ -104,10 +148,11 @@ typedef struct ahci_port_t {
     HBA_port_t* port;
     ahci_controller_t* ahci_controller;
     uint32_t port_num;
-    void* cmdlist_base_virt;
-    void* fis_rec_virt;
-    void* cmd_table_virt;
-    void* data_base_virt;
+    HBA_cmd_hdr_t* command_list;    // Array of 32 entries
+    FIS_reg_d2h_t* fis_received;    // Points to one FIS (hopefully the right kind)
+    HBA_cmd_table_t* command_table; // Points to one command table
+    uint8_t* data_base;             // Array of size 'data_base_size'
+    uint32_t data_base_size;        // Size of 'data_base' in bytes
 } ahci_port_t;
 
 void init_ahci();

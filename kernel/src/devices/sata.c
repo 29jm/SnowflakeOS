@@ -51,8 +51,9 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
     // Uncomment below to do a read of the first sector of each drive
     // uint8_t* buf = kmalloc(SATA_BLOCK_SIZE);
     // memset(buf, 0, SATA_BLOCK_SIZE);
-    // sata_read_device(dev, 0, 0, buf);
+    // sata_read_device(dev, 53, 0, buf);
     // printk("read from sata device %d: %s", dev->id,buf);
+    // dbg_buffer_dump(buf, 512);
     // kfree(buf);
 
     return true;
@@ -62,17 +63,15 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
 bool sata_identify_device(sata_device_t* dev) {
     HBA_port_t* port = dev->port->port;
 
-    HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->cmdlist_base_virt;
-    hdr->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
-    HBA_cmd_table_t* tbl = dev->port->cmd_table_virt;
+    dev->port->command_list->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
 
     FIS_reg_h2d_t cmd = {0};
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_IDENTIFY_DEV;
 
-    // Move command to
-    memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
+    // Move command to the command table
+    memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
 
     // Issue command
     port->ci = 0x01;
@@ -94,7 +93,7 @@ bool sata_identify_device(sata_device_t* dev) {
     }
 
     char* dest = dev->model_name;
-    char* src = dev->port->data_base_virt + SATA_DEV_MODEL_OFFSET;
+    char* src = (char*) (dev->port->data_base + SATA_DEV_MODEL_OFFSET);
 
     // Copy name to device struct, swap bits due to sata endianess
     for (unsigned int i = 0; i < sizeof(dev->model_name); i += 2) {
@@ -108,7 +107,7 @@ bool sata_identify_device(sata_device_t* dev) {
             dest[i] = 0;
     }
 
-    uint16_t* base = (uint16_t*) dev->port->data_base_virt;
+    uint16_t* base = (uint16_t*) dev->port->data_base;
 
     uint32_t capacity;
     capacity = base[SATA_DEV_LBA_CAP_OFFSET / 2];
@@ -123,38 +122,42 @@ bool sata_identify_device(sata_device_t* dev) {
 }
 
 bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
-    //// Send read command
+    // Send read command
     HBA_port_t* port = dev->port->port;
 
-    HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->cmdlist_base_virt;
-    hdr->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
-    hdr->c = 1;
-    HBA_cmd_table_t* tbl = dev->port->cmd_table_virt;
+    dev->port->command_list->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
+    dev->port->command_list->c = 1;
+    dev->port->command_list->w = 0;
 
     FIS_reg_h2d_t cmd = {0};
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_READ_DMA_EXT;
-    cmd.countl = 1;
-    cmd.device = (1 << 6); // lba48 mode?
+    cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
 
     cmd.lba0 = (block_num_l >> 0) & 0xFF;
     cmd.lba1 = (block_num_l >> 8) & 0xFF;
     cmd.lba2 = (block_num_l >> 16) & 0xFF;
+    cmd.device = (1 << 6); // lba48 mode
     cmd.lba3 = (block_num_l >> 24) & 0xFF;
     cmd.lba4 = (block_num_h >> 0) & 0xFF;
     cmd.lba5 = (block_num_h >> 8) & 0xFF;
 
     // Move command to table
-    memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
+    memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
 
     // Issue command
     port->ci = 0x01;
 
     // Wait for port to return that the command has finished
     uint32_t spin = 0;
-    while (port->ci != 0x0) {
+    while ((port->ci & 0x1) != 0) {
         spin++;
+
+        if (port->is & (1 << 30)) {
+            printke("error while reading");
+            return false;
+        }
 
         if (spin > SPIN_WAIT) {
             printk("Port appears to be stuck during read for sata dev: %d", dev->id);
@@ -167,35 +170,36 @@ bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_n
         return false;
     }
 
-    memcpy(buf, dev->port->data_base_virt, SATA_BLOCK_SIZE);
+    memcpy(buf, dev->port->data_base, dev->port->data_base_size);
 
     return true;
 }
 
 bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
-    //// Send read command
+    // Send write command
     HBA_port_t* port = dev->port->port;
 
-    HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->cmdlist_base_virt;
+    HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->command_list;
     hdr->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
     hdr->c = 1;
-    HBA_cmd_table_t* tbl = dev->port->cmd_table_virt;
+    // dev->port->command_list->w = 1; // TODO: I would expect this here
+    HBA_cmd_table_t* tbl = dev->port->command_table;
 
     FIS_reg_h2d_t cmd = {0};
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_WRITE_DMA_EXT;
-    cmd.countl = 1;
-    cmd.device = (1 << 6); // lba48 mode?
+    cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
 
     cmd.lba0 = (block_num_l >> 0) & 0xFF;
     cmd.lba1 = (block_num_l >> 8) & 0xFF;
     cmd.lba2 = (block_num_l >> 16) & 0xFF;
+    cmd.device = (1 << 6); // lba48 mode
     cmd.lba3 = (block_num_l >> 24) & 0xFF;
     cmd.lba4 = (block_num_h >> 0) & 0xFF;
     cmd.lba5 = (block_num_h >> 8) & 0xFF;
 
-    memcpy(dev->port->data_base_virt, buf, SATA_BLOCK_SIZE);
+    memcpy(dev->port->data_base, buf, dev->port->data_base_size);
 
     // Move command to table
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
@@ -207,7 +211,7 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     uint32_t spin = 0;
     while (port->ci != 0x0) {
         spin++;
-        if (spin > 10000) {
+        if (spin > SPIN_WAIT) {
             printk("Port appears to be stuck during write for sata dev: %d", dev->id);
             return false;
         }
@@ -219,4 +223,44 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     }
 
     return true;
+}
+
+static void sata_read_block(fs_t* fs, uint32_t block, uint8_t* buf) {
+    sata_device_t* dev = fs->device.underlying_device;
+    sata_read_device(dev, 2*block, 0, buf);
+}
+
+static void sata_write_block(fs_t* fs, uint32_t block, uint8_t* buf) {
+    sata_device_t* dev = fs->device.underlying_device;
+    printk("writing to dev %s, block %d", dev->model_name, 2*block);
+    sata_write_device(dev, 2*block, 0, buf);
+}
+
+static void sata_clear_block(fs_t* fs, uint32_t block) {
+    uint8_t zeroes[SATA_BLOCK_SIZE] = {0};
+    sata_device_t* dev = fs->device.underlying_device;
+    sata_write_device(dev, 2*block, 0, zeroes);
+}
+
+fs_device_t sata_to_fs_device(sata_device_t* dev) {
+    fs_device_t fs_dev;
+
+    fs_dev.underlying_device = dev;
+    fs_dev.read_block = sata_read_block;
+    fs_dev.write_block = sata_write_block;
+    fs_dev.clear_block = sata_clear_block;
+
+    return fs_dev;
+}
+
+sata_device_t* sata_get_device_by_name(const char* name) {
+    sata_device_t* dev;
+
+    list_for_each_entry(dev, &sata_devs) {
+        if (!strcmp(dev->model_name, name)) {
+            return dev;
+        }
+    }
+
+    return NULL;
 }

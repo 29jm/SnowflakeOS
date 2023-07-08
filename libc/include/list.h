@@ -20,10 +20,16 @@ typedef struct list_t {
 #define list_last_entry(list, type) \
     ((type*) (list)->prev->data)
 
+/* Iterate over the list by (iter, pos) pair, where iter is a list_t* and pos
+ * has the list's data type.
+ * Useful when the list needs to be edited during iteration.
+ */
 #define list_for_each(iter, pos, list) \
     for (iter = (list)->next, pos = (typeof(pos)) iter->data; \
         iter != (list); iter = iter->next, pos = (typeof(pos)) iter->data)
 
+/* Iterate over the list by element pos where pos has the list's data type.
+ */
 #define list_for_each_entry(pos, list) \
     pos = (typeof(pos)) (list)->next->data; \
     for (list_t* __iter = (list)->next; \

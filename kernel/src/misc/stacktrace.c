@@ -54,6 +54,11 @@ void stacktrace_print() {
     stackframe_t* stackframe = NULL;
     uintptr_t addr = 0;
 
+    if (!symbols) {
+        printke("symbols were not loaded, aborting stack trace output");
+        return;
+    }
+
     asm volatile ("movl %%ebp, %0" : "=r"(stackframe));
 
     printk("stacktrace:");

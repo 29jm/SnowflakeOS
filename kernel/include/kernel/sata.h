@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/ahci.h>
+#include <kernel/fs.h>
 
 #define SATA_MAX_DEVS 256
 
@@ -49,50 +50,6 @@ enum {
 
 extern char* sata_types[];
 
-typedef volatile struct FIS_reg_h2d_t {
-    uint8_t fis_type;   // FIS_TYPE_REG_H2D
-    uint8_t pmport : 4; // Port multiplier
-    uint8_t rsv0 : 3;   // Reserved
-    uint8_t c : 1;      // 1: Command, 0: Control
-    uint8_t command;    // Command register
-    uint8_t featurel;   // Feature register, 7:0
-    uint8_t lba0;       // LBA low register, 7:0
-    uint8_t lba1;       // LBA mid register, 15:8
-    uint8_t lba2;       // LBA high register, 23:16
-    uint8_t device;     // Device register
-    uint8_t lba3;       // LBA register, 31:24
-    uint8_t lba4;       // LBA register, 39:32
-    uint8_t lba5;       // LBA register, 47:40
-    uint8_t featureh;   // Feature register, 15:8
-    uint8_t countl;     // Count register, 7:0
-    uint8_t counth;     // Count register, 15:8
-    uint8_t icc;        // Isochronous command completion
-    uint8_t control;    // Control register
-    uint8_t rsv1[4];    // Reserved
-} __attribute__((packed)) FIS_reg_h2d_t;
-
-typedef volatile struct FIS_reg_d2h_t {
-    uint8_t fis_type;   // FIS_TYPE_REG_D2H
-    uint8_t pmport : 4; // Port multiplier
-    uint8_t rsv0 : 2;   // Reserved
-    uint8_t i : 1;      // Interrupt bit
-    uint8_t rsv1 : 1;   // Reserved
-    uint8_t status;     // Status register
-    uint8_t error;      // Error register
-    uint8_t lba0;       // LBA low register, 7:0
-    uint8_t lba1;       // LBA mid register, 15:8
-    uint8_t lba2;       // LBA high register, 23:16
-    uint8_t device;     // Device register
-    uint8_t lba3;       // LBA register, 31:24
-    uint8_t lba4;       // LBA register, 39:32
-    uint8_t lba5;       // LBA register, 47:40
-    uint8_t rsv2;       // Reserved
-    uint8_t countl;     // Count register, 7:0
-    uint8_t counth;     // Count register, 15:8
-    uint8_t rsv3[2];    // Reserved
-    uint8_t rsv4[4];    // Reserved
-} __attribute__((packed)) FIS_reg_d2h_t;
-
 typedef struct sata_device_t {
     uint8_t id;
     ahci_port_t* port;
@@ -107,3 +64,6 @@ void sata_send_command(sata_device_t* dev);
 bool sata_identify_device(sata_device_t* dev);
 bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf);
 bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf);
+
+sata_device_t* sata_get_device_by_name(const char* name);
+fs_device_t sata_to_fs_device(sata_device_t* dev);

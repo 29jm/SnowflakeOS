@@ -9,9 +9,11 @@
 #include <kernel/paging.h>
 #include <kernel/pci.h>
 #include <kernel/ahci.h>
+#include <kernel/sata.h>
 #include <kernel/pmm.h>
 #include <kernel/proc.h>
 #include <kernel/ps2.h>
+#include <kernel/ramfs.h>
 #include <kernel/serial.h>
 #include <kernel/stacktrace.h>
 #include <kernel/sys.h>
@@ -81,7 +83,7 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
             memcpy(data, (void*) mod->mod_start, size);
 
             if (!strcmp(module_name, "disk")) {
-                init_fs(init_ext2(data, size));
+                // init_fs(init_ext2(ramfs_new(data, size)));
             } else if (!strcmp(module_name, "symbols")) {
                 init_stacktrace(data, size);
             }
@@ -90,6 +92,12 @@ void kernel_main(mb2_t* boot, uint32_t magic) {
         }
 
         tag = (mb2_tag_t*) ((uintptr_t) tag + align_to(tag->size, 8));
+    }
+
+    sata_device_t* dev = sata_get_device_by_name("TESTDRIVE");
+
+    if (dev) {
+        init_fs(init_ext2(sata_to_fs_device(dev)));
     }
 
     init_proc();

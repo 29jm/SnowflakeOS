@@ -34,8 +34,16 @@ typedef struct folder_inode_t {
     list_t subfiles;
 } folder_inode_t;
 
+typedef struct fs_device_t {
+    void* underlying_device; // e.g. sata_device_t*, raw memory...
+    void (*read_block)(struct fs_t*, uint32_t, uint8_t*);
+    void (*write_block)(struct fs_t*, uint32_t, uint8_t*);
+    void (*clear_block)(struct fs_t*, uint32_t);
+} fs_device_t;
+
 typedef struct fs_t {
     folder_inode_t* root;
+    fs_device_t device;
     uint32_t uid;
     uint32_t (*create)(struct fs_t*, const char*, uint32_t, uint32_t);
     int32_t (*rename)(struct fs_t*, uint32_t, uint32_t, uint32_t);

@@ -118,7 +118,6 @@ typedef struct ext2_fs_t {
     fs_t fs;
     superblock_t* sb;
     group_descriptor_t* group_descriptors;
-    uint8_t* device;
     uint32_t block_size;
     uint32_t inode_size;
     uint32_t num_block_groups;
@@ -188,15 +187,15 @@ static void write_directory_entries(ext2_fs_t* fs, uint32_t ino, list_t* dir_ent
 static dentry_t* make_directory_entry(const char* name, uint32_t ino, uint32_t type);
 static void free_directory_entries(list_t* entries);
 
-fs_t* init_ext2(uint8_t* data, uint32_t len) {
+fs_t* init_ext2(fs_device_t dev) {
     ext2_fs_t* e2fs = kmalloc(sizeof(ext2_fs_t));
 
-    if (len < 1024 + sizeof(superblock_t)) {
-        printke("invalid volume: too small to be true");
-        return NULL;
-    }
+    // if (len < 1024 + sizeof(superblock_t)) {
+    //     printke("invalid volume: too small to be true");
+    //     return NULL;
+    // }
 
-    e2fs->device = data;
+    e2fs->fs.device = dev;
     e2fs->sb = parse_superblock(e2fs);
     e2fs->group_descriptors = parse_group_descriptors(e2fs);
 
@@ -494,15 +493,18 @@ int32_t ext2_stat(ext2_fs_t* fs, uint32_t ino, stat_t* stat) {
  */
 static void read_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf) {
     // TODO: check for max block ?
-    memcpy(buf, fs->device + block*fs->block_size, fs->block_size);
+    fs->fs.device.read_block((fs_t*) fs, block, buf);
+    // memcpy(buf, fs->device + block*fs->block_size, fs->block_size);
 }
 
 static void write_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf) {
-    memcpy(fs->device + block*fs->block_size, buf, fs->block_size);
+    fs->fs.device.write_block((fs_t*) fs, block, buf);
+    // memcpy(fs->device + block*fs->block_size, buf, fs->block_size);
 }
 
 static void clear_block(ext2_fs_t* fs, uint32_t block) {
-    memset(fs->device + block*fs->block_size, 0, fs->block_size);
+    fs->fs.device.clear_block((fs_t*) fs, block);
+    // memset(fs->device + block*fs->block_size, 0, fs->block_size);
 }
 
 static void write_superblock(ext2_fs_t* fs) {

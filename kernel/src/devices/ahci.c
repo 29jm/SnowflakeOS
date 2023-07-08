@@ -210,6 +210,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     HBA_cmd_hdr_t* hdr;
     HBA_cmd_table_t* tbl;
     ahci_port_t* ahci_port;
+    const uint32_t data_base_size = 1024;
 
     if (!ahci_stop_port(p)) {
         printk("failed to stop command processing for port %d", n);
@@ -224,7 +225,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     //    Command Table   (addr: FIS Received+FIS_REC_SIZE, 128B aligned)
     //    Data Base       (addr: Command Table+CMD_TABLE_SIZE)
 
-    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t) + SATA_BLOCK_SIZE;
+    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t) + data_base_size;
 
     // If its greater than a page, we have an issue
     if (size > PAGE_SIZE) {
@@ -270,10 +271,10 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     hdr->ctbau = 0;
 
     // Configure one PRDT to point to our Data Base buffer
-    tbl = (HBA_cmd_table_t*) cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
+    tbl = (HBA_cmd_table_t*) (cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE));
     tbl->prdt_entry[0].dba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
     tbl->prdt_entry[0].dbau = 0;
-    tbl->prdt_entry[0].dbc = SATA_BLOCK_SIZE;
+    tbl->prdt_entry[0].dbc = data_base_size - 1;
     tbl->prdt_entry[0].i = 1;
 
     // Enable port operations - none are defined at this point
@@ -284,10 +285,11 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     ahci_port->port = p;
     ahci_port->ahci_controller = c;
     ahci_port->port_num = n;
-    ahci_port->cmdlist_base_virt = cmdlist_base;
-    ahci_port->fis_rec_virt = cmdlist_base + (HBA_CMDLIST_SIZE);
-    ahci_port->cmd_table_virt = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
-    ahci_port->data_base_virt = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
+    ahci_port->command_list = cmdlist_base;
+    ahci_port->fis_received = cmdlist_base + (HBA_CMDLIST_SIZE);
+    ahci_port->command_table = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
+    ahci_port->data_base = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
+    ahci_port->data_base_size = data_base_size;
 
     return ahci_port;
 }
@@ -406,18 +408,20 @@ static void ahci_interrupt_handler(registers_t* regs) {
         HBA_ghc_t* ghc = (HBA_ghc_t*) c->abar_virt;
         uint32_t is = ghc->int_status;
 
+        ghc->int_status |= is; // Write it back to ACK
+
         if (!is) {
             return;
         }
 
-        printk("interrupt fired for AHCI controller: %d, ports: 0x%x", c->id, is);
+        // printk("interrupt fired for AHCI controller: %d, ports: 0x%x", c->id, is);
         ahci_controller_handle_int(c, is);
     }
 }
 
 static void ahci_controller_handle_int(ahci_controller_t* c, uint32_t is) {
     for (int i = 0; i < AHCI_MAX_PORTS; i++) {
-        if (((is >> i) & 0x01)) {
+        if ((is >> i) & 0x01) {
             HBA_port_t* p = AHCI_GET_PORT(c, i);
             p->is |= p->is;
         }

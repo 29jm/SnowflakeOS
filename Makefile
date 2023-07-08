@@ -82,7 +82,7 @@ qemu: SnowflakeOS.iso
 	qemu-system-x86_64  \
 			   -display gtk \
 	                   -drive file=SnowflakeOS.iso,id=disk,if=none,format=raw \
-	                   -drive file=drive.img,id=test,if=none,format=raw \
+	                   -drive file=$(DISKIMAGE),id=test,if=none,format=raw \
 			   -device ahci,id=ahci \
 			   -device ide-hd,drive=disk,bus=ahci.0,model=HOSTDEVICE,serial=10101010101 \
 			   -device ide-hd,drive=test,bus=ahci.1,model=TESTDRIVE,serial=6969696969696 \
