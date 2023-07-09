@@ -190,11 +190,6 @@ static void free_directory_entries(list_t* entries);
 fs_t* init_ext2(fs_device_t dev) {
     ext2_fs_t* e2fs = kmalloc(sizeof(ext2_fs_t));
 
-    // if (len < 1024 + sizeof(superblock_t)) {
-    //     printke("invalid volume: too small to be true");
-    //     return NULL;
-    // }
-
     e2fs->fs.device = dev;
     e2fs->sb = parse_superblock(e2fs);
     e2fs->group_descriptors = parse_group_descriptors(e2fs);
@@ -494,17 +489,14 @@ int32_t ext2_stat(ext2_fs_t* fs, uint32_t ino, stat_t* stat) {
 static void read_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf) {
     // TODO: check for max block ?
     fs->fs.device.read_block((fs_t*) fs, block, buf);
-    // memcpy(buf, fs->device + block*fs->block_size, fs->block_size);
 }
 
 static void write_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf) {
     fs->fs.device.write_block((fs_t*) fs, block, buf);
-    // memcpy(fs->device + block*fs->block_size, buf, fs->block_size);
 }
 
 static void clear_block(ext2_fs_t* fs, uint32_t block) {
     fs->fs.device.clear_block((fs_t*) fs, block);
-    // memset(fs->device + block*fs->block_size, 0, fs->block_size);
 }
 
 static void write_superblock(ext2_fs_t* fs) {
@@ -515,7 +507,7 @@ static void write_group_descriptor(ext2_fs_t* fs, uint32_t group) {
     write_block(fs, 2, (uint8_t*) &fs->group_descriptors[group]);
 }
 
-/* Parses an ext2 superblock from the ext2 partition buffer stored at `data`.
+/* Parses an ext2 superblock from the ext2 partition in the block device.
  * Updates `num_block_groups`, and `block_size`.
  * Returns a kmalloc'ed superblock_t struct.
  */

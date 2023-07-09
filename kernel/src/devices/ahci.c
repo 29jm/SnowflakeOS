@@ -198,8 +198,7 @@ void init_controller(ahci_controller_t* c) {
 /* Allocates memory for the data structures of a port:
  * - Command List  - Contains one command header, pointing to the Command Table
  * - FIS Received  - Sent by the device when it has responded
- * - Command Table - Contains eight PRDTs, pointing nowhere. Setting these up
- *                   is the job of the SATA driver.
+ * - Command Table - Contains one PRDT pointing to 2 KiB.
  *
  * Note: Can only process one command at a time with the current design.
  */
@@ -209,7 +208,6 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     void* cmdlist_base;
     HBA_cmd_hdr_t* hdr;
     ahci_port_t* ahci_port;
-    const uint32_t cmd_table_size = sizeof(HBA_cmd_table_t) + (AHCI_PRDT_COUNT-1)*sizeof(HBA_prdt_entry_t);
 
     if (!ahci_stop_port(p)) {
         printk("failed to stop command processing for port %d", n);
@@ -219,11 +217,12 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     // Allocate an area for all port data structures, with the limitation of only one command table
     // with one PRDT of 512 bytes.
     // The memory layout is as follows:
-    //    Command List    (addr: base, page aligned)
-    //    FIS Received    (addr: Command List+CMDLIST_SIZE, 256B aligned)
-    //    Command Table   (addr: FIS Received+FIS_REC_SIZE, 128B aligned)
+    //    Command List   |  addr: base, page aligned
+    //    FIS Received   |  addr: +CMDLIST_SIZE, 1 KiB aligned
+    //    Command Table  |  addr: +FIS_REC_SIZE, 256 B aligned
+    //    PRDT           |  addr: +cmd_table_size, occupies `PAGE_SIZE - size`
 
-    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + cmd_table_size;
+    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t);
 
     // If its greater than a page, we have an issue
     if (size > PAGE_SIZE) {
@@ -231,7 +230,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
         return NULL;
     }
 
-    cmdlist_base = kamalloc(size, PAGE_SIZE); // The physical pages will be aligned too
+    cmdlist_base = kamalloc(PAGE_SIZE, PAGE_SIZE); // The physical pages will be aligned too
     if (!cmdlist_base) {
         printke("error allocating virt mem for ahci dev: %d port %d, cmdlist base", c->id, n);
         return NULL;

@@ -11,10 +11,9 @@
 
 #define HBA_PORT_IS_TFES (1 << 30) // was there an error in the received fis
 
-#define HBA_CMDLIST_SIZE 0x400 // 1kb
-#define FIS_REC_SIZE 0x100     // 256b
-#define AHCI_PRDT_SIZE 0x2000
-#define AHCI_PRDT_COUNT 8
+#define HBA_CMDLIST_SIZE 0x400 // 1 KiB
+#define FIS_REC_SIZE 0x100     // 256 B
+#define AHCI_PRDT_SIZE 0x800   // 2 KiB
 
 #define AHCI_ENABLE (1 << 31)
 #define AHCI_MAX_PORTS 32

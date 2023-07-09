@@ -5,6 +5,7 @@
 
 #include <list.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define SPIN_WAIT 10000
 
@@ -61,7 +62,7 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
 
 // Send identify device command
 bool sata_identify_device(sata_device_t* dev) {
-    uint32_t id_data[1024/4];
+    uint8_t* id_data = kamalloc(PAGE_SIZE, PAGE_SIZE);
     HBA_port_t* port = dev->port->port;
 
     dev->port->command_list->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
@@ -82,8 +83,6 @@ bool sata_identify_device(sata_device_t* dev) {
     dev->port->command_table->prdt_entry[0].dbc = 1024-1;
     dev->port->command_table->prdt_entry[0].i = 1;
 
-    printk("%p -> %p", &id_data[0], dev->port->command_table->prdt_entry[0].dba);
-
     // Issue command
     port->ci = 0x01;
 
@@ -103,8 +102,8 @@ bool sata_identify_device(sata_device_t* dev) {
         return false;
     }
 
-    printk("transferred %d bytes", dev->port->command_list->prdbc);
-    dbg_buffer_dump(id_data, 560);
+    // Necessary for the data to show up
+    paging_invalidate_page((uintptr_t) id_data);
 
     char* dest = dev->model_name;
     char* src = (char*) (id_data + SATA_DEV_MODEL_OFFSET);
@@ -128,11 +127,13 @@ bool sata_identify_device(sata_device_t* dev) {
     printk("identified SATA device: type %s named \"%s\", capacity: 0x%x blocks",
         sata_types[dev->type], dev->model_name, dev->capacity_in_sectors);
 
+    kfree(id_data);
+
     return true;
 }
 
 /* Reads `size` bytes from `dev` into `buf` starting with block `blk_h:blk_l`,
- * a 48-bit number (LBA48).
+ * a 48-bit number (LBA48). `buf` must be located in pages with caching disabled.
  * Returns the number of bytes read.
  *
  * Note:
@@ -141,7 +142,7 @@ bool sata_identify_device(sata_device_t* dev) {
  */
 uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf) {
     // Check that we can handle the size
-    if (size > AHCI_PRDT_COUNT*AHCI_PRDT_SIZE) {
+    if (size > AHCI_PRDT_SIZE) {
         printke("invalid read: size too big");
         return 0;
     }
@@ -174,21 +175,27 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
     // Move command to table
     memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
 
+    // Disable page cache
+    uintptr_t page = ((uintptr_t) buf) & ~0xFFF;
+    uintptr_t end = (uintptr_t) buf + size;
+    while (page < end) {
+        paging_disable_page_cache((void*) page);
+        page += PAGE_SIZE;
+    }
+
     // Set PRDTs to cover `buf[0:size]`
     uint32_t i = 0;
     uint32_t phys_buf = paging_virt_to_phys((uintptr_t) buf);
-    for (; i < (uint32_t) (dev->port->command_list->prdtl-1); i++) {
+    uint32_t remaining = size;
+    for (; i < dev->port->command_list->prdtl; i++) {
+        uint32_t prdt_size = min(remaining, AHCI_PRDT_SIZE);
         dev->port->command_table->prdt_entry[i].dba = phys_buf;
         dev->port->command_table->prdt_entry[i].dbau = 0;
-        dev->port->command_table->prdt_entry[i].dbc = AHCI_PRDT_SIZE-1;
+        dev->port->command_table->prdt_entry[i].dbc = prdt_size-1;
         dev->port->command_table->prdt_entry[i].i = 1;
-        phys_buf += AHCI_PRDT_SIZE;
+        phys_buf += prdt_size;
+        remaining -= prdt_size;
     }
-
-    dev->port->command_table->prdt_entry[i].dba = phys_buf;
-    dev->port->command_table->prdt_entry[i].dbau = 0;
-    dev->port->command_table->prdt_entry[i].dbc = (size % AHCI_PRDT_SIZE) - 1;
-    dev->port->command_table->prdt_entry[i].i = 1;
 
     // Issue command
     dev->port->port->ci = 0x01;
@@ -208,6 +215,14 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
         printke("error attempting to read from sata device id: %d", dev->id);
         return 0;
     }
+
+    // Necessary for the data to show up
+    // uint8_t* max_addr = (uint32_t) (buf + size);
+    // buf = (uint8_t*) ((uintptr_t) buf & ~0xFFF);
+    // while (buf < max_addr) {
+    //     paging_invalidate_page((uintptr_t) buf);
+    //     buf += PAGE_SIZE;
+    // }
 
     uint32_t bytes_read = dev->port->command_list->prdbc;
 
