@@ -198,8 +198,8 @@ void init_controller(ahci_controller_t* c) {
 /* Allocates memory for the data structures of a port:
  * - Command List  - Contains one command header, pointing to the Command Table
  * - FIS Received  - Sent by the device when it has responded
- * - Command Table - Contains one PRDT, that points to the Data Base
- * - Data Base     - the DMA buffer itself, for read/write ops
+ * - Command Table - Contains eight PRDTs, pointing nowhere. Setting these up
+ *                   is the job of the SATA driver.
  *
  * Note: Can only process one command at a time with the current design.
  */
@@ -208,9 +208,8 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     uint32_t size, cmdlist_phys_base;
     void* cmdlist_base;
     HBA_cmd_hdr_t* hdr;
-    HBA_cmd_table_t* tbl;
     ahci_port_t* ahci_port;
-    const uint32_t data_base_size = 1024;
+    const uint32_t cmd_table_size = sizeof(HBA_cmd_table_t) + (AHCI_PRDT_COUNT-1)*sizeof(HBA_prdt_entry_t);
 
     if (!ahci_stop_port(p)) {
         printk("failed to stop command processing for port %d", n);
@@ -223,9 +222,8 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     //    Command List    (addr: base, page aligned)
     //    FIS Received    (addr: Command List+CMDLIST_SIZE, 256B aligned)
     //    Command Table   (addr: FIS Received+FIS_REC_SIZE, 128B aligned)
-    //    Data Base       (addr: Command Table+CMD_TABLE_SIZE)
 
-    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t) + data_base_size;
+    size = HBA_CMDLIST_SIZE + FIS_REC_SIZE + cmd_table_size;
 
     // If its greater than a page, we have an issue
     if (size > PAGE_SIZE) {
@@ -233,7 +231,7 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
         return NULL;
     }
 
-    cmdlist_base = kamalloc(size, PAGE_SIZE);
+    cmdlist_base = kamalloc(size, PAGE_SIZE); // The physical pages will be aligned too
     if (!cmdlist_base) {
         printke("error allocating virt mem for ahci dev: %d port %d, cmdlist base", c->id, n);
         return NULL;
@@ -247,7 +245,6 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
 
     // Set the port's Command List address
     cmdlist_phys_base = (uint32_t) paging_virt_to_phys((uintptr_t) cmdlist_base);
-
     p->clb = cmdlist_phys_base;
     p->clbu = 0;
 
@@ -255,27 +252,13 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     p->fb = cmdlist_phys_base + HBA_CMDLIST_SIZE;
     p->fbu = 0;
 
-    // Check alignments - TODO: do we have guarantees?
-    if (cmdlist_phys_base % 1024 != 0) { // 1k align
-        printke("Issue setting up ahci dev: %d port %d, cmdlist not aligned", c->id, n);
-        return NULL;
-    }
-
     // Zero out every port data structure we just allocated
     memset(cmdlist_base, 0, size);
 
     // Configure one command header in the Command List
     hdr = (HBA_cmd_hdr_t*) cmdlist_base;
-    hdr->prdtl = 1;
     hdr->ctba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
     hdr->ctbau = 0;
-
-    // Configure one PRDT to point to our Data Base buffer
-    tbl = (HBA_cmd_table_t*) (cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE));
-    tbl->prdt_entry[0].dba = cmdlist_phys_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
-    tbl->prdt_entry[0].dbau = 0;
-    tbl->prdt_entry[0].dbc = data_base_size - 1;
-    tbl->prdt_entry[0].i = 1;
 
     // Enable port operations - none are defined at this point
     ahci_start_port(p);
@@ -288,8 +271,6 @@ static ahci_port_t* ahci_alloc_port_mem(ahci_controller_t* c, int n) {
     ahci_port->command_list = cmdlist_base;
     ahci_port->fis_received = cmdlist_base + (HBA_CMDLIST_SIZE);
     ahci_port->command_table = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE);
-    ahci_port->data_base = cmdlist_base + (HBA_CMDLIST_SIZE + FIS_REC_SIZE + sizeof(HBA_cmd_table_t));
-    ahci_port->data_base_size = data_base_size;
 
     return ahci_port;
 }

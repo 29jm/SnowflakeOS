@@ -13,6 +13,8 @@
 
 #define HBA_CMDLIST_SIZE 0x400 // 1kb
 #define FIS_REC_SIZE 0x100     // 256b
+#define AHCI_PRDT_SIZE 0x2000
+#define AHCI_PRDT_COUNT 8
 
 #define AHCI_ENABLE (1 << 31)
 #define AHCI_MAX_PORTS 32
@@ -151,8 +153,6 @@ typedef struct ahci_port_t {
     HBA_cmd_hdr_t* command_list;    // Array of 32 entries
     FIS_reg_d2h_t* fis_received;    // Points to one FIS (hopefully the right kind)
     HBA_cmd_table_t* command_table; // Points to one command table
-    uint8_t* data_base;             // Array of size 'data_base_size'
-    uint32_t data_base_size;        // Size of 'data_base' in bytes
 } ahci_port_t;
 
 void init_ahci();

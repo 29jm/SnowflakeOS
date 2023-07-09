@@ -61,17 +61,28 @@ bool sata_add_device(ahci_port_t* port, uint32_t type) {
 
 // Send identify device command
 bool sata_identify_device(sata_device_t* dev) {
+    uint32_t id_data[1024/4];
     HBA_port_t* port = dev->port->port;
 
     dev->port->command_list->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
+    dev->port->command_list->prdtl = 1;
 
     FIS_reg_h2d_t cmd = {0};
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
+    cmd.countl = 2;
     cmd.command = ATA_CMD_IDENTIFY_DEV;
 
     // Move command to the command table
     memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
+
+    // Set PRDT
+    dev->port->command_table->prdt_entry[0].dba = paging_virt_to_phys((uintptr_t) &id_data[0]);
+    dev->port->command_table->prdt_entry[0].dbau = 0;
+    dev->port->command_table->prdt_entry[0].dbc = 1024-1;
+    dev->port->command_table->prdt_entry[0].i = 1;
+
+    printk("%p -> %p", &id_data[0], dev->port->command_table->prdt_entry[0].dba);
 
     // Issue command
     port->ci = 0x01;
@@ -92,8 +103,11 @@ bool sata_identify_device(sata_device_t* dev) {
         return false;
     }
 
+    printk("transferred %d bytes", dev->port->command_list->prdbc);
+    dbg_buffer_dump(id_data, 560);
+
     char* dest = dev->model_name;
-    char* src = (char*) (dev->port->data_base + SATA_DEV_MODEL_OFFSET);
+    char* src = (char*) (id_data + SATA_DEV_MODEL_OFFSET);
 
     // Copy name to device struct, swap bits due to sata endianess
     for (unsigned int i = 0; i < sizeof(dev->model_name); i += 2) {
@@ -107,11 +121,7 @@ bool sata_identify_device(sata_device_t* dev) {
             dest[i] = 0;
     }
 
-    uint16_t* base = (uint16_t*) dev->port->data_base;
-
-    uint32_t capacity;
-    capacity = base[SATA_DEV_LBA_CAP_OFFSET / 2];
-    capacity |= (((uint32_t) base[SATA_DEV_LBA_CAP_OFFSET / 2 + 1]) << 16);
+    uint32_t capacity = ((uint32_t*) id_data)[SATA_DEV_LBA_CAP_OFFSET / 4];
 
     dev->capacity_in_sectors = capacity;
 
@@ -121,58 +131,91 @@ bool sata_identify_device(sata_device_t* dev) {
     return true;
 }
 
-bool sata_read_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
-    // Send read command
-    HBA_port_t* port = dev->port->port;
+/* Reads `size` bytes from `dev` into `buf` starting with block `blk_h:blk_l`,
+ * a 48-bit number (LBA48).
+ * Returns the number of bytes read.
+ *
+ * Note:
+ * - `size` is limited to `AHCI_PRDT_SIZE` times `AHCI_PRDT_COUNT`.
+ * - No out of bounds checks are performed, make sure to read within the disk.
+ */
+uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf) {
+    // Check that we can handle the size
+    if (size > AHCI_PRDT_COUNT*AHCI_PRDT_SIZE) {
+        printke("invalid read: size too big");
+        return 0;
+    }
 
+    // Set command header
     dev->port->command_list->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
-    dev->port->command_list->c = 1;
+    dev->port->command_list->a = 0;
     dev->port->command_list->w = 0;
+    dev->port->command_list->p = 0;
+    dev->port->command_list->r = 0;
+    dev->port->command_list->b = 0;
+    dev->port->command_list->c = 1;
+    dev->port->command_list->pmp = 0;
+    dev->port->command_list->prdtl = divide_up(size, AHCI_PRDT_SIZE);
 
+    // Set command FIS
     FIS_reg_h2d_t cmd = {0};
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_READ_DMA_EXT;
-    cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
-
-    cmd.lba0 = (block_num_l >> 0) & 0xFF;
-    cmd.lba1 = (block_num_l >> 8) & 0xFF;
-    cmd.lba2 = (block_num_l >> 16) & 0xFF;
-    cmd.device = (1 << 6); // lba48 mode
-    cmd.lba3 = (block_num_l >> 24) & 0xFF;
-    cmd.lba4 = (block_num_h >> 0) & 0xFF;
-    cmd.lba5 = (block_num_h >> 8) & 0xFF;
+    cmd.countl = divide_up(size, SATA_BLOCK_SIZE);
+    cmd.device = (1 << 6); // LBA48 mode
+    cmd.lba0 = (blk_l >> 0)  & 0xFF;
+    cmd.lba1 = (blk_l >> 8)  & 0xFF;
+    cmd.lba2 = (blk_l >> 16) & 0xFF;
+    cmd.lba3 = (blk_l >> 24) & 0xFF;
+    cmd.lba4 = (blk_h >> 0)  & 0xFF;
+    cmd.lba5 = (blk_h >> 8)  & 0xFF;
 
     // Move command to table
     memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
 
+    // Set PRDTs to cover `buf[0:size]`
+    uint32_t i = 0;
+    uint32_t phys_buf = paging_virt_to_phys((uintptr_t) buf);
+    for (; i < (uint32_t) (dev->port->command_list->prdtl-1); i++) {
+        dev->port->command_table->prdt_entry[i].dba = phys_buf;
+        dev->port->command_table->prdt_entry[i].dbau = 0;
+        dev->port->command_table->prdt_entry[i].dbc = AHCI_PRDT_SIZE-1;
+        dev->port->command_table->prdt_entry[i].i = 1;
+        phys_buf += AHCI_PRDT_SIZE;
+    }
+
+    dev->port->command_table->prdt_entry[i].dba = phys_buf;
+    dev->port->command_table->prdt_entry[i].dbau = 0;
+    dev->port->command_table->prdt_entry[i].dbc = (size % AHCI_PRDT_SIZE) - 1;
+    dev->port->command_table->prdt_entry[i].i = 1;
+
     // Issue command
-    port->ci = 0x01;
+    dev->port->port->ci = 0x01;
 
     // Wait for port to return that the command has finished
     uint32_t spin = 0;
-    while ((port->ci & 0x1) != 0) {
+    while ((dev->port->port->ci & 0x1) != 0) {
         spin++;
 
-        if (port->is & (1 << 30)) {
-            printke("error while reading");
-            return false;
-        }
-
         if (spin > SPIN_WAIT) {
-            printk("Port appears to be stuck during read for sata dev: %d", dev->id);
-            return false;
+            printk("port appears to be stuck during read for sata dev: %d", dev->id);
+            return 0;
         }
     }
 
-    if (port->is & (1 << 30)) {
-        printke("Error attempting to read from sata device id: %d", dev->id);
-        return false;
+    if (dev->port->port->is & (1 << 30)) {
+        printke("error attempting to read from sata device id: %d", dev->id);
+        return 0;
     }
 
-    memcpy(buf, dev->port->data_base, dev->port->data_base_size);
+    uint32_t bytes_read = dev->port->command_list->prdbc;
 
-    return true;
+    if (bytes_read != size) {
+        printke("%d bytes read, %d bytes expected", bytes_read, size);
+    }
+
+    return bytes_read;
 }
 
 bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
@@ -189,7 +232,7 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_WRITE_DMA_EXT;
-    cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
+    // cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
 
     cmd.lba0 = (block_num_l >> 0) & 0xFF;
     cmd.lba1 = (block_num_l >> 8) & 0xFF;
@@ -199,7 +242,8 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     cmd.lba4 = (block_num_h >> 0) & 0xFF;
     cmd.lba5 = (block_num_h >> 8) & 0xFF;
 
-    memcpy(dev->port->data_base, buf, dev->port->data_base_size);
+    UNUSED(buf);
+    // memcpy(dev->port->data_base, buf, dev->port->data_base_size);
 
     // Move command to table
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
@@ -227,7 +271,7 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
 
 static void sata_read_block(fs_t* fs, uint32_t block, uint8_t* buf) {
     sata_device_t* dev = fs->device.underlying_device;
-    sata_read_device(dev, 2*block, 0, buf);
+    sata_read_device(dev, 2*block, 0, 1024, buf);
 }
 
 static void sata_write_block(fs_t* fs, uint32_t block, uint8_t* buf) {
