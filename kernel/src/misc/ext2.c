@@ -1,5 +1,6 @@
 #include <kernel/ext2.h>
 #include <kernel/fs.h>
+#include <kernel/paging.h>
 #include <kernel/sys.h>
 
 #include <string.h>
@@ -14,6 +15,8 @@
 #define EXT2_IGNORE 1
 #define EXT2_REMOUNT_RO 2
 #define EXT2_PANIC 3
+
+#define BUFFER_SIZE PAGE_SIZE
 
 enum {
     LINUX, HURD, MASIX, FREEBSD, GENERIC_BSD
@@ -69,7 +72,7 @@ typedef struct {
     uint32_t block_bitmap;
     uint32_t inode_bitmap;
     uint32_t inode_table;
-    uint16_t free_blocs;
+    uint16_t free_blocks;
     uint16_t free_inodes;
     uint16_t directories_count;
     uint16_t pad;
@@ -121,6 +124,11 @@ typedef struct ext2_fs_t {
     uint32_t block_size;
     uint32_t inode_size;
     uint32_t num_block_groups;
+    /* Used as temporary buffer for two purposes:
+       - To avoid unnecessary allocations
+       - To be used as uncached page with read/write_block,
+         which interact with disk drivers. */
+    uint8_t* buffer;
 } ext2_fs_t;
 
 #define INODE_FIFO 0x1000
@@ -191,11 +199,20 @@ fs_t* init_ext2(fs_device_t dev) {
     ext2_fs_t* e2fs = kmalloc(sizeof(ext2_fs_t));
 
     e2fs->fs.device = dev;
+    e2fs->buffer = kamalloc(BUFFER_SIZE, PAGE_SIZE);
+
+    paging_disable_page_cache(e2fs->buffer);
+
     e2fs->sb = parse_superblock(e2fs);
     e2fs->group_descriptors = parse_group_descriptors(e2fs);
 
     if (!e2fs->sb) {
         printke("bad superblock, aborting");
+        return NULL;
+    }
+
+    if (!e2fs->group_descriptors) {
+        printke("failed to read group descriptors, aborting");
         return NULL;
     }
 
@@ -308,7 +325,7 @@ int32_t ext2_rename(ext2_fs_t* fs, uint32_t dir_ino, uint32_t ino, uint32_t dest
  */
 uint32_t ext2_append(ext2_fs_t* fs, uint32_t inode, uint8_t* data, uint32_t size) {
     ext2_inode_t* in = get_inode(fs, inode);
-    uint8_t* tmp = zalloc(fs->block_size);
+    uint8_t* tmp = memset(fs->buffer, 0, fs->block_size);
 
     uint32_t start_block = in->size_lower / fs->block_size;
     uint32_t end_block = (in->size_lower + size) / fs->block_size;
@@ -338,7 +355,6 @@ uint32_t ext2_append(ext2_fs_t* fs, uint32_t inode, uint8_t* data, uint32_t size
 
     in->size_lower += size;
     update_inode(fs, inode, in);
-    kfree(tmp);
     kfree(in);
 
     return size;
@@ -375,7 +391,7 @@ uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf,
     uint32_t end_offset = end % fs->block_size;
     uint32_t bytes_read = end - offset;
 
-    uint8_t* tmp = kmalloc(fs->block_size);
+    uint8_t* tmp = fs->buffer;
 
     if (start_block == end_block) {
         read_inode_block(fs, in, start_block, tmp);
@@ -386,8 +402,10 @@ uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf,
                 read_inode_block(fs, in, start_block, tmp);
                 memcpy(buf, tmp + start_offset, fs->block_size - start_offset);
             } else {
-                read_inode_block(fs, in, block_no,
-                    buf + (block_no - start_block)*fs->block_size - start_offset);
+                // Don't merge these two lines: we need to read into fs->buffer, it's special
+                read_inode_block(fs, in, block_no, tmp);
+                memcpy(buf + (block_no - start_block)*fs->block_size - start_offset, tmp,
+                    fs->block_size);
             }
         }
 
@@ -398,7 +416,6 @@ uint32_t ext2_read(ext2_fs_t* fs, uint32_t inode, uint32_t offset, uint8_t* buf,
     }
 
     kfree(in);
-    kfree(tmp);
 
     return bytes_read;
 }
@@ -487,7 +504,6 @@ int32_t ext2_stat(ext2_fs_t* fs, uint32_t ino, stat_t* stat) {
 /* Reads the content of the given block.
  */
 static void read_block(ext2_fs_t* fs, uint32_t block, uint8_t* buf) {
-    // TODO: check for max block ?
     fs->fs.device.read_block((fs_t*) fs, block, buf);
 }
 
@@ -513,8 +529,10 @@ static void write_group_descriptor(ext2_fs_t* fs, uint32_t group) {
  */
 static superblock_t* parse_superblock(ext2_fs_t* fs) {
     superblock_t* sb = kmalloc(1024);
-    fs->block_size = 1024;
-    read_block(fs, 1, (uint8_t*) sb);
+
+    fs->block_size = 1024; // Temporarily fix this value for `read_block` below
+    read_block(fs, 1, (uint8_t*) fs->buffer);
+    memcpy(sb, fs->buffer, fs->block_size);
 
     if (sb->magic != EXT2_MAGIC) {
         printke("invalid signature: %x", sb->magic);
@@ -529,18 +547,25 @@ static superblock_t* parse_superblock(ext2_fs_t* fs) {
     return sb;
 }
 
-/* Returns a kmalloc'ed array of `num_block_groups` block group descriptors.
+/* Returns a kmalloc'ed array of `num_block_groups` block group descriptors, or NULL in case of
+ * error.
  */
 static group_descriptor_t* parse_group_descriptors(ext2_fs_t* fs) {
     uint32_t bgd_block = fs->block_size == 1024 ? 2 : 1;
     uint32_t bgd_size = align_to(fs->num_block_groups * sizeof(group_descriptor_t), fs->block_size);
+
+    if (bgd_size > BUFFER_SIZE) {
+        printke("group descriptors too large, probably too large disk");
+        return NULL;
+    }
+
     group_descriptor_t* bgd = kmalloc(bgd_size);
 
     for (uint32_t i = 0; i < bgd_size / fs->block_size; i++) {
-        read_block(fs, bgd_block + i, (uint8_t*) ((uintptr_t) bgd + i * fs->block_size));
+        read_block(fs, bgd_block + i, (uint8_t*) ((uintptr_t) fs->buffer + i * fs->block_size));
     }
 
-    return bgd;
+    return memcpy(bgd, fs->buffer, bgd_size);
 }
 
 /* Reads the content of the n-th block of the given inode.
@@ -584,11 +609,9 @@ static ext2_inode_t* get_inode(ext2_fs_t* fs, uint32_t inode) {
     uint32_t block_offset = ((inode - 1) * fs->inode_size) / fs->block_size;
     uint32_t index_in_block = (inode - 1) - block_offset * (fs->block_size / fs->inode_size);
 
-    uint8_t* tmp = kmalloc(fs->block_size);
-    read_block(fs, table_block + block_offset, tmp);
+    read_block(fs, table_block + block_offset, fs->buffer);
     ext2_inode_t* in = kmalloc(fs->inode_size);
-    memcpy(in, tmp + index_in_block*fs->inode_size, fs->inode_size);
-    kfree(tmp);
+    memcpy(in, fs->buffer + index_in_block*fs->inode_size, fs->inode_size);
 
     return in;
 }
@@ -604,7 +627,7 @@ static uint32_t allocate_block(ext2_fs_t* fs) {
     /* Find the first non-full block group */
     uint32_t group;
     for (group = 0; group < fs->num_block_groups; group++) {
-        if (fs->group_descriptors[group].free_blocs) {
+        if (fs->group_descriptors[group].free_blocks) {
             break;
         }
     }
@@ -612,7 +635,7 @@ static uint32_t allocate_block(ext2_fs_t* fs) {
     /* Go through the bitmap */
     uint32_t bitmap_block = fs->group_descriptors[group].block_bitmap;
     uint32_t block_offset = 0;
-    uint8_t* tmp = kmalloc(fs->block_size);
+    uint8_t* tmp = fs->buffer;
 
     for (uint32_t i = 0; i < fs->sb->blocks_per_group; i++) {
         if (i % (8 * fs->block_size) == 0) {
@@ -626,10 +649,9 @@ static uint32_t allocate_block(ext2_fs_t* fs) {
         if (!(chunk & (1 << (rel_i % 8)))) {
             tmp[rel_i / 8] = chunk | 1 << (rel_i % 8);
             write_block(fs, bitmap_block + block_offset - 1, tmp);
-            kfree(tmp);
 
             fs->sb->free_blocks--;
-            fs->group_descriptors[group].free_blocs--;
+            fs->group_descriptors[group].free_blocks--;
             write_superblock(fs);
             write_group_descriptor(fs, group);
 
@@ -656,7 +678,7 @@ static void free_block(ext2_fs_t* fs, uint32_t block) {
     kfree(bitmap);
 
     fs->sb->free_blocks++;
-    fs->group_descriptors[group_no].free_blocs++;
+    fs->group_descriptors[group_no].free_blocks++;
     write_superblock(fs);
     write_group_descriptor(fs, group_no);
 }
@@ -1009,7 +1031,7 @@ static void write_directory_entries(ext2_fs_t* fs, uint32_t ino, list_t* dir_ent
         return;
     }
 
-    uint8_t* tmp = kmalloc(fs->block_size);
+    uint8_t* tmp = fs->buffer;
     ext2_directory_entry_t* ent = NULL;
     uint32_t offset = 0;
     uint32_t iblock_no = 0;
@@ -1043,7 +1065,6 @@ static void write_directory_entries(ext2_fs_t* fs, uint32_t ino, list_t* dir_ent
     in->size_lower = fs->block_size * iblock_no + offset;
     update_inode(fs, ino, in);
 
-    kfree(tmp);
     kfree(in);
 }
 

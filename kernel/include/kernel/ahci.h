@@ -13,7 +13,7 @@
 
 #define HBA_CMDLIST_SIZE 0x400 // 1 KiB
 #define FIS_REC_SIZE 0x100     // 256 B
-#define AHCI_PRDT_SIZE 0x800   // 2 KiB
+#define AHCI_PRDT_SIZE 0x1000  // 4 KiB
 
 #define AHCI_ENABLE (1 << 31)
 #define AHCI_MAX_PORTS 32

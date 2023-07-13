@@ -137,7 +137,7 @@ bool sata_identify_device(sata_device_t* dev) {
  * Returns the number of bytes read.
  *
  * Note:
- * - `size` is limited to `AHCI_PRDT_SIZE` times `AHCI_PRDT_COUNT`.
+ * - `size` is limited to `AHCI_PRDT_SIZE`, basically a page.
  * - No out of bounds checks are performed, make sure to read within the disk.
  */
 uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf) {
@@ -174,14 +174,6 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
 
     // Move command to table
     memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
-
-    // Disable page cache
-    uintptr_t page = ((uintptr_t) buf) & ~0xFFF;
-    uintptr_t end = (uintptr_t) buf + size;
-    while (page < end) {
-        paging_disable_page_cache((void*) page);
-        page += PAGE_SIZE;
-    }
 
     // Set PRDTs to cover `buf[0:size]`
     uint32_t i = 0;
