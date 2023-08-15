@@ -63,7 +63,7 @@ bool sata_setup_memory(sata_device_t* dev);
 void sata_send_command(sata_device_t* dev);
 bool sata_identify_device(sata_device_t* dev);
 uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf);
-bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf);
+uint32_t sata_write_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf);
 
 sata_device_t* sata_get_device_by_name(const char* name);
 fs_device_t sata_to_fs_device(sata_device_t* dev);

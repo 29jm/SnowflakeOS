@@ -176,10 +176,9 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
     memcpy((void*) dev->port->command_table, (const void*) &cmd, sizeof(cmd));
 
     // Set PRDTs to cover `buf[0:size]`
-    uint32_t i = 0;
     uint32_t phys_buf = paging_virt_to_phys((uintptr_t) buf);
     uint32_t remaining = size;
-    for (; i < dev->port->command_list->prdtl; i++) {
+    for (uint32_t i = 0; i < dev->port->command_list->prdtl; i++) {
         uint32_t prdt_size = min(remaining, AHCI_PRDT_SIZE);
         dev->port->command_table->prdt_entry[i].dba = phys_buf;
         dev->port->command_table->prdt_entry[i].dbau = 0;
@@ -195,9 +194,7 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
     // Wait for port to return that the command has finished
     uint32_t spin = 0;
     while ((dev->port->port->ci & 0x1) != 0) {
-        spin++;
-
-        if (spin > SPIN_WAIT) {
+        if (spin++ > SPIN_WAIT) {
             printk("port appears to be stuck during read for sata dev: %d", dev->id);
             return 0;
         }
@@ -208,14 +205,6 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
         return 0;
     }
 
-    // Necessary for the data to show up
-    // uint8_t* max_addr = (uint32_t) (buf + size);
-    // buf = (uint8_t*) ((uintptr_t) buf & ~0xFFF);
-    // while (buf < max_addr) {
-    //     paging_invalidate_page((uintptr_t) buf);
-    //     buf += PAGE_SIZE;
-    // }
-
     uint32_t bytes_read = dev->port->command_list->prdbc;
 
     if (bytes_read != size) {
@@ -225,32 +214,40 @@ uint32_t sata_read_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, ui
     return bytes_read;
 }
 
-bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_num_h, uint8_t* buf) {
+uint32_t sata_write_device(sata_device_t* dev, uint32_t blk_l, uint16_t blk_h, uint32_t size, uint8_t* buf) {
     // Send write command
     HBA_port_t* port = dev->port->port;
-
     HBA_cmd_hdr_t* hdr = (HBA_cmd_hdr_t*) dev->port->command_list;
     hdr->cfl = sizeof(FIS_reg_h2d_t) / sizeof(uint32_t);
     hdr->c = 1;
     // dev->port->command_list->w = 1; // TODO: I would expect this here
     HBA_cmd_table_t* tbl = dev->port->command_table;
 
-    FIS_reg_h2d_t cmd = {0};
+    FIS_reg_h2d_t cmd = { 0 };
     cmd.fis_type = FIS_TYPE_REG_H2D;
     cmd.c = 1;
     cmd.command = ATA_CMD_WRITE_DMA_EXT;
-    // cmd.countl = dev->port->data_base_size / SATA_BLOCK_SIZE;
+    cmd.device = (1 << 6); // LBA48 mode
+    cmd.countl = divide_up(size, SATA_BLOCK_SIZE);
+    cmd.lba0 = (blk_l >> 0)  & 0xFF;
+    cmd.lba1 = (blk_l >> 8)  & 0xFF;
+    cmd.lba2 = (blk_l >> 16) & 0xFF;
+    cmd.lba3 = (blk_l >> 24) & 0xFF;
+    cmd.lba4 = (blk_h >> 0)  & 0xFF;
+    cmd.lba5 = (blk_h >> 8)  & 0xFF;
 
-    cmd.lba0 = (block_num_l >> 0) & 0xFF;
-    cmd.lba1 = (block_num_l >> 8) & 0xFF;
-    cmd.lba2 = (block_num_l >> 16) & 0xFF;
-    cmd.device = (1 << 6); // lba48 mode
-    cmd.lba3 = (block_num_l >> 24) & 0xFF;
-    cmd.lba4 = (block_num_h >> 0) & 0xFF;
-    cmd.lba5 = (block_num_h >> 8) & 0xFF;
-
-    UNUSED(buf);
-    // memcpy(dev->port->data_base, buf, dev->port->data_base_size);
+    // Set PRDTs to cover `buf[0:size]`
+    uint32_t phys_buf = paging_virt_to_phys((uintptr_t) buf);
+    uint32_t remaining = size;
+    for (uint32_t i = 0; i < dev->port->command_list->prdtl; i++) {
+        uint32_t prdt_size = min(remaining, AHCI_PRDT_SIZE);
+        dev->port->command_table->prdt_entry[i].dba = phys_buf;
+        dev->port->command_table->prdt_entry[i].dbau = 0;
+        dev->port->command_table->prdt_entry[i].dbc = prdt_size-1;
+        dev->port->command_table->prdt_entry[i].i = 1;
+        phys_buf += prdt_size;
+        remaining -= prdt_size;
+    }
 
     // Move command to table
     memcpy((void*) tbl, (const void*) &cmd, sizeof(cmd));
@@ -261,19 +258,24 @@ bool sata_write_device(sata_device_t* dev, uint32_t block_num_l, uint16_t block_
     // Wait for port to return that the command has finished
     uint32_t spin = 0;
     while (port->ci != 0x0) {
-        spin++;
-        if (spin > SPIN_WAIT) {
+        if (spin++ > SPIN_WAIT) {
             printk("Port appears to be stuck during write for sata dev: %d", dev->id);
-            return false;
+            return 0;
         }
     }
 
     if (port->is & (1 << 30)) {
         printke("Error attempting to write to sata device id: %d", dev->id);
-        return false;
+        return 0;
     }
 
-    return true;
+    uint32_t bytes_read = dev->port->command_list->prdbc;
+
+    if (bytes_read != size) {
+        printke("%d bytes written, %d bytes expected", bytes_read, size);
+    }
+
+    return bytes_read;
 }
 
 static void sata_read_block(fs_t* fs, uint32_t block, uint8_t* buf) {
@@ -284,13 +286,13 @@ static void sata_read_block(fs_t* fs, uint32_t block, uint8_t* buf) {
 static void sata_write_block(fs_t* fs, uint32_t block, uint8_t* buf) {
     sata_device_t* dev = fs->device.underlying_device;
     printk("writing to dev %s, block %d", dev->model_name, 2*block);
-    sata_write_device(dev, 2*block, 0, buf);
+    sata_write_device(dev, 2*block, 0, 1024, buf);
 }
 
 static void sata_clear_block(fs_t* fs, uint32_t block) {
     uint8_t zeroes[SATA_BLOCK_SIZE] = {0};
     sata_device_t* dev = fs->device.underlying_device;
-    sata_write_device(dev, 2*block, 0, zeroes);
+    sata_write_device(dev, 2*block, 0, 1024, zeroes);
 }
 
 fs_device_t sata_to_fs_device(sata_device_t* dev) {
