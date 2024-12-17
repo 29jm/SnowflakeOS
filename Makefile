@@ -22,7 +22,7 @@ AR=$(HOST)-ar
 AS=$(HOST)-as
 CC=$(HOST)-gcc
 
-CFLAGS=-O1 -std=gnu11 -ffreestanding -Wall -Wextra
+CFLAGS=-g -std=gnu11 -ffreestanding -Wall -Wextra
 ASFLAGS=--32
 LDFLAGS=-nostdlib -L$(SYSROOT)/usr/lib -m elf_i386
 
@@ -79,7 +79,7 @@ modules: libc snow ui
 doomgeneric: libc snow ui
 
 qemu: SnowflakeOS.iso
-	qemu-system-x86_64  \
+	qemu-system-i386  \
 			   -display gtk \
 	                   -drive file=SnowflakeOS.iso,id=disk,if=none,format=raw \
 	                   -drive file=$(DISKIMAGE),id=test,if=none,format=raw \
@@ -87,11 +87,11 @@ qemu: SnowflakeOS.iso
 			   -device ide-hd,drive=disk,bus=ahci.0,model=HOSTDEVICE,serial=10101010101 \
 			   -device ide-hd,drive=test,bus=ahci.1,model=TESTDRIVE,serial=6969696969696 \
 			   -monitor stdio \
-			   -s -no-reboot -no-shutdown -serial file:serial.log
+			   -s -S -no-reboot -no-shutdown -serial file:serial.log
 	cat serial.log
 
 efiqemu: SnowflakeOS.iso
-	qemu-system-x86_64 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log --bios /usr/share/edk2-ovmf/x64/OVMF.fd
+	qemu-system-i386 -display gtk -cdrom SnowflakeOS.iso -monitor stdio -s -no-reboot -no-shutdown -serial file:serial.log --bios /usr/share/edk2-ovmf/x64/OVMF.fd
 	cat serial.log
 
 bochs: SnowflakeOS.iso

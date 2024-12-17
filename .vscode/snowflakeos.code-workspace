@@ -15,6 +15,16 @@
 			"sysroot": true,
 			"toolchain": true
 		},
-		"editor.rulers": [100]
+		"editor.rulers": [
+			100
+		],
+		"files.associations": {
+			"multiboot2.h": "c"
+		},
+		"qemu-gdb-debug.executablePath": "isodir/boot/SnowflakeOS.kernel",
+		"qemu-gdb-debug.startQemuCommand": "qemu-system-i386 -display gtk -drive file=SnowflakeOS.iso,id=disk,if=none,format=raw -drive file=isodir/modules/disk.img,id=test,if=none,format=raw -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0,model=HOSTDEVICE,serial=10101010101 -device ide-hd,drive=test,bus=ahci.1,model=TESTDRIVE,serial=6969696969696 -monitor stdio -s -S -no-reboot -no-shutdown -serial file:serial.log",
+		"qemu-gdb-debug.gdbPath": "/usr/bin/gdb",
+		"qemu-gdb-debug.serverAddress": ":1234",
+		"qemu-gdb-debug.stopQemuCommand": "pkill -f qemu-system-i386"
 	}
 }
