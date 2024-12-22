@@ -16,9 +16,9 @@ $(KERNEL) $(SYMBOLS): $(OBJS) $(LIBK_DEP) linker.ld
 	$(info [kernel] linking)
 	@mkdir -p $(ISO)/$(BOOTDIR)
 	@$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS) $(LIBS)
-	$(info [kernel] generating symbol table)
+	$(info [kernel] generating symbol table to $(SYMBOLS))
 	@mkdir -p $(ISO)/modules
-	@awk '$$1 ~ /0x[0-9a-f]{16}/ {print substr($$1, 3), $$2}' linker.map > $(SYMBOLS)
+	@awk '$$1 ~ /0x[0-9a-f]{16}/ && $$2 ~ /^[^0-9]/ {print substr($$1, 3), $$2}' linker.map > $(SYMBOLS)
 	@rm linker.map
 
 %.o: %.c

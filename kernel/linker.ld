@@ -40,7 +40,4 @@ SECTIONS
     KERNEL_END = .;
     KERNEL_END_PHYS = . - 0xC0000000;
     KERNEL_SIZE = KERNEL_END - KERNEL_BEGIN;
-
-    /* The compiler may produce other sections, put them in the proper place in
-       in this file, if you'd like to include them in the final kernel. */
 }

@@ -105,6 +105,8 @@ void isr_handler(registers_t* regs) {
         printke("unhandled %s %d: %s",
             regs->int_no < 32 ? "exception" : "interrupt", regs->int_no,
             regs->int_no < 32 ? exception_msgs[regs->int_no] : "Unknown");
+        printke("eip: %p", regs->eip);
+
         // TODO: we're better than this
         abort();
     }
