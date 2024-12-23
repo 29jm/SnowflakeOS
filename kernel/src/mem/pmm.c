@@ -73,7 +73,7 @@ void init_pmm(mb2_t* boot) {
 
     mem_size = available;
     max_blocks = mem_size / PMM_BLOCK_SIZE;
-    used_blocks = max_blocks;
+    used_blocks = divide_up(unavailable, PMM_BLOCK_SIZE);
 
     // Protect low memory, our glorious kernel and its modules
     pmm_deinit_region(0, kernel_end);
@@ -127,7 +127,7 @@ void pmm_deinit_region(uintptr_t addr, uint32_t size) {
  * Note: of course, this address is page-aligned.
  */
 uintptr_t pmm_alloc_page() {
-    if (max_blocks - used_blocks <= 0) {
+    if (max_blocks <= used_blocks) {
         printke("kernel is out of physical memory!");
         abort();
     }
@@ -150,7 +150,7 @@ uintptr_t pmm_alloc_page() {
  * address that is 4 MiB-aligned. Return that, mark 4 MiB as taken.
  */
 uintptr_t pmm_alloc_aligned_large_page() { // TODO: generalize
-    if (max_blocks - used_blocks < 2*1024) { // 4MiB
+    if (max_blocks <= used_blocks || max_blocks - used_blocks < 2*1024) { // 4MiB
         return 0;
     }
 
@@ -170,7 +170,7 @@ uintptr_t pmm_alloc_aligned_large_page() { // TODO: generalize
 }
 
 uintptr_t pmm_alloc_pages(uint32_t num) {
-    if (max_blocks-used_blocks < num) {
+    if (max_blocks <= used_blocks || max_blocks - used_blocks < num) {
         return 0;
     }
 
