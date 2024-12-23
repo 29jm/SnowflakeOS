@@ -46,4 +46,5 @@ void rect_subtract_clip_rect(list_t* rects, rect_t clip);
 void rect_add_clip_rect(list_t* rects, rect_t clip);
 void print_rect(rect_t* r);
 bool rect_intersect(rect_t a, rect_t b);
+bool rect_compute_intersect(rect_t a, rect_t b, rect_t* res);
 void rect_clear_clipped(list_t* rects);

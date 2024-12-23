@@ -14,7 +14,7 @@
 #define WM_EVENT_QUEUE_SIZE 5
 
 void wm_draw_window(wm_window_t* win, rect_t rect);
-void wm_partial_draw_window(wm_window_t* win, rect_t rect);
+void wm_partial_draw_window(wm_window_t* win, rect_t win_rect, rect_t rect);
 void wm_refresh_screen();
 void wm_refresh_partial(rect_t clip);
 void wm_assign_position(wm_window_t* win);
@@ -35,6 +35,7 @@ static wm_window_t* focused;
 static uint32_t id_count = 0;
 static fb_t fb;
 static mouse_t mouse;
+static rect_t screen_rect;
 
 static struct {
     mouse_t raw_prev;
@@ -51,6 +52,9 @@ void init_wm() {
 
     mouse.x = fb.width/2;
     mouse.y = fb.height/2;
+
+    screen_rect.right = fb.width - 1;
+    screen_rect.bottom = fb.height - 1;
 
     mouse_set_callback(wm_mouse_callback);
     kbd_set_callback(wm_kbd_callback);
@@ -280,9 +284,8 @@ void wm_assign_z_orders() {
 /* Draw the given part of the window to the framebuffer.
  * Note that the given clip is allowed to be partially outside the window.
  */
-void wm_partial_draw_window(wm_window_t* win, rect_t clip) {
+void wm_partial_draw_window(wm_window_t* win, rect_t win_rect, rect_t clip) {
     fb_t* wfb = &win->kfb;
-    rect_t win_rect = rect_from_window(win);
 
     // Clamp the clipping rect to the window rect
     if (clip.top < win_rect.top) {
@@ -320,6 +323,14 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
     list_t* clip_windows = wm_get_windows_above(win);
     list_t clip_rects = LIST_HEAD_INIT(clip_rects);
 
+    // Restrict the window's rect to the screen rect: avoids all off-screen problems
+    rect_t on_screen_win_rect;
+    if (!rect_compute_intersect(win_rect, screen_rect, &on_screen_win_rect)) {
+        return; // Nothing to draw
+    }
+
+    win_rect = on_screen_win_rect;
+
     rect_add_clip_rect(&clip_rects, rect);
 
     // Convert covering windows to clipping rects
@@ -336,7 +347,7 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
     rect_t* clip;
     list_for_each_entry(clip, &clip_rects) {
         if (rect_intersect(*clip, win_rect)) {
-            wm_partial_draw_window(win, *clip);
+            wm_partial_draw_window(win, win_rect, *clip);
         }
     }
 
@@ -351,7 +362,14 @@ void wm_draw_window(wm_window_t* win, rect_t rect) {
  * TODO: allow refreshing empty space, filled with black.
  */
 void wm_refresh_partial(rect_t clip) {
+    rect_t clip_in_screen;
     list_t to_refresh = LIST_HEAD_INIT(to_refresh);
+
+    if (!rect_compute_intersect(clip, screen_rect, &clip_in_screen)) {
+        return; // Nothing to be done, clip is outside the screen
+    }
+
+    clip = clip_in_screen;
     list_add(&to_refresh, rect_new_copy(clip));
 
     wm_window_t* win;
@@ -449,7 +467,7 @@ list_t* wm_get_window(uint32_t id) {
 rect_t wm_mouse_to_rect(mouse_t mouse) {
     return (rect_t) {
         .top = mouse.y, .left = mouse.x,
-        .bottom = mouse.y+MOUSE_SIZE, .right = mouse.x+MOUSE_SIZE
+        .bottom = mouse.y+MOUSE_SIZE-1, .right = mouse.x+MOUSE_SIZE-1
     };
 }
 
@@ -483,6 +501,9 @@ bool wm_is_titlebar_being_hovered(wm_window_t* win) {
     }
 }
 
+/* TODO: update to allow drawing cut-off cursors e.g. to the right
+ *       or bottom of the screen.
+ */
 void wm_draw_mouse(rect_t new) {
     uintptr_t addr = fb.address + new.top*fb.pitch + new.left*fb.bpp/8;
 
@@ -553,22 +574,18 @@ void wm_mouse_callback(mouse_t raw_curr) {
     if (cursor.win_dragged && cursor.raw_prev.left_pressed && raw_curr.left_pressed && (dx || dy)) {
         rect_t rect = rect_from_window(cursor.clicked_win);
 
-        if (!(rect.left + dx < 0 || rect.right + dx >= (int32_t) fb.width ||
-                rect.top + dy < 0 || rect.bottom + dy >= (int32_t) fb.height)) {
+        cursor.cumulative_dx += dx;
+        cursor.cumulative_dy += dy;
+        cursor.clicked_win->pos.x = cursor.initial_position.x + cursor.cumulative_dx;
+        cursor.clicked_win->pos.y = cursor.initial_position.y + cursor.cumulative_dy;
 
-            cursor.cumulative_dx += dx;
-            cursor.cumulative_dy += dy;
-            cursor.clicked_win->pos.x = cursor.initial_position.x + cursor.cumulative_dx;
-            cursor.clicked_win->pos.y = cursor.initial_position.y + cursor.cumulative_dy;
+        rect_t new_rect = rect_from_window(cursor.clicked_win);
 
-            rect_t new_rect = rect_from_window(cursor.clicked_win);
+        wm_refresh_partial(rect);
+        wm_draw_window(cursor.clicked_win, new_rect);
 
-            wm_refresh_partial(rect);
-            wm_draw_window(cursor.clicked_win, new_rect);
-
-            rect = wm_mouse_to_rect(mouse);
-            wm_draw_mouse(rect);
-        }
+        rect = wm_mouse_to_rect(mouse);
+        wm_draw_mouse(rect);
     }
 
     // Mouse release: drag ends, release events

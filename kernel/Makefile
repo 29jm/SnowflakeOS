@@ -19,7 +19,6 @@ $(KERNEL) $(SYMBOLS): $(OBJS) $(LIBK_DEP) linker.ld
 	$(info [kernel] generating symbol table to $(SYMBOLS))
 	@mkdir -p $(ISO)/modules
 	@awk '$$1 ~ /0x[0-9a-f]{16}/ && $$2 ~ /^[^0-9]/ {print substr($$1, 3), $$2}' linker.map > $(SYMBOLS)
-	@rm linker.map
 
 %.o: %.c
 	$(info [kernel] $@)

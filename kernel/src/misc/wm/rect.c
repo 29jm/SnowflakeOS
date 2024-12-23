@@ -2,6 +2,7 @@
 #include <kernel/sys.h>
 
 #include <stdlib.h>
+#include <math.h>
 #include <list.h>
 
 /* Allocates the specified `rect_t` on the stack.
@@ -39,6 +40,22 @@ rect_t rect_from_window(wm_window_t* win) {
 bool rect_intersect(rect_t a, rect_t b) {
     return a.left <= b.right && a.right >= b.left &&
            a.top <= b.bottom && a.bottom >= b.top;
+}
+
+/* If a & b intersect, fill `res` with that intersection
+ * and return true. Return false otherwise.
+ */
+bool rect_compute_intersect(rect_t a, rect_t b, rect_t* res) {
+    if (!rect_intersect(a, b)) {
+        return false;
+    }
+
+    res->left = max(a.left, b.left);
+    res->right = min(a.right, b.right);
+    res->top = max(a.top, b.top);
+    res->bottom = min(a.bottom, b.bottom);
+
+    return true;
 }
 
 /* Pretty-prints a `rect_t`.
