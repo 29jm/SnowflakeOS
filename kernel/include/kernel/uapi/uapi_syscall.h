@@ -34,6 +34,7 @@
 
 typedef struct {
     uint32_t kernel_heap_usage;
+    uint32_t kernel_heap_total;
     uint32_t ram_usage;
     uint32_t ram_total;
     float uptime;

@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #define STB_SPRINTF_IMPLEMENTATION
-#define STB_SPRINTF_NOFLOAT
 #define STB_SPRINTF_NOUNALIGNED
 #define STB_SPRINTF_MIN 512
 #include <deps/stb_sprintf.h>
